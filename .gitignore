@@ -112,3 +112,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+*.xml
+*.xml
+.idea/discord.xml
+.idea/tornado-bot.iml
+.idea/discord.xml
+.idea/discord.xml
+.idea/discord.xml
