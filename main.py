@@ -2,7 +2,7 @@ from os import getenv, listdir
 from sqlite3 import connect
 
 from discord import Bot
-from discord.ext import tasks
+from discord.ext.tasks import loop
 from dotenv import load_dotenv
 
 from data.config.settings import SETTINGS
@@ -12,21 +12,23 @@ bot: Bot = Bot(owner_ids=SETTINGS["OwnerIDs"], description=SETTINGS["Description
 
 database: connect = connect(":memory:")
 local_db: db.cxn = db.cxn
+db_initialized: bool = False
 
 load_dotenv()
 
 
-@tasks.loop(minutes=30)
+@loop(minutes=30)
 async def sync_database():
     print("Syncing database...")
-
     try:
-        database.backup(local_db)
-        local_db.backup(database)
+        if not db_initialized:
+            database.backup(local_db)
+        else:
+            local_db.backup(database)
     except Exception as e:
         print(f"An error uncured while syncing database: {e}")
-    else:
-        print("Synced database successfully.")
+        return
+    print("Synced database successfully.")
 
 
 @bot.event

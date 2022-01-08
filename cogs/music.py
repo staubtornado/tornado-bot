@@ -1,4 +1,4 @@
-from asyncio import get_event_loop, Queue, Event
+from asyncio import get_event_loop, Queue, Event, sleep
 import functools
 from datetime import datetime
 from itertools import islice
@@ -10,9 +10,12 @@ from time import gmtime, strftime
 from async_timeout import timeout
 from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio, Embed, Bot, slash_command, VoiceChannel
 from discord.ext.commands import Cog
+from discord.ext.tasks import loop as task_loop
 from millify import millify
 from spotipy import Spotify, SpotifyClientCredentials, SpotifyException
 from youtube_dl import utils, YoutubeDL
+
+# from ..data.config import settings
 
 utils.bug_reports_message = lambda: ''
 
@@ -31,7 +34,6 @@ sp: Spotify = Spotify(auth_manager=SpotifyClientCredentials(client_id=environ['S
 
 def get_track_id(track):
     track = sp.track(track)
-    print(track["id"])
     return track["id"]
 
 
@@ -54,13 +56,8 @@ def get_album(album_id):
 
 def get_track_features(track_id):
     meta = sp.track(track_id)
-    # features = sp.audio_features(track_id)
     name = meta['name']
-    # album = meta['album']['name']
     artist = meta['album']['artists'][0]['name']
-    # release_date = meta['album']['release_date']
-    # length = meta['duration_ms']
-    # popularity = meta['popularity']
     return f"{name} - {artist}"
 
 
@@ -233,7 +230,7 @@ class SongQueue(Queue):
 
 
 class VoiceState:
-    def __init__(self, bot: Bot, ctx: ApplicationContext):
+    def __init__(self, bot, ctx):
         self.bot = bot
         self._ctx = ctx
 
@@ -280,7 +277,7 @@ class VoiceState:
 
             if not self.loop:
                 try:
-                    async with timeout(10):
+                    async with timeout(180):
                         self.current = await self.songs.get()
                 except TimeoutError:
                     self.bot.loop.create_task(self.stop())
@@ -331,6 +328,27 @@ class Music(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.voice_states = {}
+        self.check_activity.start()
+
+    @task_loop(seconds=10.0)
+    async def check_activity(self):
+        await self.bot.wait_until_ready()
+
+        for key in self.voice_states:
+            state = self.voice_states[key]
+            try:
+                channel = await self.bot.fetch_channel(state.voice.channel.id)
+            except AttributeError:
+                return
+
+            if not len(channel.members) > 1:
+                await sleep(180)
+                if not len(channel.members) > 1:
+                    await state.current.source.channel.send(f"💤 **Bye**. Left {channel.mention} due to **inactivity**.")
+
+                    await state.stop()
+                    del self.voice_states[key]
+                    return
 
     def get_voice_state(self, ctx: ApplicationContext):
         state = self.voice_states.get(ctx.guild_id)
@@ -341,13 +359,14 @@ class Music(Cog):
         return state
 
     def cog_unload(self):
+        self.check_activity.stop()
         for state in self.voice_states.values():
             self.bot.loop.create_task(state.stop())
 
     async def cog_before_invoke(self, ctx: ApplicationContext):
         ctx.voice_state = self.get_voice_state(ctx)
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def join(self, ctx):
         """Joins a voice channel."""
 
@@ -363,7 +382,7 @@ class Music(Cog):
         ctx.voice_state.voice = await destination.connect()
         await ctx.respond(f"🤘 **Hello**! Joined {ctx.author.voice.channel.mention}.")
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def summon(self, ctx, *, channel: VoiceChannel = None):
         """Summons the bot to a voice channel. If no channel was specified, it joins your channel."""
 
@@ -380,19 +399,15 @@ class Music(Cog):
         await ctx.guild.change_voice_state(channel=destination, self_mute=False, self_deaf=True)
         await ctx.respond(f"🤘 **Hello**! Joined {destination.mention}.")
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def leave(self, ctx):
         """Clears the queue and leaves the voice channel."""
-
-        instance = await ensure_voice_state(ctx)
-        if isinstance(instance, str):
-            return await ctx.respond(instance)
 
         await ctx.voice_state.stop()
         del self.voice_states[ctx.guild.id]
         await ctx.respond(f"👋 **Bye**. Left {ctx.author.voice.channel.mention}.")
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def volume(self, ctx, *, volume: int):
         """Sets the volume of the player."""
         await ctx.defer()
@@ -410,7 +425,7 @@ class Music(Cog):
         ctx.voice_state.volume = volume / 100
         await ctx.respond(f"🔊 **Volume** of the player **set to {volume}**.")
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def now(self, ctx):
         """Displays the currently playing song."""
         await ctx.defer()
@@ -420,7 +435,7 @@ class Music(Cog):
         except AttributeError:
             await ctx.respond("❌ **Nothing** is currently **playing**.")
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def pause(self, ctx):
         """Pauses the currently playing song."""
         await ctx.defer()
@@ -434,7 +449,7 @@ class Music(Cog):
             return await ctx.respond("⏯ **Paused** song, use **/**`resume` to **continue**.")
         await ctx.respond("❌ Either is the **song already paused**, or **nothing is currently **playing**.")
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def resume(self, ctx):
         """Resumes a currently paused song."""
         await ctx.defer()
@@ -448,7 +463,7 @@ class Music(Cog):
             return await ctx.respond("⏯ **Resumed** song, use **/**`pause` to **pause**.")
         await ctx.respond("❌ Either is the **song is not paused**, or **nothing is currently **playing**.")
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def stop(self, ctx):
         """Stops playing song and clears the queue."""
         await ctx.defer()
@@ -465,7 +480,7 @@ class Music(Cog):
             return await ctx.respond("⏹ **Stopped** the player and **cleared** the **queue**.")
         await ctx.respond("❌ **Nothing** is currently **playing**.")
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def skip(self, ctx):
         """Vote to skip a song. The requester can automatically skip. """
         await ctx.defer()
@@ -486,7 +501,7 @@ class Music(Cog):
             ctx.voice_state.skip_votes.add(voter.id)
             total_votes = len(ctx.voice_state.skip_votes)
 
-            required_votes: int = ceil((len(ctx.author.voice.channel.members)-1) * (1/3))
+            required_votes: int = ceil((len(ctx.author.voice.channel.members) - 1) * (1 / 3))
 
             if total_votes >= required_votes:
                 await ctx.respond(f"⏭ **Skipped song**, as **{required_votes}** users voted.")
@@ -496,7 +511,7 @@ class Music(Cog):
         else:
             await ctx.respond("❌ **Cheating** not allowed**!** You **already voted**.")
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def forceskip(self, ctx):
         """Skips a song directly."""
         await ctx.defer()
@@ -510,7 +525,7 @@ class Music(Cog):
         await ctx.respond("⏭ **Forced to skip** current song.")
         ctx.voice_state.skip()
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def queue(self, ctx, *, page: int = 1):
         """Shows the queue. You can optionally specify the page to show. Each page contains 10 elements."""
 
@@ -528,11 +543,11 @@ class Music(Cog):
         for i, song in enumerate(ctx.voice_state.songs[start:end], start=start):
             queue += f"`{i + 1}`. [{song.source.title}]({song.source.url})\n"
 
-        embed = Embed(title="Queue", description=f"**Songs: {len(ctx.voice_state.songs)}**\n\n{queue}")
+        embed = Embed(title="Queue", description=f"**Songs: {len(ctx.voice_state.songs)}**\n\n{queue}", )
         embed.set_footer(text=f"Page {page}/{pages}")
         await ctx.respond(embed=embed)
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def shuffle(self, ctx):
         """Shuffles the queue."""
         await ctx.defer()
@@ -547,7 +562,7 @@ class Music(Cog):
         ctx.voice_state.songs.shuffle()
         await ctx.respond("🔀 **Shuffled** the queue.")
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def remove(self, ctx, index: int):
         """Removes a song from the queue at a given index."""
         await ctx.defer()
@@ -562,7 +577,7 @@ class Music(Cog):
         ctx.voice_state.songs.remove(index - 1)
         await ctx.respond(f"🗑 **Removed song** with index **{index}** from queue.")
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def loop(self, ctx):
         """Loops the currently playing song. Invoke this command again to disable loop the song."""
         await ctx.defer()
@@ -581,7 +596,7 @@ class Music(Cog):
         else:
             await ctx.respond("🔁 **Unlooped** song, use **/**`loop` to **enable** loop.")
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     async def play(self, ctx, *, search: str):
         await ctx.defer()
 
