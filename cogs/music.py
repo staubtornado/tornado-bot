@@ -1,5 +1,5 @@
 from asyncio import get_event_loop, Queue, Event, sleep
-import functools
+from functools import partial as func_partial
 from datetime import datetime
 from itertools import islice
 from math import ceil
@@ -125,7 +125,7 @@ class YTDLSource(PCMVolumeTransformer):
     async def create_source(cls, ctx, search: str, *, loop=None):
         loop = loop or get_event_loop()
 
-        partial = functools.partial(cls.ytdl.extract_info, search, download=False, process=False)
+        partial = func_partial(cls.ytdl.extract_info, search, download=False, process=False)
         data = await loop.run_in_executor(None, partial)
 
         if data is None:
@@ -144,7 +144,7 @@ class YTDLSource(PCMVolumeTransformer):
                 raise YTDLError(f"Could not find anything that matches `{search}`")
 
         webpage_url = process_info["webpage_url"]
-        partial = functools.partial(cls.ytdl.extract_info, webpage_url, download=False)
+        partial = func_partial(cls.ytdl.extract_info, webpage_url, download=False)
         processed_info = await loop.run_in_executor(None, partial)
 
         if processed_info is None:
@@ -187,7 +187,7 @@ class Song:
 
     @staticmethod
     def parse_counts(count: int):
-        return millify(count, precision=2, prefixes=["K", "M", " BN"])
+        return millify(count, precision=2)
 
     def create_embed(self):
         description = f"[Video]({self.source.url}) | [{self.source.uploader}]({self.source.uploader_url}) | " \
@@ -234,6 +234,7 @@ class VoiceState:
         self.bot = bot
         self._ctx = ctx
 
+        self.processing = False
         self.now = None
         self.current = None
         self.voice = None
@@ -380,7 +381,21 @@ class Music(Cog):
             return
 
         ctx.voice_state.voice = await destination.connect()
-        await ctx.respond(f"🤘 **Hello**! Joined {ctx.author.voice.channel.mention}.")
+        await ctx.respond(f"🤟 **Hello**! Joined {ctx.author.voice.channel.mention}.")
+
+    @slash_command()
+    async def clear(self, ctx):
+        """Clears the whole queue."""
+        await ctx.defer()
+        
+        if ctx.voice_state.processing is False:
+            if len(ctx.voice_state.songs) == 0:
+                await ctx.respond('❌ The **queue** is **empty**.')
+                return
+            ctx.voice_state.songs.clear()
+            await ctx.respond('🧹 **Cleared** the queue.')
+        else:
+            await ctx.respond('⚠ I am **currently processing** the previous **request**.')
 
     @slash_command()
     async def summon(self, ctx, *, channel: VoiceChannel = None):
@@ -472,13 +487,16 @@ class Music(Cog):
         if isinstance(instance, str):
             return await ctx.respond(instance)
 
-        ctx.voice_state.songs.clear()
+        if ctx.voice_state.processing is False:
+            ctx.voice_state.songs.clear()
 
-        if ctx.voice_state.is_playing:
-            ctx.voice_state.voice.stop()
-            ctx.voice_state.current = None
-            return await ctx.respond("⏹ **Stopped** the player and **cleared** the **queue**.")
-        await ctx.respond("❌ **Nothing** is currently **playing**.")
+            if ctx.voice_state.is_playing:
+                ctx.voice_state.voice.stop()
+                ctx.voice_state.current = None
+                return await ctx.respond("⏹ **Stopped** the player and **cleared** the **queue**.")
+            await ctx.respond("❌ **Nothing** is currently **playing**.")
+        else:
+            await ctx.respond('⚠ I am **currently processing** the previous **request**.')
 
     @slash_command()
     async def skip(self, ctx):
@@ -531,7 +549,7 @@ class Music(Cog):
 
         await ctx.defer()
         if len(ctx.voice_state.songs) == 0:
-            return await ctx.respond('❌ The **Queue** is **empty**.')
+            return await ctx.respond('❌ The **queue** is **empty**.')
 
         items_per_page = 10
         pages = ceil(len(ctx.voice_state.songs) / items_per_page)
@@ -542,8 +560,12 @@ class Music(Cog):
         queue = ''
         for i, song in enumerate(ctx.voice_state.songs[start:end], start=start):
             queue += f"`{i + 1}`. [{song.source.title}]({song.source.url})\n"
+        len_queue: int = len(ctx.voice_state.songs)
 
-        embed = Embed(title="Queue", description=f"**Songs: {len(ctx.voice_state.songs)}**\n\n{queue}", )
+        embed = Embed(title="Queue", description=f"**Songs:** {len_queue}\n**Estimated length:** "
+                                                 f"{YTDLSource.parse_duration(len_queue*210)}\n\n{queue}",
+                      colour=0xFF0000)
+
         embed.set_footer(text=f"Page {page}/{pages}")
         await ctx.respond(embed=embed)
 
@@ -557,7 +579,7 @@ class Music(Cog):
             return await ctx.respond(instance)
 
         if len(ctx.voice_state.songs) == 0:
-            return await ctx.respond('❌ The **Queue** is **empty**.')
+            return await ctx.respond('❌ The **queue** is **empty**.')
 
         ctx.voice_state.songs.shuffle()
         await ctx.respond("🔀 **Shuffled** the queue.")
@@ -572,9 +594,12 @@ class Music(Cog):
             return await ctx.respond(instance)
 
         if len(ctx.voice_state.songs) == 0:
-            return await ctx.respond('❌ The **Queue** is **empty**.')
-
-        ctx.voice_state.songs.remove(index - 1)
+            return await ctx.respond('❌ The **queue** is **empty**.')
+        try:
+            ctx.voice_state.songs.remove(index - 1)
+        except IndexError:
+            await ctx.respond(f"❌ **No song** in the queue **at** the given **index {index}**.")
+            return
         await ctx.respond(f"🗑 **Removed song** with index **{index}** from queue.")
 
     @slash_command()
@@ -598,7 +623,12 @@ class Music(Cog):
 
     @slash_command()
     async def play(self, ctx, *, search: str):
+        """Play a song through the bot, by searching a song with the name or by URL."""
         await ctx.defer()
+
+        if ctx.voice_state.processing:
+            await ctx.respond("⚠ I am **currently processing** the previous **request**.")
+            return
 
         instance = await ensure_voice_state(ctx)
         if isinstance(instance, str):
@@ -620,33 +650,38 @@ class Music(Cog):
             return await ctx.respond("🥵 **To many** songs in queue.")
         song_ids: list = []
 
-        try:
-            if "https://open.spotify.com/playlist/" in search or "spotify:playlist:" in search:
-                song_ids.extend(get_playlist_track_ids(search))
+        async def analyze_link():
+            try:
+                if "https://open.spotify.com/playlist/" in search or "spotify:playlist:" in search:
+                    song_ids.extend(get_playlist_track_ids(search))
 
-            elif "https://open.spotify.com/album/" in search or "spotify:album:" in search:
-                song_ids.extend(get_album(search))
+                elif "https://open.spotify.com/album/" in search or "spotify:album:" in search:
+                    song_ids.extend(get_album(search))
 
-            elif "https://open.spotify.com/track/" in search or "spotify:track:" in search:
-                track = get_track_features(search)
-                await create_ytdl_source(track)
-                return await ctx.respond(f":white_check_mark: Added: **{track}** from **Spotify**.")
+                elif "https://open.spotify.com/track/" in search or "spotify:track:" in search:
+                    track = get_track_features(search)
+                    await create_ytdl_source(track)
+                    return await ctx.respond(f":white_check_mark: Added: **{track}** from **Spotify**.")
 
-            elif 'https://open.spotify.com/artist/' in search or 'spotify:artist:' in search:
-                for result in get_artist_top_songs(search)['tracks'][:10]:
-                    song_ids.append(result["id"])
-            else:
-                return await ctx.respond(f':white_check_mark: Added: {await create_ytdl_source(search)}')
+                elif 'https://open.spotify.com/artist/' in search or 'spotify:artist:' in search:
+                    for result in get_artist_top_songs(search)['tracks'][:10]:
+                        song_ids.append(result["id"])
+                else:
+                    return await ctx.respond(f':white_check_mark: Added: {await create_ytdl_source(search)}')
 
-        except SpotifyException:
-            return await ctx.respond("❌ **Invalid** Spotify **link**.")
+            except SpotifyException:
+                return await ctx.respond("❌ **Invalid** Spotify **link**.")
 
-        if len(ctx.voice_state.songs) + len(song_ids) >= 100:
-            return await ctx.respond("🥵 **To many** songs in queue.")
+            if len(ctx.voice_state.songs) + len(song_ids) >= 100:
+                return await ctx.respond("🥵 **To many** songs in queue.")
 
-        for song_id in song_ids:
-            await create_ytdl_source(get_track_features(song_id))
-        await ctx.respond(f":white_check_mark: Added: **{len(song_ids)}** songs from **Spotify**.")
+            for song_id in song_ids:
+                await create_ytdl_source(get_track_features(song_id))
+            await ctx.respond(f":white_check_mark: Added: **{len(song_ids)}** songs from **Spotify**.")
+
+        ctx.voice_state.processing = True
+        await analyze_link()
+        ctx.voice_state.processing = False
 
 
 def setup(bot):
