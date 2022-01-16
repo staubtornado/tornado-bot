@@ -1,7 +1,7 @@
 from os import getenv, listdir
 from sqlite3 import connect
 
-from discord import Bot
+from discord import Bot, Activity, ActivityType
 from discord.ext.tasks import loop
 from dotenv import load_dotenv
 
@@ -31,6 +31,14 @@ async def sync_database():
     print("Synced database successfully.")
 
 
+@loop(minutes=30)
+async def update_rich_presence():
+    await bot.wait_until_ready()
+
+    await bot.change_presence(activity=Activity(type=ActivityType.playing,
+                                                name="Closed BETA..."))
+
+
 @bot.event
 async def on_ready():
     print(f"{bot.user} is online...")
@@ -38,6 +46,7 @@ async def on_ready():
 
 def main():
     sync_database.start()
+    update_rich_presence.start()
 
     for filename in listdir('./cogs'):
         if filename.endswith('.py'):

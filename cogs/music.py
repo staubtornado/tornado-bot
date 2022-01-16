@@ -109,6 +109,8 @@ class YTDLSource(PCMVolumeTransformer):
         date = data.get('upload_date')
         self.upload_date = f"{date[6:8]}.{date[4:6]}.{date[0:4]}"
         self.title = data.get("title")
+        self.title_limited = self.parse_limited_title(self.title)
+        self.title_limited_embed = self.parse_limited_title_embed(self.title)
         self.thumbnail = data.get("thumbnail")
         self.description = data.get("description")
         self.duration = self.parse_duration(int(data.get("duration")))
@@ -119,7 +121,7 @@ class YTDLSource(PCMVolumeTransformer):
         self.stream_url = data.get("url")
 
     def __str__(self):
-        return f"**{self.title}** by **{self.uploader}**"
+        return f"**{self.title_limited}** by **{self.uploader}**"
 
     @classmethod
     async def create_source(cls, ctx, search: str, *, loop=None):
@@ -177,6 +179,25 @@ class YTDLSource(PCMVolumeTransformer):
 
         return value
 
+    @staticmethod
+    def parse_limited_title(title: str):
+        title = title.replace('||', '')
+        if len(title) > 72:
+            return title[:72] + '...'
+        else:
+            return title
+
+    @staticmethod
+    def parse_limited_title_embed(title: str):
+        title = title.replace('[', '')
+        title = title.replace(']', '')
+        title = title.replace('||', '')
+
+        if len(title) > 45:
+            return title[:43] + '...'
+        else:
+            return title
+
 
 class Song:
     __slots__ = ("source", "requester")
@@ -189,18 +210,30 @@ class Song:
     def parse_counts(count: int):
         return millify(count, precision=2)
 
-    def create_embed(self):
+    def create_embed(self, songs):
         description = f"[Video]({self.source.url}) | [{self.source.uploader}]({self.source.uploader_url}) | " \
                       f"{self.source.duration} | {self.requester.mention}"
 
         date = self.source.upload_date
         timestamp = f"<t:{str(datetime(int(date[6:]), int(date[3:-5]), int(date[:-8])).timestamp())[:-2]}:R>"
 
-        embed = Embed(title=f"🎶 {self.source.title}", description=description, colour=0xFF0000) \
+        len_songs: int = len(songs)
+        queue = ""
+        if len_songs == 0:
+            pass
+        else:
+            for i, song in enumerate(songs[0:5], start=0):
+                queue += f"`{i + 1}.` [{song.source.title_limited_embed}]({song.source.url} '{song.source.title}')\n"
+
+        if len_songs > 6:
+            queue += f'And **{len_songs - 5}** more...'
+
+        embed = Embed(title=f"🎶 {self.source.title_limited_embed}", description=description, colour=0xFF0000) \
             .add_field(name="Views", value=self.parse_counts(self.source.views), inline=True) \
             .add_field(name="Likes", value=self.parse_counts(self.source.likes), inline=True) \
             .add_field(name="Uploaded", value=timestamp, inline=True) \
             .set_thumbnail(url=self.source.thumbnail)
+        embed.add_field(name="Queue", value=queue, inline=False) if queue != "" else None
         return embed
 
 
@@ -234,6 +267,7 @@ class VoiceState:
         self.bot = bot
         self._ctx = ctx
 
+        self.text_channel = ctx.channel
         self.processing = False
         self.now = None
         self.current = None
@@ -287,7 +321,7 @@ class VoiceState:
 
                 self.current.source.volume = self._volume
                 self.voice.play(self.current.source, after=self.play_next_song)
-                await self.current.source.channel.send(embed=self.current.create_embed())
+                await self.current.source.channel.send(embed=self.current.create_embed(self.songs))
 
             elif self.loop:
                 self.now = FFmpegPCMAudio(self.current.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
@@ -337,15 +371,18 @@ class Music(Cog):
 
         for key in self.voice_states:
             state = self.voice_states[key]
+
             try:
                 channel = await self.bot.fetch_channel(state.voice.channel.id)
             except AttributeError:
+                await state.stop()
+                del self.voice_states[key]
                 return
 
-            if not len(channel.members) > 1:
+            if len(channel.members) <= 1:
                 await sleep(180)
-                if not len(channel.members) > 1:
-                    await state.current.source.channel.send(f"💤 **Bye**. Left {channel.mention} due to **inactivity**.")
+                if len(channel.members) <= 1:
+                    await state.text_channel.send(f"💤 **Bye**. Left {channel.mention} due to **inactivity**.")
 
                     await state.stop()
                     del self.voice_states[key]
@@ -446,7 +483,7 @@ class Music(Cog):
         await ctx.defer()
 
         try:
-            await ctx.respond(embed=ctx.voice_state.current.create_embed())
+            await ctx.respond(embed=ctx.voice_state.current.create_embed(ctx.voice_state.songs))
         except AttributeError:
             await ctx.respond("❌ **Nothing** is currently **playing**.")
 
@@ -522,7 +559,7 @@ class Music(Cog):
             required_votes: int = ceil((len(ctx.author.voice.channel.members) - 1) * (1 / 3))
 
             if total_votes >= required_votes:
-                await ctx.respond(f"⏭ **Skipped song**, as **{required_votes}** users voted.")
+                await ctx.respond(f"⏭ **Skipped song**, as **{total_votes}/{required_votes}** users voted.")
                 ctx.voice_state.skip()
             else:
                 await ctx.respond(f"🗳️ **Skip vote** added: **{total_votes}/{required_votes}**")
@@ -559,7 +596,7 @@ class Music(Cog):
 
         queue = ''
         for i, song in enumerate(ctx.voice_state.songs[start:end], start=start):
-            queue += f"`{i + 1}`. [{song.source.title}]({song.source.url})\n"
+            queue += f"`{i + 1}`. [{song.source.title_limited_embed}]({song.source.url})\n"
         len_queue: int = len(ctx.voice_state.songs)
 
         embed = Embed(title="Queue", description=f"**Songs:** {len_queue}\n**Estimated length:** "
@@ -647,7 +684,7 @@ class Music(Cog):
             return source
 
         if len(ctx.voice_state.songs) >= 100:
-            return await ctx.respond("🥵 **To many** songs in queue.")
+            return await ctx.respond("🥵 **Too many** songs in queue.")
         song_ids: list = []
 
         async def analyze_link():
@@ -673,7 +710,7 @@ class Music(Cog):
                 return await ctx.respond("❌ **Invalid** Spotify **link**.")
 
             if len(ctx.voice_state.songs) + len(song_ids) >= 100:
-                return await ctx.respond("🥵 **To many** songs in queue.")
+                return await ctx.respond("🥵 **Too many** songs in queue.")
 
             for song_id in song_ids:
                 await create_ytdl_source(get_track_features(song_id))
