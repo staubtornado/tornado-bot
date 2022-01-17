@@ -454,14 +454,16 @@ class Music(Cog):
     @slash_command()
     async def leave(self, ctx):
         """Clears the queue and leaves the voice channel."""
-
-        await ctx.voice_state.stop()
-        del self.voice_states[ctx.guild.id]
-        await ctx.respond(f"👋 **Bye**. Left {ctx.author.voice.channel.mention}.")
+        try:
+            await ctx.voice_state.stop()
+            del self.voice_states[ctx.guild.id]
+            await ctx.respond(f"👋 **Bye**. Left {ctx.author.voice.channel.mention}.")
+        except AttributeError:
+            await ctx.respond(f"⚙ I am **not connected** to a voice channel so my **voice state has been reset**.")
 
     @slash_command()
     async def volume(self, ctx, *, volume: int):
-        """Sets the volume of the player."""
+        """Sets the volume of the current song."""
         await ctx.defer()
 
         instance = await ensure_voice_state(ctx)
@@ -474,7 +476,7 @@ class Music(Cog):
         if not (0 < volume <= 100):
             return await ctx.respond("❌ The **volume** has to be **between 0 and 100**.")
 
-        ctx.voice_state.volume = volume / 100
+        ctx.voice_state.current.source.volume = volume / 100
         await ctx.respond(f"🔊 **Volume** of the player **set to {volume}**.")
 
     @slash_command()
