@@ -6,6 +6,8 @@ from math import ceil
 from os import environ
 from random import shuffle
 from time import gmtime, strftime
+from requests import get as req_get
+from json import loads
 
 from async_timeout import timeout
 from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio, Embed, Bot, slash_command, VoiceChannel, \
@@ -122,6 +124,8 @@ class YTDLSource(PCMVolumeTransformer):
         self.url = data.get("webpage_url")
         self.views = data.get("view_count")
         self.likes = data.get("like_count")
+        self.dislikes = int(dict(loads(req_get(f"https://returnyoutubedislikeapi.com/votes?videoId={data.get('id')}")
+                                       .text))["dislikes"])
         self.stream_url = data.get("url")
 
     def __str__(self):
@@ -234,7 +238,8 @@ class Song:
 
         embed = Embed(title=f"🎶 {self.source.title_limited_embed}", description=description, colour=0xFF0000) \
             .add_field(name="Views", value=self.parse_counts(self.source.views), inline=True) \
-            .add_field(name="Likes", value=self.parse_counts(self.source.likes), inline=True) \
+            .add_field(name="Likes / Dislikes", value=f"{self.parse_counts(self.source.likes)} / "
+                                                      f"{self.parse_counts(self.source.dislikes)}", inline=True) \
             .add_field(name="Uploaded", value=timestamp, inline=True) \
             .set_thumbnail(url=self.source.thumbnail)
         embed.add_field(name="Queue", value=queue, inline=False) if queue != "" else None
