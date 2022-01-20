@@ -8,11 +8,14 @@ from random import shuffle
 from time import gmtime, strftime
 
 from async_timeout import timeout
-from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio, Embed, Bot, slash_command, VoiceChannel
+from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio, Embed, Bot, slash_command, VoiceChannel, \
+    ClientException
 from discord.ext.commands import Cog
 from discord.ext.tasks import loop as task_loop
+from discord.utils import get
 from millify import millify
 from spotipy import Spotify, SpotifyClientCredentials, SpotifyException
+from urllib3.exceptions import HTTPError, HTTPWarning
 from youtube_dl import utils, YoutubeDL
 
 # from ..data.config import settings
@@ -88,6 +91,7 @@ class YTDLSource(PCMVolumeTransformer):
         'no_warnings': False,
         'default_search': 'ytsearch',
         'source_address': '0.0.0.0',
+        "cookiefile": "cookies.txt",
     }
 
     FFMPEG_OPTIONS = {
@@ -415,16 +419,22 @@ class Music(Cog):
         destination = ctx.author.voice.channel
         if ctx.voice_state.voice:
             await ctx.voice_state.voice.move_to(destination)
+            await ctx.respond(f"🤟 **Hello**! Joined {ctx.author.voice.channel.mention}.")
             return
 
-        ctx.voice_state.voice = await destination.connect()
+        try:
+            ctx.voice_state.voice = await destination.connect()
+        except ClientException:
+            await get(self.bot.voice_clients, guild=ctx.guild).disconnect(force=True)
+            ctx.voice_state.voice = await destination.connect()
+
         await ctx.respond(f"🤟 **Hello**! Joined {ctx.author.voice.channel.mention}.")
 
     @slash_command()
     async def clear(self, ctx):
         """Clears the whole queue."""
         await ctx.defer()
-        
+
         if ctx.voice_state.processing is False:
             if len(ctx.voice_state.songs) == 0:
                 await ctx.respond('❌ The **queue** is **empty**.')
@@ -457,6 +467,11 @@ class Music(Cog):
         try:
             await ctx.voice_state.stop()
             del self.voice_states[ctx.guild.id]
+
+            voice_channel = get(self.bot.voice_clients, guild=ctx.guild)
+            if voice_channel:
+                await voice_channel.disconnect(force=True)
+
             await ctx.respond(f"👋 **Bye**. Left {ctx.author.voice.channel.mention}.")
         except AttributeError:
             await ctx.respond(f"⚙ I am **not connected** to a voice channel so my **voice state has been reset**.")
@@ -547,7 +562,7 @@ class Music(Cog):
             return await ctx.respond(instance)
 
         if not ctx.voice_state.is_playing:
-            return ctx.respond("❌ **Nothing** is currently **playing**.")
+            return await ctx.respond("❌ **Nothing** is currently **playing**.")
 
         voter = ctx.author
         if voter == ctx.voice_state.current.requester:
@@ -602,7 +617,7 @@ class Music(Cog):
         len_queue: int = len(ctx.voice_state.songs)
 
         embed = Embed(title="Queue", description=f"**Songs:** {len_queue}\n**Estimated length:** "
-                                                 f"{YTDLSource.parse_duration(len_queue*210)}\n\n{queue}",
+                                                 f"{YTDLSource.parse_duration(len_queue * 210)}\n\n{queue}",
                       colour=0xFF0000)
 
         embed.set_footer(text=f"Page {page}/{pages}")
@@ -677,7 +692,11 @@ class Music(Cog):
             await self.join(self, ctx)
 
         async def create_ytdl_source(track_name: str):
-            source = await YTDLSource.create_source(ctx, track_name, loop=self.bot.loop)
+            try:
+                source = await YTDLSource.create_source(ctx, track_name, loop=self.bot.loop)
+            except errors as error:
+                return error
+
             if not ctx.voice_state.voice:
                 await self.join(self, ctx)
 
@@ -689,6 +708,10 @@ class Music(Cog):
             return await ctx.respond("🥵 **Too many** songs in queue.")
         song_ids: list = []
 
+        errors: tuple = (utils.ExtractorError, utils.DownloadError, utils.compat_HTTPError, utils.GeoRestrictedError,
+                         utils.UnavailableVideoError, utils.XAttrUnavailableError, utils.YoutubeDLError, HTTPError,
+                         HTTPWarning)
+
         async def analyze_link():
             try:
                 if "https://open.spotify.com/playlist/" in search or "spotify:playlist:" in search:
@@ -699,14 +722,22 @@ class Music(Cog):
 
                 elif "https://open.spotify.com/track/" in search or "spotify:track:" in search:
                     track = get_track_features(search)
-                    await create_ytdl_source(track)
+
+                    source = await create_ytdl_source(track)
+                    if isinstance(source, errors):
+                        source = str(source).replace("\n", " ")
+                        return await ctx.respond(f"❌ **An error occurred**: `{source}`")
                     return await ctx.respond(f":white_check_mark: Added: **{track}** from **Spotify**.")
 
                 elif 'https://open.spotify.com/artist/' in search or 'spotify:artist:' in search:
                     for result in get_artist_top_songs(search)['tracks'][:10]:
                         song_ids.append(result["id"])
                 else:
-                    return await ctx.respond(f':white_check_mark: Added: {await create_ytdl_source(search)}')
+                    source = await create_ytdl_source(search)
+                    if isinstance(source, errors):
+                        source = str(source).replace("\n", " ")
+                        return await ctx.respond(f"❌ **An error occurred**: `{source}`")
+                    return await ctx.respond(f':white_check_mark: Added: {source}')
 
             except SpotifyException:
                 return await ctx.respond("❌ **Invalid** Spotify **link**.")
@@ -714,12 +745,22 @@ class Music(Cog):
             if len(ctx.voice_state.songs) + len(song_ids) >= 100:
                 return await ctx.respond("🥵 **Too many** songs in queue.")
 
+            failed_songs: int = 0
             for song_id in song_ids:
-                await create_ytdl_source(get_track_features(song_id))
-            await ctx.respond(f":white_check_mark: Added: **{len(song_ids)}** songs from **Spotify**.")
+                source = await create_ytdl_source(get_track_features(song_id))
+                if isinstance(source, errors):
+                    print(source)
+                    failed_songs += 1
+                    continue
+            await ctx.respond(f":white_check_mark: Added: **{len(song_ids) - failed_songs}** songs from **Spotify**.")
 
         ctx.voice_state.processing = True
-        await analyze_link()
+        try:
+            await analyze_link()
+        except Exception as e:
+            print(e)
+            e = str(e).replace("\n", " ")
+            await ctx.respond(f"❌ **An error occurred**: `{e}`")
         ctx.voice_state.processing = False
 
 
