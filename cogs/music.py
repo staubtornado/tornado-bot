@@ -1,4 +1,4 @@
-from asyncio import get_event_loop, Queue, Event, sleep
+from asyncio import get_event_loop, Queue, Event, TimeoutError
 from datetime import datetime
 from functools import partial as func_partial
 from itertools import islice
@@ -13,7 +13,6 @@ from async_timeout import timeout
 from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio, Embed, Bot, slash_command, VoiceChannel, \
     ClientException
 from discord.ext.commands import Cog
-from discord.ext.tasks import loop as task_loop
 from discord.utils import get
 from millify import millify
 from psutil import virtual_memory
@@ -277,7 +276,6 @@ class VoiceState:
         self.bot = bot
         self._ctx = ctx
 
-        self.text_channel = ctx.channel
         self.processing = False
         self.now = None
         self.current = None
@@ -321,14 +319,13 @@ class VoiceState:
             self.now = None
 
             if not self.loop:
-
                 try:
                     async with timeout(180):
                         self.current = await self.songs.get()
                 except TimeoutError:
-                    print("TImeout somehwo...")
-                    self.bot.loop.create_task(self.stop())  # TODO: FIX AUTO LEAVE AND HANG-UP RESULT
+                    self.bot.loop.create_task(self.stop())
                     self.exists = False
+                    await self._ctx.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to **inactivity**.")
                     return
 
                 self.current.source.volume = self._volume
@@ -375,30 +372,6 @@ class Music(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.voice_states = {}
-        self.check_activity.start()
-
-    @task_loop(seconds=10.0)
-    async def check_activity(self):
-        await self.bot.wait_until_ready()
-
-        for key in self.voice_states:
-            state = self.voice_states[key]
-
-            try:
-                channel = await self.bot.fetch_channel(state.voice.channel.id)
-            except AttributeError:
-                await state.stop()
-                del self.voice_states[key]
-                return
-
-            if len(channel.members) <= 1:
-                await sleep(180)
-                if len(channel.members) <= 1:
-                    await state.text_channel.send(f"💤 **Bye**. Left {channel.mention} due to **inactivity**.")
-
-                    await state.stop()
-                    del self.voice_states[key]
-                    return
 
     def get_voice_state(self, ctx: ApplicationContext):
         state = self.voice_states.get(ctx.guild_id)
@@ -433,8 +406,12 @@ class Music(Cog):
         try:
             ctx.voice_state.voice = await destination.connect()
         except ClientException:
-            await get(self.bot.voice_clients, guild=ctx.guild).disconnect(force=True)
-            ctx.voice_state.voice = await destination.connect()
+            guild_channel = get(self.bot.voice_clients, guild=ctx.guild)
+            if guild_channel == destination:
+                pass
+            else:
+                await guild_channel.disconnect(force=True)
+                ctx.voice_state.voice = await destination.connect()
         await ctx.respond(f"👍 **Hello**! Joined {ctx.author.voice.channel.mention}.")
 
     @slash_command()
@@ -499,7 +476,7 @@ class Music(Cog):
             return await ctx.respond("❌ The **volume** has to be **between 0 and 100**.")
 
         ctx.voice_state.current.source.volume = volume / 100
-        await ctx.respond(f"🔊 **Volume** of the player **set to {volume}**.")
+        await ctx.respond(f"🔊 **Volume** of the song **set to {volume}%**.")
 
     @slash_command()
     async def now(self, ctx):
@@ -714,7 +691,7 @@ class Music(Cog):
         if len(ctx.voice_state.songs) >= 100:
             return await ctx.respond("🥵 **Too many** songs in queue.")
         if virtual_memory().percent > 75:
-            return await ctx.respond("🔥 I am currently experiencing high usage. Please try again later.")
+            return await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please try again **later**.")
 
         song_ids: list = []
 
