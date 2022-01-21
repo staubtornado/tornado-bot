@@ -1,13 +1,13 @@
 from asyncio import get_event_loop, Queue, Event, sleep
-from functools import partial as func_partial
 from datetime import datetime
+from functools import partial as func_partial
 from itertools import islice
+from json import loads
 from math import ceil
 from os import environ
 from random import shuffle
 from time import gmtime, strftime
-from requests import get as req_get
-from json import loads
+from traceback import format_exc
 
 from async_timeout import timeout
 from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio, Embed, Bot, slash_command, VoiceChannel, \
@@ -16,6 +16,8 @@ from discord.ext.commands import Cog
 from discord.ext.tasks import loop as task_loop
 from discord.utils import get
 from millify import millify
+from psutil import virtual_memory
+from requests import get as req_get
 from spotipy import Spotify, SpotifyClientCredentials, SpotifyException
 from urllib3.exceptions import HTTPError, HTTPWarning
 from youtube_dl import utils, YoutubeDL
@@ -93,7 +95,6 @@ class YTDLSource(PCMVolumeTransformer):
         'no_warnings': False,
         'default_search': 'ytsearch',
         'source_address': '0.0.0.0',
-        "cookiefile": "cookies.txt",
     }
 
     FFMPEG_OPTIONS = {
@@ -320,11 +321,13 @@ class VoiceState:
             self.now = None
 
             if not self.loop:
+
                 try:
                     async with timeout(180):
                         self.current = await self.songs.get()
                 except TimeoutError:
-                    self.bot.loop.create_task(self.stop())
+                    print("TImeout somehwo...")
+                    self.bot.loop.create_task(self.stop())  # TODO: FIX AUTO LEAVE AND HANG-UP RESULT
                     self.exists = False
                     return
 
@@ -424,7 +427,7 @@ class Music(Cog):
         destination = ctx.author.voice.channel
         if ctx.voice_state.voice:
             await ctx.voice_state.voice.move_to(destination)
-            await ctx.respond(f"🤟 **Hello**! Joined {ctx.author.voice.channel.mention}.")
+            await ctx.respond(f"👍 **Hello**! Joined {ctx.author.voice.channel.mention}.")
             return
 
         try:
@@ -432,8 +435,7 @@ class Music(Cog):
         except ClientException:
             await get(self.bot.voice_clients, guild=ctx.guild).disconnect(force=True)
             ctx.voice_state.voice = await destination.connect()
-
-        await ctx.respond(f"🤟 **Hello**! Joined {ctx.author.voice.channel.mention}.")
+        await ctx.respond(f"👍 **Hello**! Joined {ctx.author.voice.channel.mention}.")
 
     @slash_command()
     async def clear(self, ctx):
@@ -464,7 +466,7 @@ class Music(Cog):
 
         ctx.voice_state.voice = await destination.connect()
         await ctx.guild.change_voice_state(channel=destination, self_mute=False, self_deaf=True)
-        await ctx.respond(f"🤘 **Hello**! Joined {destination.mention}.")
+        await ctx.respond(f"👍 **Hello**! Joined {destination.mention}.")
 
     @slash_command()
     async def leave(self, ctx):
@@ -711,6 +713,9 @@ class Music(Cog):
 
         if len(ctx.voice_state.songs) >= 100:
             return await ctx.respond("🥵 **Too many** songs in queue.")
+        if virtual_memory().percent > 75:
+            return await ctx.respond("🔥 I am currently experiencing high usage. Please try again later.")
+
         song_ids: list = []
 
         errors: tuple = (utils.ExtractorError, utils.DownloadError, utils.compat_HTTPError, utils.GeoRestrictedError,
@@ -763,9 +768,8 @@ class Music(Cog):
         try:
             await analyze_link()
         except Exception as e:
-            print(e)
-            e = str(e).replace("\n", " ")
-            await ctx.respond(f"❌ **An error occurred**: `{e}`")
+            print(e, format_exc())
+            await ctx.respond(f"❌ **An error occurred**: \n```{format_exc()}```")
         ctx.voice_state.processing = False
 
 
