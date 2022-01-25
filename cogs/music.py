@@ -283,6 +283,7 @@ class VoiceState:
         self.next = Event()
         self.songs = SongQueue()
         self.exists = True
+        self.times_looped = 0
 
         self._loop = False
         self._volume = 0.5
@@ -300,6 +301,7 @@ class VoiceState:
     @loop.setter
     def loop(self, value: bool):
         self._loop = value
+        self.times_looped = 0
 
     @property
     def volume(self):
@@ -319,6 +321,8 @@ class VoiceState:
             self.now = None
 
             if not self.loop:
+                self.times_looped = 0
+
                 try:
                     async with timeout(180):
                         self.current = await self.songs.get()
@@ -333,6 +337,12 @@ class VoiceState:
                 await self.current.source.channel.send(embed=self.current.create_embed(self.songs))
 
             elif self.loop:
+                if self.times_looped >= 10:  # TODO: ADJUST LOOP
+                    self.loop = not self.loop
+                    await self.current.source.channel.send("🔂 **The loop** has been **disabled** due to "
+                                                           "**inactivity**.")
+
+                self.times_looped += 1
                 self.now = FFmpegPCMAudio(self.current.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
                 self.voice.play(self.now, after=self.play_next_song)
 
@@ -353,6 +363,7 @@ class VoiceState:
 
     async def stop(self):
         self.songs.clear()
+        self.times_looped = 0
 
         if self.voice:
             await self.voice.disconnect()
@@ -690,8 +701,8 @@ class Music(Cog):
 
         if len(ctx.voice_state.songs) >= 100:
             return await ctx.respond("🥵 **Too many** songs in queue.")
-        if virtual_memory().percent > 75:
-            return await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please try again **later**.")
+        # if virtual_memory().percent > 75:
+        #     return await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please try again **later**.")
 
         song_ids: list = []
 
