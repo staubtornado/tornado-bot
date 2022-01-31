@@ -18,12 +18,12 @@ from millify import millify
 from psutil import virtual_memory
 from requests import get as req_get
 from spotipy import Spotify, SpotifyClientCredentials, SpotifyException
-from urllib3.exceptions import HTTPError, HTTPWarning
-from youtube_dl import utils, YoutubeDL
+from yt_dlp import utils, YoutubeDL
 
 # from ..data.config import settings
 
 utils.bug_reports_message = lambda: ''
+PRODUCTION: bool = False
 
 
 class VoiceError(Exception):
@@ -38,45 +38,41 @@ sp: Spotify = Spotify(auth_manager=SpotifyClientCredentials(client_id=environ['S
                                                             client_secret=environ['SPOTIFY_CLIENT_SECRET']))
 
 
-def get_track_id(track):
-    track = sp.track(track)
-    return track["id"]
+def get_track_name(track_id) -> str:
+    meta: dict = sp.track(track_id)
+    name = meta["name"]
+    artist = meta["artists"][0]["name"]
+    return f"{name} by {artist}"
 
 
-def get_playlist_track_ids(playlist_id):
-    ids = []
-    playlist = sp.playlist(playlist_id)
-    for item in playlist['tracks']['items']:
-        track = item['track']
-        ids.append(track['id'])
-    return ids
+def get_playlist_track_names(playlist_id) -> list:
+    songs: list = []
+    meta: dict = sp.playlist(playlist_id)
+    for song in meta['tracks']['items']:
+        name = song["track"]["name"]
+        artist = song["track"]["artists"][0]["name"]
+        songs.append(f"{name} by {artist}")
+    return songs
 
 
-def get_album(album_id):
-    album = sp.album_tracks(album_id)
-    ids = []
-    for item in album['items']:
-        ids.append(item["id"])
-    return ids
+def get_album_track_names(album_id) -> list:
+    songs: list = []
+    meta: dict = sp.album(album_id)
+    for song in meta['tracks']['items']:
+        name = song["name"]
+        artist = song["artists"][0]["name"]
+        songs.append(f"{name} by {artist}")
+    return songs
 
 
-def get_track_features(track_id):
-    meta = sp.track(track_id)
-    name = meta['name']
-    artist = meta['album']['artists'][0]['name']
-    return f"{name} - {artist}"
-
-
-def get_album_id(album_name):
-    return sp.album(album_name)
-
-
-def get_artist_top_songs(artist_id):
-    return sp.artist_top_tracks(artist_id, country='US')
-
-
-def get_artist(artist_id):
-    return sp.artist(artist_id)['name']
+def get_artist_top_songs(artist_id) -> list:
+    songs: list = []
+    meta: dict = sp.artist_top_tracks(artist_id, country='US')
+    for song in meta["tracks"][:10]:
+        name = song["name"]
+        artist = song["artists"][0]["name"]
+        songs.append(f"{name} by {artist}")
+    return songs
 
 
 class YTDLSource(PCMVolumeTransformer):
@@ -119,7 +115,7 @@ class YTDLSource(PCMVolumeTransformer):
         self.title_limited_embed = self.parse_limited_title_embed(self.title)
         self.thumbnail = data.get("thumbnail")
         self.description = data.get("description")
-        self.duration = self.parse_duration(int(data.get("duration")))
+        self.duration = self.parse_duration(int(data.get("duration") if data.get("duration") is not None else -1))
         self.tags = data.get("tags")
         self.url = data.get("webpage_url")
         self.views = data.get("view_count")
@@ -139,7 +135,7 @@ class YTDLSource(PCMVolumeTransformer):
         data = await loop.run_in_executor(None, partial)
 
         if data is None:
-            raise YTDLError(f"Could not find anything that matches `{search}`")
+            raise YTDLError(f"**Could not find anything** that matches `{search}`")
 
         if "entries" not in data:
             process_info = data
@@ -151,14 +147,14 @@ class YTDLSource(PCMVolumeTransformer):
                     break
 
             if process_info is None:
-                raise YTDLError(f"Could not find anything that matches `{search}`")
+                raise YTDLError(f"**Could not find anything** that matches `{search}`.")
 
         webpage_url = process_info["webpage_url"]
         partial = func_partial(cls.ytdl.extract_info, webpage_url, download=False)
         processed_info = await loop.run_in_executor(None, partial)
 
         if processed_info is None:
-            raise YTDLError(f"Could not fetch `{webpage_url}`")
+            raise YTDLError(f"**Could not fetch** `{webpage_url}`")
 
         if "entries" not in processed_info:
             info = processed_info
@@ -168,7 +164,7 @@ class YTDLSource(PCMVolumeTransformer):
                 try:
                     info = processed_info["entries"].pop(0)
                 except IndexError:
-                    raise YTDLError(f"Could not retrieve any matches for `{webpage_url}`")
+                    raise YTDLError(f"**Could not retrieve any matches** for `{webpage_url}`")
 
         return cls(ctx, FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
@@ -234,7 +230,7 @@ class Song:
                 queue += f"`{i + 1}.` [{song.source.title_limited_embed}]({song.source.url} '{song.source.title}')\n"
 
         if len_songs > 6:
-            queue += f'And **{len_songs - 5}** more...'
+            queue += f"Use **/**`queue` to show **{len_songs - 5}** more..."
 
         embed = Embed(title=f"🎶 {self.source.title_limited_embed}", description=description, colour=0xFF0000) \
             .add_field(name="Views", value=self.parse_counts(self.source.views), inline=True) \
@@ -337,7 +333,7 @@ class VoiceState:
                 await self.current.source.channel.send(embed=self.current.create_embed(self.songs))
 
             elif self.loop:
-                if self.times_looped >= 10:  # TODO: ADJUST LOOP
+                if self.times_looped >= 50:
                     self.loop = not self.loop
                     await self.current.source.channel.send("🔂 **The loop** has been **disabled** due to "
                                                            "**inactivity**.")
@@ -408,7 +404,7 @@ class Music(Cog):
         if isinstance(instance, str):
             return await ctx.respond(instance)
 
-        destination = ctx.author.voice.channel
+        destination: VoiceChannel = ctx.author.voice.channel
         if ctx.voice_state.voice:
             await ctx.voice_state.voice.move_to(destination)
             await ctx.respond(f"👍 **Hello**! Joined {ctx.author.voice.channel.mention}.")
@@ -561,7 +557,7 @@ class Music(Cog):
 
         voter = ctx.author
         if voter == ctx.voice_state.current.requester:
-            await ctx.respond("⏭ **Skipped song** directly, as **you** added it.")
+            await ctx.respond("⏭ **Skipped** the **song directly**, cause **you** added it.")
             ctx.voice_state.skip()
 
         elif voter.id not in ctx.voice_state.skip_votes:
@@ -644,12 +640,18 @@ class Music(Cog):
 
         if len(ctx.voice_state.songs) == 0:
             return await ctx.respond('❌ The **queue** is **empty**.')
+
+        def ordinal(n=index):
+            if isinstance(n, float):
+                n = int(n)
+            return "%d%s" % (n, "tsnrhtdd"[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10::4])
+
         try:
             ctx.voice_state.songs.remove(index - 1)
         except IndexError:
-            await ctx.respond(f"❌ **No song** in the queue **at** the given **index {index}**.")
+            await ctx.respond(f"❌ **No song** has the **{ordinal()} position** in queue.")
             return
-        await ctx.respond(f"🗑 **Removed song** with index **{index}** from queue.")
+        await ctx.respond(f"🗑 **Removed** the **{ordinal()} song** in queue.")
 
     @slash_command()
     async def loop(self, ctx):
@@ -681,15 +683,23 @@ class Music(Cog):
 
         instance = await ensure_voice_state(ctx)
         if isinstance(instance, str):
-            return await ctx.respond(instance)
+            await ctx.respond(instance)
+            return
 
         if not ctx.voice_state.voice:
             await self.join(self, ctx)
 
-        async def create_ytdl_source(track_name: str):
+        if len(ctx.voice_state.songs) >= 100:
+            await ctx.respond("🥵 **Too many** songs in queue.")
+            return
+
+        if virtual_memory().percent > 75 and PRODUCTION:
+            await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please try again **later**.")
+
+        async def add_song(track_name: str):
             try:
                 source = await YTDLSource.create_source(ctx, track_name, loop=self.bot.loop)
-            except errors as error:
+            except Exception as error:
                 return error
 
             if not ctx.voice_state.voice:
@@ -699,65 +709,62 @@ class Music(Cog):
             await ctx.voice_state.songs.put(song)
             return source
 
-        if len(ctx.voice_state.songs) >= 100:
-            return await ctx.respond("🥵 **Too many** songs in queue.")
-        # if virtual_memory().percent > 75:
-        #     return await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please try again **later**.")
+        spotify_indicators: list = ["https://open.spotify.com/playlist/", "spotify:playlist:",
+                                    "https://open.spotify.com/album/", "spotify:album:",
+                                    "https://open.spotify.com/track/", "spotify:track:",
+                                    "https://open.spotify.com/artist/", "spotify:artist:"]
 
-        song_ids: list = []
+        async def process():
+            if any(x in search for x in spotify_indicators):
+                song_names: list = []
+                errors: int = 0
 
-        errors: tuple = (utils.ExtractorError, utils.DownloadError, utils.compat_HTTPError, utils.GeoRestrictedError,
-                         utils.UnavailableVideoError, utils.XAttrUnavailableError, utils.YoutubeDLError, HTTPError,
-                         HTTPWarning)
+                try:
+                    if "playlist" in search:
+                        song_names.extend(get_playlist_track_names(search))
+                    elif "album" in search:
+                        song_names.extend(get_album_track_names(search))
+                    elif "track" in search:
+                        song_names.append(get_track_name(search))
+                    elif "artist" in search:
+                        song_names.extend(get_artist_top_songs(search))
+                    else:
+                        raise SpotifyException
 
-        async def analyze_link():
-            try:
-                if "https://open.spotify.com/playlist/" in search or "spotify:playlist:" in search:
-                    song_ids.extend(get_playlist_track_ids(search))
+                except SpotifyException:
+                    await ctx.respond("❌ **Invalid** or **unsupported** Spotify **link**.")
+                    return
 
-                elif "https://open.spotify.com/album/" in search or "spotify:album:" in search:
-                    song_ids.extend(get_album(search))
+                for i, song_name in enumerate(song_names):
+                    if not len(ctx.voice_state.songs) >= 100:
+                        song_process = await add_song(song_name)
+                        if isinstance(song_process, Exception):
+                            errors += 1
+                        continue
+                    errors += len(song_names) - i
+                    break
 
-                elif "https://open.spotify.com/track/" in search or "spotify:track:" in search:
-                    track = get_track_features(search)
+                info: str = song_names[0].replace(" by ", "** by **") if len(song_names) == 1 else \
+                    f"{len(song_names) - errors} songs"
+                await ctx.respond(f":white_check_mark: Added **{info}** from **Spotify**.")
+                return
 
-                    source = await create_ytdl_source(track)
-                    if isinstance(source, errors):
-                        source = str(source).replace("\n", " ")
-                        return await ctx.respond(f"❌ **An error occurred**: `{source}`")
-                    return await ctx.respond(f":white_check_mark: Added: **{track}** from **Spotify**.")
-
-                elif 'https://open.spotify.com/artist/' in search or 'spotify:artist:' in search:
-                    for result in get_artist_top_songs(search)['tracks'][:10]:
-                        song_ids.append(result["id"])
-                else:
-                    source = await create_ytdl_source(search)
-                    if isinstance(source, errors):
-                        source = str(source).replace("\n", " ")
-                        return await ctx.respond(f"❌ **An error occurred**: `{source}`")
-                    return await ctx.respond(f':white_check_mark: Added: {source}')
-
-            except SpotifyException:
-                return await ctx.respond("❌ **Invalid** Spotify **link**.")
-
-            if len(ctx.voice_state.songs) + len(song_ids) >= 100:
-                return await ctx.respond("🥵 **Too many** songs in queue.")
-
-            failed_songs: int = 0
-            for song_id in song_ids:
-                source = await create_ytdl_source(get_track_features(song_id))
-                if isinstance(source, errors):
-                    print(source)
-                    failed_songs += 1
-                    continue
-            await ctx.respond(f":white_check_mark: Added: **{len(song_ids) - failed_songs}** songs from **Spotify**.")
+            name = await add_song(search)
+            if isinstance(name, YTDLError):
+                await ctx.respond(f"❌ {name}")
+            elif isinstance(name, utils.GeoRestrictedError):
+                await ctx.respond("🌍 This **video** is **not available in** my **country**.")
+            elif isinstance(name, utils.UnavailableVideoError):
+                await ctx.respond("🚫 This **video is **not available**.")
+            elif isinstance(name, Exception):
+                traceback = format_exc()
+                print(traceback) if traceback is not None else None
+                await ctx.respond(f"❌ **Error**: `{name}`")
+            else:
+                await ctx.respond(f':white_check_mark: Added {name}')
 
         ctx.voice_state.processing = True
-        try:
-            await analyze_link()
-        except Exception as e:
-            print(e, format_exc())
-            await ctx.respond(f"❌ **An error occurred**: \n```{format_exc()}```")
+        await process()
         ctx.voice_state.processing = False
 
 
