@@ -457,8 +457,6 @@ class Music(Cog):
         """Clears the queue and leaves the voice channel."""
         try:
             await ctx.voice_state.stop()
-            del self.voice_states[ctx.guild.id]
-
             voice_channel = get(self.bot.voice_clients, guild=ctx.guild)
             if voice_channel:
                 await voice_channel.disconnect(force=True)
@@ -466,6 +464,7 @@ class Music(Cog):
             await ctx.respond(f"👋 **Bye**. Left {ctx.author.voice.channel.mention}.")
         except AttributeError:
             await ctx.respond(f"⚙ I am **not connected** to a voice channel so my **voice state has been reset**.")
+        del self.voice_states[ctx.guild.id]
 
     @slash_command()
     async def volume(self, ctx, *, volume: int):
@@ -774,7 +773,11 @@ class Music(Cog):
                 await ctx.respond(f':white_check_mark: Added {name}')
 
         ctx.voice_state.processing = True
-        await process()
+        try:
+            await process()
+        except Exception as e:
+            await ctx.respond(f"**A fata error has occurred**: `{e}`. **You might** execute **/**`leave` to **reset "
+                              f"the voice state on** this **server**.")
         ctx.voice_state.processing = False
 
     @slash_command()
