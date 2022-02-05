@@ -114,14 +114,17 @@ class YTDLSource(PCMVolumeTransformer):
         self.title_limited = self.parse_limited_title(self.title)
         self.title_limited_embed = self.parse_limited_title_embed(self.title)
         self.thumbnail = data.get("thumbnail")
-        self.description = data.get("description")
-        self.duration = self.parse_duration(int(data.get("duration") if data.get("duration") is not None else -1))
-        self.tags = data.get("tags")
+        self.duration = self.parse_duration(data.get("duration"))
         self.url = data.get("webpage_url")
         self.views = data.get("view_count")
-        self.likes = data.get("like_count")
-        self.dislikes = int(dict(loads(req_get(f"https://returnyoutubedislikeapi.com/votes?videoId={data.get('id')}")
-                                       .text))["dislikes"])
+        self.likes = data.get("like_count") if data.get("like_count") is not None else -1
+
+        try:
+            self.dislikes = int(
+                dict(loads(req_get(f"https://returnyoutubedislikeapi.com/votes?videoId={data.get('id')}")
+                           .text))["dislikes"])
+        except KeyError:
+            self.dislikes = -1
         self.stream_url = data.get("url")
 
     def __str__(self):
@@ -169,25 +172,23 @@ class YTDLSource(PCMVolumeTransformer):
         return cls(ctx, FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
     @staticmethod
-    def parse_duration(duration: int):
-        if duration > 0:
-            if not duration >= 3600:
+    def parse_duration(duration: str or None):
+        if duration is None:
+            return "LIVE"
+        elif int(duration) > 0:
+            if not int(duration) >= 3600:
                 value = strftime('%M:%S', gmtime(duration))
             else:
                 value = strftime('%H:%M:%S', gmtime(duration))
-
-        elif duration == 0:
-            value = "LIVE"
         else:
             value = "Error"
-
         return value
 
     @staticmethod
     def parse_limited_title(title: str):
         title = title.replace('||', '')
         if len(title) > 72:
-            return title[:72] + '...'
+            return f"{title[:72]}..."
         else:
             return title
 
@@ -198,7 +199,7 @@ class YTDLSource(PCMVolumeTransformer):
         title = title.replace('||', '')
 
         if len(title) > 45:
-            return title[:43] + '...'
+            return f"{title[:43]}..."
         else:
             return title
 
@@ -234,7 +235,7 @@ class Song:
 
         embed = Embed(title=f"🎶 {self.source.title_limited_embed}", description=description, colour=0xFF0000) \
             .add_field(name="Views", value=self.parse_counts(self.source.views), inline=True) \
-            .add_field(name="Likes / Dislikes", value=f"{self.parse_counts(self.source.likes)} / "
+            .add_field(name="Likes / Dislikes", value=f"{self.parse_counts(self.source.likes)} **/** "
                                                       f"{self.parse_counts(self.source.dislikes)}", inline=True) \
             .add_field(name="Uploaded", value=timestamp, inline=True) \
             .set_thumbnail(url=self.source.thumbnail)
@@ -385,7 +386,6 @@ class Music(Cog):
         if not state or not state.exists:
             state = VoiceState(self.bot, ctx)
             self.voice_states[ctx.guild_id] = state
-
         return state
 
     def cog_unload(self):
@@ -482,8 +482,15 @@ class Music(Cog):
         if not (0 < volume <= 100):
             return await ctx.respond("❌ The **volume** has to be **between 0 and 100**.")
 
+        if volume < 50:  # THIS MIGHT GET REMOVED IN THE FUTURE
+            emoji: str = "🔈"
+        elif volume == 50:
+            emoji: str = "🔉"
+        else:
+            emoji: str = "🔊"
+
         ctx.voice_state.current.source.volume = volume / 100
-        await ctx.respond(f"🔊 **Volume** of the song **set to {volume}%**.")
+        await ctx.respond(f"{emoji} **Volume** of the song **set to {volume}%**.")
 
     @slash_command()
     async def now(self, ctx):
@@ -545,7 +552,7 @@ class Music(Cog):
 
     @slash_command()
     async def skip(self, ctx):
-        """Vote to skip a song. The requester can automatically skip. """
+        """Vote to skip a song. The requester can automatically skip."""
         await ctx.defer()
 
         instance = await ensure_voice_state(ctx)
@@ -591,8 +598,8 @@ class Music(Cog):
     @slash_command()
     async def queue(self, ctx, *, page: int = 1):
         """Shows the queue. You can optionally specify the page to show. Each page contains 10 elements."""
-
         await ctx.defer()
+
         if len(ctx.voice_state.songs) == 0:
             return await ctx.respond('❌ The **queue** is **empty**.')
 
@@ -602,13 +609,16 @@ class Music(Cog):
         start = (page - 1) * items_per_page
         end = start + items_per_page
 
-        queue = ''
+        queue: str = ""
         for i, song in enumerate(ctx.voice_state.songs[start:end], start=start):
             queue += f"`{i + 1}`. [{song.source.title_limited_embed}]({song.source.url})\n"
-        len_queue: int = len(ctx.voice_state.songs)
+        duration: int = 0
+        for song in ctx.voice_state.songs:
+            temp = song.source.data.get("duration")
+            duration += int(temp) if temp is isinstance(temp, int) else 0
 
-        embed = Embed(title="Queue", description=f"**Songs:** {len_queue}\n**Estimated length:** "
-                                                 f"{YTDLSource.parse_duration(len_queue * 210)}\n\n{queue}",
+        embed = Embed(title="Queue", description=f"**Songs:** {len(ctx.voice_state.songs)}\n**Duration:** "
+                                                 f"{YTDLSource.parse_duration(duration)}\n\n{queue}",
                       colour=0xFF0000)
 
         embed.set_footer(text=f"Page {page}/{pages}")
@@ -703,7 +713,7 @@ class Music(Cog):
                 return error
 
             if not ctx.voice_state.voice:
-                await self.join(self, ctx)
+                await self.join(ctx)
 
             song = Song(source)
             await ctx.voice_state.songs.put(song)
@@ -766,6 +776,20 @@ class Music(Cog):
         ctx.voice_state.processing = True
         await process()
         ctx.voice_state.processing = False
+
+    @slash_command()
+    async def supported_links(self, ctx):
+        """Lists all supported music streaming services."""
+        await ctx.respond(embed=Embed(title="Supported Links", description="All supported streaming services.",
+                                      colour=0xFF0000)
+                          .add_field(name="YouTube", value="✅ Tracks\n❌ Playlists\n❌ Albums\n❌ Artists\n⚠ Livestreams")
+                          .add_field(name="YouTube Music", value="✅ Tracks\n❌ Playlists\n❌ Albums\n❌ Artists")
+                          .add_field(name="Spotify", value="✅ Tracks\n✅ Playlists\n✅ Albums\n✅ Artists")
+                          .add_field(name="Soundcloud", value="✅ Tracks\n❌ Playlists\n❌ Albums\n❌ Artists")
+                          .add_field(name="Twitch", value="⚠ Livestreams")
+                          .add_field(name="🐞 Troubleshooting", value="If you are experiencing issues, please execute "
+                                                                     "**/**`leave`. This should fix most errors.",
+                                     inline=False))
 
 
 def setup(bot):
