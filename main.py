@@ -1,32 +1,38 @@
 from os import getenv, listdir
 from sqlite3 import connect
+from traceback import format_exc
 
 from discord import Bot, Activity, ActivityType
 from discord.ext.tasks import loop
 from dotenv import load_dotenv
 
 from data.config.settings import SETTINGS
-from lib.db import db
+from data.db.memory import database
 
 bot: Bot = Bot(owner_ids=SETTINGS["OwnerIDs"], description=SETTINGS["Description"], intents=SETTINGS["Intents"])
 
-database: connect = connect(":memory:")
-local_db: db.cxn = db.cxn
+local_db: connect = connect("./data/db/database.db", check_same_thread=False)
 db_initialized: bool = False
 
-load_dotenv()
+load_dotenv("./data/config/.env")
 
 
-@loop(minutes=30)
+@loop(minutes=1)
 async def sync_database():
+    global db_initialized
     print("Syncing database...")
     try:
         if not db_initialized:
-            database.backup(local_db)
-        else:
+            with open("./data/db/build.sql", "r", encoding="utf-8") as script:
+                local_db.cursor().executescript(script.read())
             local_db.backup(database)
+            db_initialized = True
+            database.cursor().execute("""INSERT INTO guild (GuildID) VALUES (543754357)""")
+        else:
+            database.backup(local_db)
     except Exception as e:
-        print(f"An error uncured while syncing database: {e}")
+        print(f"An error occurred while syncing database: {e}")
+        print(format_exc())
         return
     print("Synced database successfully.")
 
