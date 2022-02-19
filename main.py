@@ -11,7 +11,6 @@ from data.db.memory import database
 
 bot: Bot = Bot(owner_ids=SETTINGS["OwnerIDs"], description=SETTINGS["Description"], intents=SETTINGS["Intents"])
 
-local_db: connect = connect("./data/db/database.db", check_same_thread=False)
 db_initialized: bool = False
 
 load_dotenv("./data/config/.env")
@@ -20,21 +19,24 @@ load_dotenv("./data/config/.env")
 @loop(minutes=1)
 async def sync_database():
     global db_initialized
+    local_db: connect = connect("./data/db/database.db", check_same_thread=False)
+
     print("Syncing database...")
     try:
         if not db_initialized:
             with open("./data/db/build.sql", "r", encoding="utf-8") as script:
                 local_db.cursor().executescript(script.read())
+            local_db.commit()
             local_db.backup(database)
             db_initialized = True
-            database.cursor().execute("""INSERT INTO guild (GuildID) VALUES (543754357)""")
         else:
-            database.backup(local_db)
+            with database:
+                database.backup(local_db)
     except Exception as e:
-        print(f"An error occurred while syncing database: {e}")
-        print(format_exc())
-        return
-    print("Synced database successfully.")
+        print(f"An error occurred while syncing database: {e}\n{format_exc()}")
+    else:
+        print("Synced database successfully.")
+    local_db.close()
 
 
 @loop(minutes=30)
