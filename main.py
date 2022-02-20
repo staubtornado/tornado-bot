@@ -43,8 +43,7 @@ async def sync_database():
 async def update_rich_presence():
     await bot.wait_until_ready()
 
-    await bot.change_presence(activity=Activity(type=ActivityType.playing,
-                                                name="Closed BETA..."))
+    await bot.change_presence(activity=Activity(type=ActivityType.playing, name="Closed BETA..."))
 
 
 @bot.event
@@ -62,7 +61,10 @@ def main():
 
     print(
         f"VERSION: {None}\nCopyright (c) 2021 - present Staubtornado\n{'-' * 30}")  # TODO: ADD VERSION TO BOT START-UP MESSAGE
-    bot.run(getenv("DISCORD_BOT_TOKEN"))
+    try:
+        bot.run(getenv("DISCORD_BOT_TOKEN"))
+    except KeyboardInterrupt:
+        bot.close()
 
 
 if __name__ == "__main__":

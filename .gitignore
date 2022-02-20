@@ -116,3 +116,4 @@ dmypy.json
 .idea/tornado-bot.iml
 ffmpeg.exe
 data/db/database.db
+*.db

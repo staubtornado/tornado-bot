@@ -1,9 +1,8 @@
-CREATE TABLE IF NOT EXISTS exp (
-    GuildID integer PRIMARY KEY,
-    UserID integer PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS experience (
+    GuildID integer,
+    UserID integer,
     XP integer DEFAULT 0,
-    Level integer DEFAULT 0,
-    XPLock text DEFAULT CURRENT_TIMESTAMP
+    PRIMARY KEY (GuildID, UserID)
 );
 
 CREATE TABLE IF NOT EXISTS guild (
