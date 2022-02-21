@@ -168,6 +168,10 @@ class YTDLSource(PCMVolumeTransformer):
                 except IndexError:
                     raise YTDLError(f"**Could not retrieve any matches** for `{webpage_url}`")
 
+        if int(info["duration"]) > 1728:
+            raise YTDLError("This **song is too long**! Use **/**`loop` to **loop a song**.\n👉 **Why?** Keeping "
+                            "Discord bots too long in voice channels is a **TOS violation** and secondly drastically "
+                            "**decreases performance** resulting in a **worse experience** for all users.")
         return cls(ctx, FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
     @staticmethod
