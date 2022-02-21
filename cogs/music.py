@@ -1,5 +1,5 @@
 from asyncio import get_event_loop, Queue, Event, TimeoutError
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import partial as func_partial
 from itertools import islice
 from json import loads
@@ -20,7 +20,6 @@ from requests import get as req_get
 from spotipy import Spotify, SpotifyClientCredentials, SpotifyException
 from yt_dlp import utils, YoutubeDL
 
-# from ..data.config import settings
 
 utils.bug_reports_message = lambda: ''
 PRODUCTION: bool = False
@@ -118,6 +117,7 @@ class YTDLSource(PCMVolumeTransformer):
         self.url = data.get("webpage_url")
         self.views = data.get("view_count")
         self.likes = data.get("like_count") if data.get("like_count") is not None else -1
+        self.stream_url = data.get("url")
 
         try:
             self.dislikes = int(
@@ -125,7 +125,6 @@ class YTDLSource(PCMVolumeTransformer):
                            .text))["dislikes"])
         except KeyError:
             self.dislikes = -1
-        self.stream_url = data.get("url")
 
     def __str__(self):
         return f"**{self.title_limited}** by **{self.uploader}**"
@@ -175,11 +174,14 @@ class YTDLSource(PCMVolumeTransformer):
     def parse_duration(duration: str or None):
         if duration is None:
             return "LIVE"
-        elif int(duration) > 0:
-            if not int(duration) >= 3600:
+        duration: int = int(duration)
+        if duration > 0:
+            if duration < 3600:
                 value = strftime('%M:%S', gmtime(duration))
-            else:
+            elif 86400 > duration >= 3600:
                 value = strftime('%H:%M:%S', gmtime(duration))
+            else:
+                value = timedelta(seconds=duration)
         else:
             value = "Error"
         return value
