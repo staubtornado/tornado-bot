@@ -117,3 +117,4 @@ dmypy.json
 ffmpeg.exe
 data/db/database.db
 *.db
+.idea/
