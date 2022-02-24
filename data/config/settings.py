@@ -2,6 +2,7 @@ from discord import Intents, Colour
 
 intents: Intents = Intents.default()
 intents.__setattr__("members", True)
+intents.__setattr__("messages", True)
 
 SETTINGS: dict = {
     "OwnerIDs": [272446903940153345],

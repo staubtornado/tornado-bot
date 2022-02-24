@@ -1,5 +1,5 @@
 from os import getenv, listdir
-from sqlite3 import connect
+from sqlite3 import connect, Error
 from traceback import format_exc
 
 from discord import Bot, Activity, ActivityType
@@ -32,7 +32,7 @@ async def sync_database():
         else:
             with database:
                 database.backup(local_db)
-    except Exception as e:
+    except Error as e:
         print(f"An error occurred while syncing database: {e}\n{format_exc()}")
     else:
         print("Synced database successfully.")

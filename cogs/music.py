@@ -13,6 +13,7 @@ from async_timeout import timeout
 from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio, Embed, Bot, slash_command, VoiceChannel, \
     ClientException
 from discord.ext.commands import Cog
+from discord.commands.permissions import has_role
 from discord.utils import get
 from millify import millify
 from psutil import virtual_memory
@@ -487,7 +488,7 @@ class Music(Cog):
         if not (0 < volume <= 100):
             return await ctx.respond("❌ The **volume** has to be **between 0 and 100**.")
 
-        if volume < 50:  # THIS MIGHT GET REMOVED IN THE FUTURE
+        if volume < 50:
             emoji: str = "🔈"
         elif volume == 50:
             emoji: str = "🔉"
@@ -587,6 +588,7 @@ class Music(Cog):
             await ctx.respond("❌ **Cheating** not allowed**!** You **already voted**.")
 
     @slash_command()
+    @has_role("DJ")
     async def forceskip(self, ctx):
         """Skips a song directly."""
         await ctx.defer()

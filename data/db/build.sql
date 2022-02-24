@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS experience (
     GuildID integer,
     UserID integer,
     XP integer DEFAULT 0,
+    Messages integer DEFAULT 0,
     PRIMARY KEY (GuildID, UserID)
 );
 
