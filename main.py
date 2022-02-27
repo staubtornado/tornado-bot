@@ -13,8 +13,6 @@ bot: Bot = Bot(owner_ids=SETTINGS["OwnerIDs"], description=SETTINGS["Description
 
 db_initialized: bool = False
 
-load_dotenv("./data/config/.env")
-
 
 @loop(minutes=1)
 async def sync_database():
@@ -31,6 +29,7 @@ async def sync_database():
             db_initialized = True
         else:
             with database:
+                database.commit()
                 database.backup(local_db)
     except Error as e:
         print(f"An error occurred while syncing database: {e}\n{format_exc()}")
@@ -52,6 +51,8 @@ async def on_ready():
 
 
 def main():
+    load_dotenv("./data/config/.env")
+
     sync_database.start()
     update_rich_presence.start()
 
