@@ -11,5 +11,14 @@ SETTINGS: dict = {
     "Colours": {
         "Default": Colour.blue(),
         "Error": Colour.red()
+    },
+    "Cogs": {
+        "Experience": {
+            "Multiplication": 1,
+            "BaseLevel": 250,
+            "MinXP": 15,
+            "MaxXP": 25,
+            "Cooldown": 60
+        }
     }
 }
