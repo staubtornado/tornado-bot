@@ -1,8 +1,7 @@
-from sqlite3 import Cursor
-
 from discord import Guild, Member, Message
 from discord.ext.commands import Cog
 
+from cogs.experience import ExperienceSystem
 from data.db.memory import database
 
 
@@ -35,19 +34,7 @@ class Listeners(Cog):
 
     @Cog.listener()
     async def on_message(self, message: Message):
-        cur: Cursor = database.cursor()
-
-        select_query: str = f"""SELECT Messages from experience where (GuildID, UserID) = ({message.guild.id}, 
-        {message.author.id})"""
-
-        cur.execute(select_query)
-        messages: int = cur.fetchone()
-
-        if messages is None:
-            cur.execute(
-                f"""INSERT INTO experience (GuildID, UserID) VALUES ({message.guild.id}, {message.author.id})""")
-        cur.execute(f"""UPDATE experience SET Messages = Messages + 1 
-                        WHERE (GuildID, UserID) = ({message.guild.id}, {message.author.id})""")
+        await ExperienceSystem(self.bot, message).start()
 
 
 def setup(bot):
