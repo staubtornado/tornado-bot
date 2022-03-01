@@ -2,7 +2,7 @@ from asyncio import sleep
 from random import randint
 from sqlite3 import Cursor
 
-from discord import slash_command, ApplicationContext, Message, Bot
+from discord import slash_command, ApplicationContext, Message, Bot, Embed
 from discord.ext.commands import Cog
 
 from data.config.settings import SETTINGS
@@ -40,27 +40,29 @@ class ExperienceSystem:
         cur: Cursor = database.cursor()
 
         cur.execute(f"""
-            SELECT Messages from experience where (GuildID, UserID) = (
+            SELECT XP, Level from experience where (GuildID, UserID) = (
                 {self.message.guild.id}, {self.message.author.id})
         """)
-        row: int = cur.fetchone()
 
-        if row is None:
+        try:
+            self.xp, self.level = cur.fetchone()
+        except TypeError:
             cur.execute(f"""
-                INSERT INTO experience (GuildID, UserID) VALUES ({self.message.guild.id}, {self.message.author.id})
-            """)
+                    INSERT INTO experience (GuildID, UserID) VALUES ({self.message.guild.id}, {self.message.author.id})
+                """)
+            self.xp = 0
+            self.level = 0
 
         cur.execute(f"""UPDATE experience SET Messages = Messages + 1 
                         WHERE (GuildID, UserID) = ({self.message.guild.id}, {self.message.author.id})""")
         database.commit()
 
         if not (self.message.guild.id, self.message.author.id) in on_cooldown:
-            xp: int = round(randint(self.min_xp, self.max_xp) * self.multiplier)
-
-            self.check_for_level_up()
-
-            cur.execute(f"""UPDATE experience SET XP = XP + {xp}
+            self.xp += round(randint(self.min_xp, self.max_xp) * self.multiplier)
+            await self.check_for_level_up()
+            cur.execute(f"""UPDATE experience SET (XP, Level) = ({self.xp}, {self.level})
                             WHERE (GuildID, UserID) = ({self.message.guild.id}, {self.message.author.id})""")
+
             database.commit()
             on_cooldown.append((self.message.guild.id, self.message.author.id))
             await sleep(self.cooldown)
@@ -69,14 +71,25 @@ class ExperienceSystem:
     def calc_xp(self) -> int:
         return round(self.base_level * 1.1248 ** self.level)
 
-    def check_for_level_up(self) -> tuple:
+    def progress_bar(self) -> str:
+        percent = (self.xp / self.calc_xp()) * 100
+        return round(percent / 10) * "◻️" + round((100 - percent) / 10) * "▪️"
+
+    async def check_for_level_up(self) -> None:
         required: int = self.calc_xp()
 
+        level_up: bool = False
         while self.xp >= required:
             self.xp -= required
             self.level += 1
+            level_up = True
             required = self.calc_xp()
-        return self.xp, self.level
+        if level_up:
+            embed = Embed(title="Level Up!", description=f"GG, you are now level {self.level} on this server.",
+                          colour=SETTINGS["Colours"]["Default"])
+            embed.add_field(name=f"Progress ({self.xp}XP / {required}XP)", value=self.progress_bar())
+            embed.set_author(name=self.message.author.name, icon_url=self.message.author.avatar.url)
+            await self.message.reply(embed=embed, delete_after=60)
 
 
 class Experience(Cog):
@@ -84,12 +97,21 @@ class Experience(Cog):
         self.bot = bot
 
     @slash_command()
+    async def rank(self, ctx: ApplicationContext):
+        await ctx.defer()
+
+        embed = Embed(colour=SETTINGS["Colours"]["Default"])
+        embed.add_field(name="Total XP", value="-")
+        embed.add_field(name="Level", value="-")
+        embed.add_field(name="Progress", value="-")
+        embed.set_author(name=ctx.author.name, url=ctx.author.avatar.url)
+        await ctx.respond(embed=embed)
+
+    @slash_command()
     async def leaderboard(self, ctx: ApplicationContext):
         pass
 
-    @slash_command()
-    async def rank(self, ctx: ApplicationContext):
-        pass
+
 
 
 def setup(bot):
