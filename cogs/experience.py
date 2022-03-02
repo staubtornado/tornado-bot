@@ -2,7 +2,7 @@ from asyncio import sleep
 from random import randint
 from sqlite3 import Cursor
 
-from discord import slash_command, ApplicationContext, Message, Bot, Embed, Option, Member
+from discord import slash_command, ApplicationContext, Message, Bot, Embed, Member
 from discord.ext.commands import Cog
 
 from data.config.settings import SETTINGS
@@ -118,16 +118,17 @@ class Experience(Cog):
         self.bot = bot
 
     @slash_command()
-    async def rank(self, ctx: ApplicationContext, user: Option(Member, "Look up stats about others.",
-                                                               required=False)):
+    async def rank(self, ctx: ApplicationContext, user: Member = None):
         await ctx.defer()
-        ctx.author.id = ctx.author.id or user.id
+
+        if user is not None:
+            ctx.author = user
         system: ExperienceSystem = ExperienceSystem(self.bot, ctx)
 
         embed = Embed(colour=SETTINGS["Colours"]["Default"])
-        embed.add_field(name="Total XP", value=system.total_xp())
-        embed.add_field(name="Level", value=system.get_level())
-        embed.add_field(name="Messages", value=system.get_messages())
+        embed.add_field(name="Total XP", value=f"`{system.total_xp()}`")
+        embed.add_field(name="Level", value=f"`{system.get_level()}`")
+        embed.add_field(name="Messages", value=f"`{system.get_messages()}`")
         embed.add_field(name=f"Progress ({system.get_xp()}XP / {system.calc_xp()}XP)", value=system.progress_bar())
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar.url)
         await ctx.respond(embed=embed)
