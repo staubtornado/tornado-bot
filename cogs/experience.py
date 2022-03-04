@@ -119,6 +119,7 @@ class Experience(Cog):
 
     @slash_command()
     async def rank(self, ctx: ApplicationContext, user: Member = None):
+        """Displays information about your stats on this server."""
         await ctx.defer()
 
         if user is not None:
@@ -130,7 +131,11 @@ class Experience(Cog):
         embed.add_field(name="Level", value=f"`{system.get_level()}`")
         embed.add_field(name="Messages", value=f"`{system.get_messages()}`")
         embed.add_field(name=f"Progress ({system.get_xp()}XP / {system.calc_xp()}XP)", value=system.progress_bar())
-        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar.url)
+
+        try:
+            embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar.url)
+        except AttributeError:
+            embed.set_author(name=ctx.author.name, icon_url=ctx.author.default_avatar.url)
         await ctx.respond(embed=embed)
 
     @slash_command()
