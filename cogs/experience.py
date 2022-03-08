@@ -2,7 +2,7 @@ from asyncio import sleep
 from random import randint
 from sqlite3 import Cursor
 
-from discord import slash_command, ApplicationContext, Message, Bot, Embed, Member
+from discord import slash_command, ApplicationContext, Message, Bot, Embed, Member, User, Colour
 from discord.ext.commands import Cog
 
 from data.config.settings import SETTINGS
@@ -114,7 +114,7 @@ class ExperienceSystem:
 
 
 class Experience(Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     @slash_command()
@@ -140,14 +140,32 @@ class Experience(Cog):
 
     @slash_command()
     async def leaderboard(self, ctx: ApplicationContext):
-        query: str = f"""SELECT Level, Messages from experience where GuildID = {ctx.guild.id}"""
-        database.cursor().execute(query)
+        query: str = f"""SELECT UserID, Level, XP from experience where GuildID = {ctx.guild.id}"""
 
-        rows = database.cursor().fetchall()
-        print(rows)
+        cur: Cursor = database.cursor()
+        cur.execute(query)
 
-        await ctx.respond("The leaderboard is currently under development. Use **/**`rank` to look up stats about you "
-                          "or others.")
+        total_xps: list = []
+        user_list: list = []
+
+        system: ExperienceSystem = ExperienceSystem(self.bot, ctx)
+        for i, row in enumerate(cur.fetchall()):
+            system.level = row[1]
+            system.xp = row[2]
+            total_xp: int = system.total_xp()
+
+            total_xps.append(total_xp)
+            total_xps.sort()
+            user_list.insert(total_xps.index(total_xp), row[0])
+
+            if i >= 24:
+                break
+
+        embed: Embed = Embed(title="Leaderboard", description="Top 25 users on this server. Use **/**`rank [@user]` "
+                                                              "to get more information.", colour=Colour.blue())
+        for i, user_id in enumerate(user_list):
+            embed.add_field(name=f"{i + 1}. {await self.bot.fetch_user(user_id)}", value="0")
+        await ctx.respond(embed=embed)
 
 
 def setup(bot):
