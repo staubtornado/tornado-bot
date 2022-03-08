@@ -196,8 +196,7 @@ class YTDLSource(PCMVolumeTransformer):
         title = title.replace('||', '')
         if len(title) > 72:
             return f"{title[:72]}..."
-        else:
-            return title
+        return title
 
     @staticmethod
     def parse_limited_title_embed(title: str):
@@ -207,8 +206,7 @@ class YTDLSource(PCMVolumeTransformer):
 
         if len(title) > 45:
             return f"{title[:43]}..."
-        else:
-            return title
+        return title
 
 
 class Song:
@@ -685,9 +683,8 @@ class Music(Cog):
         ctx.voice_state.loop = not ctx.voice_state.loop
 
         if ctx.voice_state.loop:
-            await ctx.respond("🔁 **Looped** song, use **/**`loop` to **disable** loop.")
-        else:
-            await ctx.respond("🔁 **Unlooped** song, use **/**`loop` to **enable** loop.")
+            return await ctx.respond("🔁 **Looped** song, use **/**`loop` to **disable** loop.")
+        await ctx.respond("🔁 **Unlooped** song, use **/**`loop` to **enable** loop.")
 
     @slash_command()
     async def play(self, ctx, *, search: str):
