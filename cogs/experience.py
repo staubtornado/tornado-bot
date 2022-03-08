@@ -140,6 +140,12 @@ class Experience(Cog):
 
     @slash_command()
     async def leaderboard(self, ctx: ApplicationContext):
+        query: str = f"""SELECT Level, Messages from experience where GuildID = {ctx.guild.id}"""
+        database.cursor().execute(query)
+
+        rows = database.cursor().fetchall()
+        print(rows)
+
         await ctx.respond("The leaderboard is currently under development. Use **/**`rank` to look up stats about you "
                           "or others.")
 

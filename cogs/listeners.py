@@ -1,3 +1,5 @@
+from sqlite3 import Cursor
+
 from discord import Guild, Member, Message
 from discord.ext.commands import Cog
 
@@ -16,7 +18,9 @@ class Listeners(Cog):
 
     @Cog.listener()
     async def on_guild_remove(self, guild: Guild):
-        database.cursor().execute(f"""DELETE from guild where GuildID = {guild.id}""")
+        cur: Cursor = database.cursor()
+        cur.execute(f"""DELETE from guild where GuildID = {guild.id}""")
+        cur.execute(f"""DELETE from experience where GuildID = {guild.id}""")
         database.commit()
 
     @Cog.listener()

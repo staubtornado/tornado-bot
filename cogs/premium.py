@@ -4,6 +4,9 @@ from discord.ext.commands import Cog
 
 from data.db.memory import database
 
+beta_guilds: list = []
+premium_guilds: list = []
+
 
 class Premium(Cog):
     def __init__(self, bot):
