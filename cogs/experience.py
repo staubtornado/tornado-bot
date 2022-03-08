@@ -2,7 +2,7 @@ from asyncio import sleep
 from random import randint
 from sqlite3 import Cursor
 
-from discord import slash_command, ApplicationContext, Message, Bot, Embed, Member, User, Colour
+from discord import slash_command, ApplicationContext, Message, Bot, Embed, Member
 from discord.ext.commands import Cog
 
 from data.config.settings import SETTINGS
@@ -126,7 +126,7 @@ class Experience(Cog):
             ctx.author = user
         system: ExperienceSystem = ExperienceSystem(self.bot, ctx)
 
-        embed = Embed(colour=SETTINGS["Colours"]["Default"])
+        embed = Embed(colour=ctx.author.colour)
         embed.add_field(name="Total XP", value=f"`{system.total_xp()}`")
         embed.add_field(name="Level", value=f"`{system.get_level()}`")
         embed.add_field(name="Messages", value=f"`{system.get_messages()}`")
@@ -140,14 +140,17 @@ class Experience(Cog):
 
     @slash_command()
     async def leaderboard(self, ctx: ApplicationContext):
-        query: str = f"""SELECT UserID, Level, XP from experience where GuildID = {ctx.guild.id}"""
+        """Displays the most active users on this server."""
 
         cur: Cursor = database.cursor()
-        cur.execute(query)
+        cur.execute(f"""SELECT UserID, Level, XP from experience where GuildID = {ctx.guild.id}""")
 
         total_xps: list = []
         user_list: list = []
 
+        embed: Embed = Embed(title="Leaderboard", description="Top 25 users on this server. Use **/**`rank [@user]` "
+                                                              "to get more information.",
+                             colour=SETTINGS["Colours"]["Default"])
         system: ExperienceSystem = ExperienceSystem(self.bot, ctx)
         for i, row in enumerate(cur.fetchall()):
             system.level = row[1]
@@ -158,13 +161,10 @@ class Experience(Cog):
             total_xps.sort()
             user_list.insert(total_xps.index(total_xp), row[0])
 
+            embed.add_field(name=f"{i + 1}. {await self.bot.fetch_user(row[0])}",
+                            value=f"Level: `{row[1]}` XP: `{row[2]}`")
             if i >= 24:
                 break
-
-        embed: Embed = Embed(title="Leaderboard", description="Top 25 users on this server. Use **/**`rank [@user]` "
-                                                              "to get more information.", colour=Colour.blue())
-        for i, user_id in enumerate(user_list):
-            embed.add_field(name=f"{i + 1}. {await self.bot.fetch_user(user_id)}", value="0")
         await ctx.respond(embed=embed)
 
 
