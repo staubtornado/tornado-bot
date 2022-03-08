@@ -2,12 +2,13 @@ from os import getenv, listdir
 from sqlite3 import connect, Error
 from traceback import format_exc
 
-from discord import Bot, Activity, ActivityType
+from discord import Bot
 from discord.ext.tasks import loop
 from dotenv import load_dotenv
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
+from lib.presence.presence import update_rich_presence
 
 bot: Bot = Bot(owner_ids=SETTINGS["OwnerIDs"], description=SETTINGS["Description"], intents=SETTINGS["Intents"])
 
@@ -38,30 +39,24 @@ async def sync_database():
     local_db.close()
 
 
-@loop(minutes=30)
-async def update_rich_presence():
-    await bot.wait_until_ready()
-
-    await bot.change_presence(activity=Activity(type=ActivityType.playing, name="Closed BETA..."))
-
-
 @bot.event
 async def on_ready():
     print(f"{bot.user} is online...")
 
 
 def main():
+    print(f"VERSION: {None}\nCopyright (c) 2021 - present Staubtornado\n{'-' * 30}")  # TODO: ADD VERSION TO BOT START-UP MESSAGE
     load_dotenv("./data/config/.env")
 
     sync_database.start()
-    update_rich_presence.start()
+    update_rich_presence.start(bot)
 
     for filename in listdir('./cogs'):
         if filename.endswith('.py'):
-            bot.load_extension(f'cogs.{filename[:-3]}')
-
-    print(
-        f"VERSION: {None}\nCopyright (c) 2021 - present Staubtornado\n{'-' * 30}")  # TODO: ADD VERSION TO BOT START-UP MESSAGE
+            try:
+                bot.load_extension(f'cogs.{filename[:-3]}')
+            except Exception as e:
+                print(f"Failed to load {filename}: {e}")
     try:
         bot.run(getenv("DISCORD_BOT_TOKEN"))
     except KeyboardInterrupt:
