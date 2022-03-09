@@ -161,9 +161,14 @@ class Experience(Cog):
             total_xps.sort()
             user_list.insert(total_xps.index(total_xp), row[0])
 
-            embed.add_field(name=f"{i + 1}. {await self.bot.fetch_user(row[0])}",
-                            value=f"Level: `{row[1]}` XP: `{row[2]}`")
-            if i >= 24:
+            indexes: dict = {0: 0, 1: 3, 2: 6, 3: 9, 4: 12, 5: 15, 6: 18, 7: 21, 8: 1,
+                             9: 4, 10: 7, 11: 10, 12: 13, 13: 16, 14: 19, 15: 22,
+                             16: 2, 17: 5, 18: 8, 19: 11, 20: 14, 21: 17, 22: 22, 23: 23}
+
+            embed.insert_field_at(indexes[i], name=f"{i}. {await self.bot.fetch_user(row[0])}",
+                                  value=f"Level: `{row[1]}` XP: `{row[2]}`")
+
+            if i >= 23:
                 break
         await ctx.respond(embed=embed)
 
