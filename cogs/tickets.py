@@ -10,6 +10,8 @@ class Tickets(Cog):
 
     @Cog.listener()
     async def on_ready(self):
+        self.bot.persistent_views_added = False
+
         if not self.bot.persistent_views_added:
             self.bot.add_view(Support())
             self.bot.persistent_views_added = True
