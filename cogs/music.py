@@ -21,9 +21,9 @@ from requests import get as req_get
 from spotipy import Spotify, SpotifyClientCredentials, SpotifyException
 from yt_dlp import utils, YoutubeDL
 
+from data.config.settings import SETTINGS
 
 utils.bug_reports_message = lambda: ''
-PRODUCTION: bool = False
 
 
 class VoiceError(Exception):
@@ -169,10 +169,8 @@ class YTDLSource(PCMVolumeTransformer):
                 except IndexError:
                     raise YTDLError(f"**Could not retrieve any matches** for `{webpage_url}`")
 
-        if int(info["duration"]) > 1728:
-            raise YTDLError("This **song is too long**! Use **/**`loop` to **loop a song**.\n👉 **Why?** Keeping "
-                            "Discord bots too long in voice channels is a **TOS violation** and secondly drastically "
-                            "**decreases performance** resulting in a **worse experience** for all users.")
+        if int(info["duration"]) > 10800:
+            raise YTDLError("**Songs** can not be **longer than three hours**. Use **/**`loop` to repeat songs.")
         return cls(ctx, FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
     @staticmethod
@@ -182,14 +180,11 @@ class YTDLSource(PCMVolumeTransformer):
         duration: int = int(duration)
         if duration > 0:
             if duration < 3600:
-                value = strftime('%M:%S', gmtime(duration))
+                return strftime('%M:%S', gmtime(duration))
             elif 86400 > duration >= 3600:
-                value = strftime('%H:%M:%S', gmtime(duration))
-            else:
-                value = timedelta(seconds=duration)
-        else:
-            value = "Error"
-        return value
+                return strftime('%H:%M:%S', gmtime(duration))
+            return timedelta(seconds=duration)
+        return"Error"
 
     @staticmethod
     def parse_limited_title(title: str):
@@ -200,10 +195,7 @@ class YTDLSource(PCMVolumeTransformer):
 
     @staticmethod
     def parse_limited_title_embed(title: str):
-        title = title.replace('[', '')
-        title = title.replace(']', '')
-        title = title.replace('||', '')
-
+        title = title.replace("[", "").replace("]", "").replace("||", "")
         if len(title) > 45:
             return f"{title[:43]}..."
         return title
@@ -339,8 +331,8 @@ class VoiceState:
                 await self.current.source.channel.send(embed=self.current.create_embed(self.songs))
 
             elif self.loop:
-                if self.times_looped >= 50:
-                    self.loop = not self.loop
+                if self.times_looped * self.current.source.duration > 10800:
+                    self.loop = False
                     await self.current.source.channel.send("🔂 **The loop** has been **disabled** due to "
                                                            "**inactivity**.")
 
@@ -707,7 +699,7 @@ class Music(Cog):
             await ctx.respond("🥵 **Too many** songs in queue.")
             return
 
-        if virtual_memory().percent > 75 and PRODUCTION:
+        if virtual_memory().percent > 75 and SETTINGS["Production"]:
             await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please try again **later**.")
 
         async def add_song(track_name: str):
