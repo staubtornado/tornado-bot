@@ -45,7 +45,7 @@ async def on_ready():
 
 
 def main():
-    print(f"VERSION: {None}\nCopyright (c) 2021 - present Staubtornado\n{'-' * 30}")  # TODO: ADD VERSION TO BOT START-UP MESSAGE
+    print(f"VERSION: {SETTINGS['Version']}\nCopyright (c) 2021 - present Staubtornado\n{'-' * 30}")
     load_dotenv("./data/config/.env")
 
     sync_database.start()
@@ -56,7 +56,7 @@ def main():
             try:
                 bot.load_extension(f'cogs.{filename[:-3]}')
             except Exception as e:
-                print(f"Failed to load {filename}: {e}")
+                print(f"Failed to load {filename}: {e} \n{format_exc()}")
     try:
         bot.run(getenv("DISCORD_BOT_TOKEN"))
     except KeyboardInterrupt:

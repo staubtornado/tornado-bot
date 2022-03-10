@@ -20,5 +20,7 @@ SETTINGS: dict = {
             "MaxXP": 25,
             "Cooldown": 60
         }
-    }
+    },
+    "Version": "0.0.1a",
+    "Production": False
 }
