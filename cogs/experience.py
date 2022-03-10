@@ -126,7 +126,7 @@ class Experience(Cog):
             ctx.author = user
         system: ExperienceSystem = ExperienceSystem(self.bot, ctx)
 
-        embed = Embed(colour=ctx.author.colour)
+        embed = Embed(colour=SETTINGS["Colours"]["Default"])
         embed.add_field(name="Total XP", value=f"`{system.total_xp()}`")
         embed.add_field(name="Level", value=f"`{system.get_level()}`")
         embed.add_field(name="Messages", value=f"`{system.get_messages()}`")
@@ -146,6 +146,7 @@ class Experience(Cog):
         cur.execute(f"""SELECT UserID, Level, XP from experience where GuildID = {ctx.guild.id}""")
 
         total_xps: list = []
+        data: list = []
         user_list: list = []
 
         embed: Embed = Embed(title="Leaderboard", description="Top 25 users on this server. Use **/**`rank [@user]` "
@@ -159,16 +160,18 @@ class Experience(Cog):
 
             total_xps.append(total_xp)
             total_xps.sort()
-            user_list.insert(total_xps.index(total_xp), row[0])
 
-            indexes: dict = {0: 0, 1: 3, 2: 6, 3: 9, 4: 12, 5: 15, 6: 18, 7: 21, 8: 1,
-                             9: 4, 10: 7, 11: 10, 12: 13, 13: 16, 14: 19, 15: 22,
-                             16: 2, 17: 5, 18: 8, 19: 11, 20: 14, 21: 17, 22: 22, 23: 23}
+            index: int = total_xps.index(total_xp)
+            user_list.insert(index, row[0])
+            data.insert(index, (row[1], row[2]))
 
-            embed.insert_field_at(indexes[i], name=f"{i}. {await self.bot.fetch_user(row[0])}",
-                                  value=f"Level: `{row[1]}` XP: `{row[2]}`")
+        user_list.reverse()
+        data.reverse()
+        for i, user_id in enumerate(user_list):
+            embed.add_field(name=f"{i + 1}. {await self.bot.fetch_user(user_id)}",
+                            value=f"Level: `{data[i][0]}` XP: `{data[i][1]}`")
 
-            if i >= 23:
+            if i > 24:
                 break
         await ctx.respond(embed=embed)
 
