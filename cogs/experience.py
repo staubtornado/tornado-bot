@@ -155,6 +155,9 @@ class Experience(Cog):
             system.xp = row[2]
             total_xp: int = system.total_xp()
 
+            if total_xp == 0:
+                continue
+
             total_xps.append(total_xp)
             total_xps.sort()
 
