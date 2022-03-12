@@ -37,12 +37,13 @@ class ExperienceSystem:
         try:
             self.xp, self.level, self.messages = self._cur.fetchone()
         except TypeError:
-            self._cur.execute("""INSERT INTO experience (GuildID, UserID) VALUES (?, ?)""",
-                              (self.message.guild.id, self.message.author.id))
-            self.xp = 0
-            self.level = 0
-            self.messages = 0
-            database.commit()
+            if isinstance(message, Message):
+                self._cur.execute("""INSERT INTO experience (GuildID, UserID) VALUES (?, ?)""",
+                                  (self.message.guild.id, self.message.author.id))
+                self.xp = 0
+                self.level = 0
+                self.messages = 0
+                database.commit()
 
     def get_xp(self) -> int:
         return self.xp
