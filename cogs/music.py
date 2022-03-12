@@ -22,6 +22,7 @@ from spotipy import Spotify, SpotifyClientCredentials, SpotifyException
 from yt_dlp import utils, YoutubeDL
 
 from data.config.settings import SETTINGS
+from lib.utils.utils import ordinal
 
 utils.bug_reports_message = lambda: ''
 
@@ -648,17 +649,12 @@ class Music(Cog):
         if len(ctx.voice_state.songs) == 0:
             return await ctx.respond('❌ The **queue** is **empty**.')
 
-        def ordinal(n=index):
-            if isinstance(n, float):
-                n = int(n)
-            return "%d%s" % (n, "tsnrhtdd"[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10::4])
-
         try:
             ctx.voice_state.songs.remove(index - 1)
         except IndexError:
-            await ctx.respond(f"❌ **No song** has the **{ordinal()} position** in queue.")
+            await ctx.respond(f"❌ **No song** has the **{ordinal(n=index)} position** in queue.")
             return
-        await ctx.respond(f"🗑 **Removed** the **{ordinal()} song** in queue.")
+        await ctx.respond(f"🗑 **Removed** the **{ordinal(n=index)} song** in queue.")
 
     @slash_command()
     async def loop(self, ctx):
