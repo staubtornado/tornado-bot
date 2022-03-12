@@ -36,9 +36,8 @@ class ExperienceSystem:
         try:
             self.xp, self.level, self.messages = self._cur.fetchone()
         except TypeError:
-            self._cur.execute(f"""
-                    INSERT INTO experience (GuildID, UserID) VALUES ({self.message.guild.id}, {self.message.author.id})
-                """)
+            self._cur.execute("""INSERT INTO experience (GuildID, UserID) VALUES (?, ?)""",
+                              (self.message.guild.id, self.message.author.id))
             self.xp = 0
             self.level = 0
             self.messages = 0
@@ -60,20 +59,18 @@ class ExperienceSystem:
         return True
 
     async def add_xp(self) -> None:
-        self._cur.execute(f"""
-            SELECT XP, Level from experience where (GuildID, UserID) = (
-                {self.message.guild.id}, {self.message.author.id})
-        """)
+        self._cur.execute("""SELECT XP, Level from experience where (GuildID, UserID) = (?, ?)""",
+                          (self.message.guild.id, self.message.author.id))
 
-        self._cur.execute(f"""UPDATE experience SET Messages = Messages + 1 
-                        WHERE (GuildID, UserID) = ({self.message.guild.id}, {self.message.author.id})""")
+        self._cur.execute("""UPDATE experience SET Messages = Messages + 1 WHERE (GuildID, UserID) = (?, ?)""",
+                          (self.message.guild.id, self.message.author.id))
         database.commit()
 
         if not (self.message.guild.id, self.message.author.id) in on_cooldown:
             self.xp += round(randint(self.min_xp, self.max_xp) * self.multiplier)
             await self.check_for_level_up()
-            self._cur.execute(f"""UPDATE experience SET (XP, Level) = ({self.xp}, {self.level})
-                            WHERE (GuildID, UserID) = ({self.message.guild.id}, {self.message.author.id})""")
+            self._cur.execute("""UPDATE experience SET (XP, Level) = (?, ?) WHERE (GuildID, UserID) = (?, ?)""",
+                              (self.xp, self.level, self.message.guild.id, self.message.author.id))
 
             database.commit()
             on_cooldown.append((self.message.guild.id, self.message.author.id))
@@ -143,7 +140,7 @@ class Experience(Cog):
         """Displays the most active users on this server."""
 
         cur: Cursor = database.cursor()
-        cur.execute(f"""SELECT UserID, Level, XP from experience where GuildID = {ctx.guild.id}""")
+        cur.execute("""SELECT UserID, Level, XP from experience where GuildID = ?""", [ctx.guild.id])
 
         total_xps: list = []
         data: list = []
@@ -168,7 +165,7 @@ class Experience(Cog):
         user_list.reverse()
         data.reverse()
         for i, user_id in enumerate(user_list):
-            embed.add_field(name=f"{i + 1}. {await self.bot.fetch_user(user_id)}",
+            embed.add_field(name=f"{i + 1}. {self.bot.get_user(user_id)}",
                             value=f"Level: `{data[i][0]}` XP: `{data[i][1]}`")
 
             if i > 24:
