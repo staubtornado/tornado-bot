@@ -1,4 +1,5 @@
 from asyncio import sleep
+from math import ceil
 from random import randint
 from sqlite3 import Cursor
 
@@ -136,8 +137,9 @@ class Experience(Cog):
         await ctx.respond(embed=embed)
 
     @slash_command()
-    async def leaderboard(self, ctx: ApplicationContext):
+    async def leaderboard(self, ctx: ApplicationContext, *, page: int = 1):
         """Displays the most active users on this server."""
+        await ctx.defer()
 
         cur: Cursor = database.cursor()
         cur.execute("""SELECT UserID, Level, XP from experience where GuildID = ?""", [ctx.guild.id])
@@ -146,9 +148,6 @@ class Experience(Cog):
         data: list = []
         user_list: list = []
 
-        embed: Embed = Embed(title="Leaderboard", description="Top 25 users on this server. Use **/**`rank [@user]` "
-                                                              "to get more information.",
-                             colour=SETTINGS["Colours"]["Default"])
         system: ExperienceSystem = ExperienceSystem(self.bot, ctx)
         for i, row in enumerate(cur.fetchall()):
             system.level = row[1]
@@ -164,15 +163,26 @@ class Experience(Cog):
             index: int = total_xps.index(total_xp)
             user_list.insert(index, row[0])
             data.insert(index, (row[1], row[2]))
-
         user_list.reverse()
         data.reverse()
-        for i, user_id in enumerate(user_list):
+
+        items_per_page = 25
+        pages: int = ceil(len(user_list) / items_per_page)
+
+        start: int = (page - 1) * items_per_page
+        end: int = start + items_per_page
+
+        if page > pages or page < 1:
+            await ctx.respond(f"❌ The **leaderboard only** has **{pages} pages**.")
+            return
+
+        embed: Embed = Embed(title="Leaderboard", description="Top users on this server. Use **/**`rank [@user]` "
+                                                              "to get more information.",
+                             colour=SETTINGS["Colours"]["Default"])
+        for i, user_id in enumerate(user_list[start:end], start=start):
             embed.add_field(name=f"{i + 1}. {self.bot.get_user(user_id)}",
                             value=f"Level: `{data[i][0]}` XP: `{data[i][1]}`")
-
-            if i > 24:
-                break
+        embed.set_footer(text=f"Page {page}/{pages}")
         await ctx.respond(embed=embed)
 
 
