@@ -13,27 +13,26 @@ class Listeners(Cog):
 
     @Cog.listener()
     async def on_guild_join(self, guild: Guild):
-        database.cursor().execute(f"""INSERT INTO guild (GuildID) VALUES ({guild.id})""")
+        database.cursor().execute("""INSERT INTO guilds (GuildID) VALUES (?)""", [guild.id])
         database.commit()
 
     @Cog.listener()
     async def on_guild_remove(self, guild: Guild):
         cur: Cursor = database.cursor()
-        cur.execute(f"""DELETE from guild where GuildID = {guild.id}""")
-        cur.execute(f"""DELETE from experience where GuildID = {guild.id}""")
+        cur.execute("""DELETE from guilds where GuildID = ?""", [guild.id])
+        cur.execute("""DELETE from experience where GuildID = ?""", [guild.id])
         database.commit()
 
     @Cog.listener()
     async def on_member_join(self, member: Member):
-        database.cursor().execute(
-            f"""INSERT INTO experience (GuildID, UserID) VALUES ({member.guild.id}, {member.id})"""
-        )
+        database.cursor().execute("""INSERT INTO experience (GuildID, UserID) VALUES (?, ?)""",
+                                  (member.guild.id, member.id))
         database.commit()
 
     @Cog.listener()
     async def on_member_remove(self, member: Member):
-        database.cursor().execute(
-            f"""DELETE from experience where GuildID = {member.guild.id} and UserID = {member.id}""")
+        database.cursor().execute("""DELETE from experience where GuildID = ? and UserID = ?""",
+                                  (member.guild.id, member.id))
         database.commit()
 
     @Cog.listener()
