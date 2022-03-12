@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS experience (
     PRIMARY KEY (GuildID, UserID)
 );
 
-CREATE TABLE IF NOT EXISTS guild (
+CREATE TABLE IF NOT EXISTS guilds (
     GuildID integer PRIMARY KEY,
     HasPremium integer DEFAULT 0,
     HasBeta integer DEFAULT 0
