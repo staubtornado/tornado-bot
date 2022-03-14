@@ -12,8 +12,8 @@ from traceback import format_exc
 from async_timeout import timeout
 from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio, Embed, Bot, slash_command, VoiceChannel, \
     ClientException
-from discord.ext.commands import Cog
 from discord.commands.permissions import has_role
+from discord.ext.commands import Cog
 from discord.utils import get
 from millify import millify
 from psutil import virtual_memory

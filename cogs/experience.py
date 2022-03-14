@@ -182,7 +182,7 @@ class Experience(Cog):
         end: int = start + items_per_page
 
         if page > pages or page < 1:
-            await ctx.respond(f"❌ The **leaderboard only** has **{pages} pages**.")
+            await ctx.respond(f"❌ **Invalid** page.")
             return
 
         def get_author_position() -> str:
