@@ -15,7 +15,7 @@ bot: Bot = Bot(owner_ids=SETTINGS["OwnerIDs"], description=SETTINGS["Description
 db_initialized: bool = False
 
 
-@loop(minutes=1)
+@loop(seconds=SETTINGS["DatabaseSyncInSeconds"])
 async def sync_database():
     global db_initialized
     local_db: connect = connect("./data/db/database.db", check_same_thread=False)
@@ -58,7 +58,7 @@ def main():
             except Exception as e:
                 print(f"Failed to load {filename}: {e} \n{format_exc()}")
     try:
-        bot.run(getenv("DISCORD_BOT_TOKEN"))
+        bot.run(getenv("DISCORD_BOT_TOKEN"))  # TODO: FIX STRG + C NOT MAKING A SAVE BEFORE EXIT
     except KeyboardInterrupt:
         bot.close()
 

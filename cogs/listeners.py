@@ -25,9 +25,7 @@ class Listeners(Cog):
 
     @Cog.listener()
     async def on_member_join(self, member: Member):
-        database.cursor().execute("""INSERT INTO experience (GuildID, UserID) VALUES (?, ?)""",
-                                  (member.guild.id, member.id))
-        database.commit()
+        pass
 
     @Cog.listener()
     async def on_member_remove(self, member: Member):

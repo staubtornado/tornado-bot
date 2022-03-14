@@ -134,7 +134,7 @@ class Experience(Cog):
             embed.add_field(name="Messages", value=f"`{system.get_messages()}`")
             embed.add_field(name=f"{system.get_xp()} / {system.calc_xp()} XP", value=system.progress_bar())
         except TypeError:
-            await ctx.respond("❌ I **do not have** any **information about this user**.")
+            await ctx.respond("❌ I **do not have** any **information about you or this user**.")
             return
 
         try:
@@ -175,7 +175,7 @@ class Experience(Cog):
         user_list.reverse()
         data.reverse()
 
-        items_per_page = 25
+        items_per_page = SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"]
         pages: int = ceil(len(user_list) / items_per_page)
 
         start: int = (page - 1) * items_per_page

@@ -18,9 +18,13 @@ SETTINGS: dict = {
             "BaseLevel": 250,
             "MinXP": 15,
             "MaxXP": 25,
-            "Cooldown": 60
+            "Cooldown": 60,
+            "Leaderboard": {
+                "ItemsPerPage": 25
+            }
         }
     },
     "Version": "0.0.1a",
-    "Production": False
+    "Production": False,
+    "DatabaseSyncInSeconds": 60
 }

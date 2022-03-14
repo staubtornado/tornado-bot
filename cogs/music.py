@@ -697,6 +697,7 @@ class Music(Cog):
 
         if virtual_memory().percent > 75 and SETTINGS["Production"]:
             await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please try again **later**.")
+            return
 
         async def add_song(track_name: str):
             try:
