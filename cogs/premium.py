@@ -1,7 +1,7 @@
+from sqlite3 import Cursor
 from time import sleep
 
 from discord import slash_command, ApplicationContext
-from discord.commands import Option
 from discord.ext.commands import Cog
 
 from data.db.memory import database
@@ -40,12 +40,29 @@ class Premium(Cog):
                           f"**premium benefits**!")
 
     @slash_command()
-    async def beta(self, ctx: ApplicationContext, state: bool, key: Option(str, "Your closed beta access key.",
-                                                                           required=False)) -> None:
-        database.cursor().execute("""Update guilds set HasBeta = ? where GuildID = ?""", (int(state), ctx.guild.id))
+    async def beta(self, ctx: ApplicationContext, state: bool, *, key: str = None) -> None:
+        cur: Cursor = database.cursor()
+        cur.execute("SELECT HasBeta from guilds where GuildID = ?", [ctx.guild.id])
+
+        def update_db():
+            row = cur.fetchone()
+
+            if row is None:
+                if key is None:
+                    await ctx.respond("It is your first time switching to our beta. Please enter your beta key.")
+                    return
+                cur.execute("""INSERT INTO guilds (GuildID, HasBeta) VALUES (?, ?)""", [ctx.guild.id, int(state)])
+                return
+            cur.execute("""Update guilds set HasBeta = ? where GuildID = ?""", (int(state), ctx.guild.id))
+
+        update_db()
         database.commit()
-        await ctx.respond("✅ **Beta features are now available on this server**, some of them **might cause bugs**. "
-                          "Thanks for your patience.")
+
+        if state:
+            state: str = "available on this server**, some of them **might cause bugs**. Thanks for your patience."
+        else:
+            state: str = "disabled** on this server."
+        await ctx.respond(f"✅ **Beta features are now {state}")
 
 
 def setup(bot):
