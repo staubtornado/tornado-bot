@@ -34,29 +34,50 @@ class Premium(Cog):
 
     @slash_command()
     async def activate(self, ctx: ApplicationContext, key: str) -> None:
-        database.cursor().execute("""Update guilds set HasPremium = 1 where GuildID = ?""", [ctx.guild.id])
-        database.commit()
+        await ctx.defer()
+
+        cur: Cursor = database.cursor()
+        cur.execute("SELECT HasPremium from guilds where GuildID = ?", [ctx.guild.id])
+
+        async def update_db():
+            row = cur.fetchone()
+
+            if row is None:
+                cur.execute("""INSERT INTO guilds (GuildID, HasPremium) VALUES (?, ?)""", [ctx.guild.id, 1])
+                database.commit()
+                return
+            return "❌ You **already activated premium** on this server."
+
+        result = await update_db()
+        if isinstance(result, str):
+            await ctx.respond(result)
+            return
         await ctx.respond(f"🌟 **Thanks for buying** TornadoBot **Premium**! **{ctx.guild.name} has** now all "
                           f"**premium benefits**!")
 
     @slash_command()
     async def beta(self, ctx: ApplicationContext, state: bool, *, key: str = None) -> None:
+        await ctx.defer()
+
         cur: Cursor = database.cursor()
         cur.execute("SELECT HasBeta from guilds where GuildID = ?", [ctx.guild.id])
 
-        def update_db():
+        async def update_db():
             row = cur.fetchone()
 
             if row is None:
                 if key is None:
-                    await ctx.respond("It is your first time switching to our beta. Please enter your beta key.")
-                    return
+                    return "❌ It is your **first time switching to** our **beta**. Please **enter** your **beta key**."
                 cur.execute("""INSERT INTO guilds (GuildID, HasBeta) VALUES (?, ?)""", [ctx.guild.id, int(state)])
                 return
             cur.execute("""Update guilds set HasBeta = ? where GuildID = ?""", (int(state), ctx.guild.id))
 
-        update_db()
+        result = await update_db()
         database.commit()
+
+        if isinstance(result, str):
+            await ctx.respond(result)
+            return
 
         if state:
             state: str = "available on this server**, some of them **might cause bugs**. Thanks for your patience."
