@@ -18,5 +18,8 @@ CREATE TABLE IF NOT EXISTS ticket_settings (
     CreateVoiceChannel integer DEFAULT 0,
     RoleID message_text,
     CategoryID integer
+);
 
+CREATE TABLE IF NOT EXISTS keys (
+    KeyString message_text PRIMARY KEY
 )
