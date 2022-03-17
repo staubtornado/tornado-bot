@@ -39,16 +39,20 @@ class Premium(Cog):
         cur: Cursor = database.cursor()
         cur.execute("SELECT HasPremium from guilds where GuildID = ?", [ctx.guild.id])
 
-        async def update_db():
-            row = cur.fetchone()
+        def update_db():
+            if cur.fetchone() is None:
 
-            if row is None:
+                cur.execute("""SELECT KeyString from keys where KeyString = ?""", [key])
+                if cur.fetchone() is None:
+                    return "❌ **Invalid key**."
+
                 cur.execute("""INSERT INTO guilds (GuildID, HasPremium) VALUES (?, ?)""", [ctx.guild.id, 1])
+                cur.execute("""DELETE from keys where KeyString = ?""", [key])
                 database.commit()
                 return
             return "❌ You **already activated premium** on this server."
 
-        result = await update_db()
+        result = update_db()
         if isinstance(result, str):
             await ctx.respond(result)
             return
