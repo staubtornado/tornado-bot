@@ -1,7 +1,7 @@
 from sqlite3 import Cursor
 from time import sleep
 
-from discord import slash_command, ApplicationContext
+from discord import slash_command, ApplicationContext, Bot
 from discord.ext.commands import Cog
 
 from data.db.memory import database
@@ -16,12 +16,12 @@ def update_guilds():
     sleep(5)
     query: str = """SELECT * from guilds where HasPremium = 1 OR HasBeta = 1"""
     sleep(5)
-    for row in database.cursor().execute(query):
+    for row in database.cursor().execute(query).fetchall():
         print(row)
 
 
 class Premium(Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     @staticmethod
@@ -62,17 +62,15 @@ class Premium(Cog):
         cur: Cursor = database.cursor()
         cur.execute("SELECT HasBeta from guilds where GuildID = ?", [ctx.guild.id])
 
-        async def update_db():
-            row = cur.fetchone()
-
-            if row is None:
+        def update_db():
+            if cur.fetchone() is None:
                 if key is None:
                     return "❌ It is your **first time switching to** our **beta**. Please **enter** your **beta key**."
                 cur.execute("""INSERT INTO guilds (GuildID, HasBeta) VALUES (?, ?)""", [ctx.guild.id, int(state)])
                 return
             cur.execute("""Update guilds set HasBeta = ? where GuildID = ?""", (int(state), ctx.guild.id))
 
-        result = await update_db()
+        result = update_db()
         database.commit()
 
         if isinstance(result, str):
@@ -86,5 +84,5 @@ class Premium(Cog):
         await ctx.respond(f"✅ **Beta features are now {state}")
 
 
-def setup(bot):
+def setup(bot: Bot):
     bot.add_cog(Premium(bot))
