@@ -170,7 +170,7 @@ class YTDLSource(PCMVolumeTransformer):
                 except IndexError:
                     raise YTDLError(f"**Could not retrieve any matches** for `{webpage_url}`")
 
-        if int(info["duration"]) > 10800:
+        if int(info["duration"]) > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
             raise YTDLError("**Songs** can not be **longer than three hours**. Use **/**`loop` to repeat songs.")
         return cls(ctx, FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
@@ -185,7 +185,7 @@ class YTDLSource(PCMVolumeTransformer):
             elif 86400 > duration >= 3600:
                 return strftime('%H:%M:%S', gmtime(duration))
             return timedelta(seconds=duration)
-        return"Error"
+        return "Error"
 
     @staticmethod
     def parse_limited_title(title: str):
@@ -332,7 +332,7 @@ class VoiceState:
                 await self.current.source.channel.send(embed=self.current.create_embed(self.songs))
 
             elif self.loop:
-                if self.times_looped * self.current.source.duration > 10800:
+                if self.times_looped * self.current.source.duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
                     self.loop = False
                     await self.current.source.channel.send("🔂 **The loop** has been **disabled** due to "
                                                            "**inactivity**.")
@@ -691,7 +691,7 @@ class Music(Cog):
         if not ctx.voice_state.voice:
             await self.join(self, ctx)
 
-        if len(ctx.voice_state.songs) >= 100:
+        if len(ctx.voice_state.songs) >= SETTINGS["Cogs"]["Music"]["MaxQueueLength"]:
             await ctx.respond("🥵 **Too many** songs in queue.")
             return
 
@@ -712,13 +712,11 @@ class Music(Cog):
             await ctx.voice_state.songs.put(song)
             return source
 
-        spotify_indicators: list = ["https://open.spotify.com/playlist/", "spotify:playlist:",
-                                    "https://open.spotify.com/album/", "spotify:album:",
-                                    "https://open.spotify.com/track/", "spotify:track:",
-                                    "https://open.spotify.com/artist/", "spotify:artist:"]
-
         async def process():
-            if any(x in search for x in spotify_indicators):
+            if any(x in search for x in ["https://open.spotify.com/playlist/", "spotify:playlist:",
+                                         "https://open.spotify.com/album/", "spotify:album:",
+                                         "https://open.spotify.com/track/", "spotify:track:",
+                                         "https://open.spotify.com/artist/", "spotify:artist:"]):
                 song_names: list = []
                 errors: int = 0
 
@@ -770,7 +768,7 @@ class Music(Cog):
         try:
             await process()
         except Exception as e:
-            await ctx.respond(f"**A fata error has occurred**: `{e}`. **You might** execute **/**`leave` to **reset "
+            await ctx.respond(f"**A fatal error has occurred**: `{e}`. **You might** execute **/**`leave` to **reset "
                               f"the voice state on** this **server**.")
         ctx.voice_state.processing = False
 
@@ -785,7 +783,7 @@ class Music(Cog):
                           .add_field(name="Soundcloud", value="✅ Tracks\n❌ Playlists\n❌ Albums\n❌ Artists")
                           .add_field(name="Twitch", value="⚠ Livestreams")
                           .add_field(name="🐞 Troubleshooting", value="If you are experiencing issues, please execute "
-                                                                     "**/**`leave`. This should fix most errors.",
+                                                                      "**/**`leave`. This should fix most errors.",
                                      inline=False))
 
 

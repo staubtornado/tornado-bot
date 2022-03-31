@@ -22,6 +22,10 @@ SETTINGS: dict = {
             "Leaderboard": {
                 "ItemsPerPage": 25
             }
+        },
+        "Music": {
+            "MaxQueueLength": 100,
+            "MaxDuration": 10800
         }
     },
     "Version": "0.0.1a",
