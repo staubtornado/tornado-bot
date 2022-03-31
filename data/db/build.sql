@@ -21,5 +21,7 @@ CREATE TABLE IF NOT EXISTS ticket_settings (
 );
 
 CREATE TABLE IF NOT EXISTS keys (
-    KeyString message_text PRIMARY KEY
+    KeyString message_text PRIMARY KEY,
+    EnablesPremium integer,
+    EnablesBeta integer
 )
