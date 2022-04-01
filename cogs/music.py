@@ -262,6 +262,14 @@ class SongQueue(Queue):
     def shuffle(self):
         shuffle(self._queue)
 
+    def reverse(self):
+        length: int = self.qsize()
+
+        for i in range(int(length / 2)):
+            n = self._queue[i]
+            self._queue[i] = self._queue[length - i - 1]
+            self._queue[length - i - 1] = n
+
     def remove(self, index: int):
         del self._queue[index]
 
@@ -632,10 +640,26 @@ class Music(Cog):
             return await ctx.respond(instance)
 
         if len(ctx.voice_state.songs) == 0:
-            return await ctx.respond('❌ The **queue** is **empty**.')
+            return await ctx.respond("❌ The **queue** is **empty**.")
 
         ctx.voice_state.songs.shuffle()
         await ctx.respond("🔀 **Shuffled** the queue.")
+
+    @slash_command()
+    async def reverse(self, ctx):
+        """Reverses the queue."""
+        await ctx.defer()
+
+        instance = await ensure_voice_state(ctx)
+        if isinstance(instance, str):
+            await ctx.respond(instance)
+            return
+
+        if len(ctx.voice_state.songs) == 0:
+            await ctx.respond("❌ The **queue** is **empty**.")
+            return
+        ctx.voice_state.songs.reverse()
+        await ctx.respond("↩ **Reversed** the **queue**.")
 
     @slash_command()
     async def remove(self, ctx, index: int):
