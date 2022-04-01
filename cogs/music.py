@@ -620,8 +620,10 @@ class Music(Cog):
             queue += f"`{i + 1}`. [{song.source.title_limited_embed}]({song.source.url})\n"
         duration: int = 0
         for song in ctx.voice_state.songs:
-            temp = song.source.data.get("duration")
-            duration += int(temp) if temp is isinstance(temp, int) else 0
+            try:
+                duration += int(song.source.data.get("duration"))
+            except TypeError:
+                continue
 
         embed = Embed(title="Queue", description=f"**Songs:** {len(ctx.voice_state.songs)}\n**Duration:** "
                                                  f"{YTDLSource.parse_duration(duration)}\n\n{queue}",
