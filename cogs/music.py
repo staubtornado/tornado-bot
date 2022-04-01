@@ -671,7 +671,7 @@ class Music(Cog):
             return await ctx.respond(instance)
 
         if len(ctx.voice_state.songs) == 0:
-            return await ctx.respond('❌ The **queue** is **empty**.')
+            return await ctx.respond("❌ The **queue** is **empty**.")
 
         try:
             ctx.voice_state.songs.remove(index - 1)
@@ -690,7 +690,7 @@ class Music(Cog):
             return await ctx.respond(instance)
 
         if not ctx.voice_state.is_playing:
-            return await ctx.respond('❌ **Nothing** is currently **playing**.')
+            return await ctx.respond("❌ **Nothing** is currently **playing**.")
 
         ctx.voice_state.loop = not ctx.voice_state.loop
 

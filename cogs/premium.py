@@ -64,13 +64,17 @@ class Premium(Cog):
         await ctx.defer()
 
         cur: Cursor = database.cursor()
-        cur.execute("SELECT HasBeta from guilds where GuildID = ?", [ctx.guild.id])
+        cur.execute("""SELECT HasBeta from guilds where GuildID = ?""", [ctx.guild.id])
 
         def update_db():
             if cur.fetchone() is None:
                 if key is None:
                     return "❌ It is your **first time switching to** our **beta**. Please **enter** your **beta key**."
+                if cur.execute("SELECT KeyString from keys where KeyString = ?", [key]).fetchone() is None:
+                    return "❌ **Invalid key**."
+
                 cur.execute("""INSERT INTO guilds (GuildID, HasBeta) VALUES (?, ?)""", [ctx.guild.id, int(state)])
+                cur.execute("""DELETE from keys where KeyString = ?""", [key])
                 return
             cur.execute("""Update guilds set HasBeta = ? where GuildID = ?""", (int(state), ctx.guild.id))
 
