@@ -30,5 +30,5 @@ SETTINGS: dict = {
     },
     "Version": "0.0.1a",
     "Production": False,
-    "DatabaseSyncInSeconds": 60
+    "DatabaseSyncInSeconds": 500
 }

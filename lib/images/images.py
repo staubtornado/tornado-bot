@@ -1,7 +1,8 @@
+from asyncio import sleep
 from urllib.parse import urlparse, urljoin
 
 from bs4 import BeautifulSoup
-from requests import get
+from selenium.webdriver import Chrome
 from tqdm import tqdm
 
 
@@ -14,10 +15,15 @@ class ImageSystem:
         parsed = urlparse(url)
         return bool(parsed.netloc) and bool(parsed.scheme)
 
-    def get_all_images(self):
-        soup = BeautifulSoup(get(self.url).content, "html.parser")
+    async def get_all_images(self):
+        driver = Chrome(executable_path="./chromedriver.exe")
+        driver.get(self.url)
+        driver.execute_script("window.scrollTo(0, 2000)")
+        await sleep(3)
+        soup = BeautifulSoup(driver.page_source, "html.parser")
+        driver.quit()
 
-        urls = []
+        urls: list = []
         for img in tqdm(soup.find_all("img", recursive=True), "Extracting images"):
             img_url = img.attrs.get("src")
             if not img_url:
@@ -31,5 +37,6 @@ class ImageSystem:
                 pass
 
             if self.is_valid(img_url):
-                urls.append(img_url)
+                if "static.pornpics.de" not in img_url:
+                    urls.append(img_url)
         return urls
