@@ -63,7 +63,7 @@ class Images(Cog):
 
     @slash_command()
     async def asian(self, ctx: ApplicationContext):
-        await self.send(ctx, "asian", "Omae wa mou shindeiru. Nani?")
+        await self.send(ctx, "asian", "Asian hate does not exist.")
 
     @slash_command()
     async def masturbation(self, ctx: ApplicationContext):
