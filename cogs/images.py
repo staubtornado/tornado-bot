@@ -3,6 +3,7 @@ from random import choice, random
 from discord import Bot, slash_command, ApplicationContext, Embed
 from discord.ext import tasks
 from discord.ext.commands import Cog
+from tqdm import tqdm
 
 from data.config.settings import SETTINGS
 from lib.images.images import ImageSystem
@@ -23,7 +24,7 @@ class Images(Cog):
                             "cat-pictures", "natural-tits", "milf"]
 
         self.gallery.clear()
-        for category in categories:
+        for category in tqdm(categories, "Extracting images"):
             url: str = f"https://www.pornpics.de/{category}/"
             if category == "cat-pictures":
                 url = "https://www.rd.com/list/cat-pictures/"

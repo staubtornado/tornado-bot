@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
-from tqdm import tqdm
 
 
 class ImageSystem:
@@ -33,7 +32,7 @@ class ImageSystem:
         driver.quit()
 
         urls: list = []
-        for img in tqdm(soup.find_all("img", recursive=True), "Extracting images"):
+        for img in soup.find_all("img", recursive=True):
             img_url = img.attrs.get("src")
             if not img_url:
                 continue
