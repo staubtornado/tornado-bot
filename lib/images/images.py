@@ -26,7 +26,8 @@ class ImageSystem:
         except WebDriverException or FileNotFoundError:
             driver = Chrome(executable_path="/usr/lib/chromium-browser/chromedriver", chrome_options=options)
         driver.get(self.url)
-        driver.execute_script("window.scrollTo(0, 2000)")
+        for i in range(10):
+            driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
             sleep(0.5)
         soup = BeautifulSoup(driver.page_source, "html.parser")
         driver.quit()
