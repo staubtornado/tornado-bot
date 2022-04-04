@@ -38,7 +38,13 @@ class Images(Cog):
         await ctx.defer()
 
         embed: Embed = Embed(title=message, colour=SETTINGS["Colours"]["Default"])
-        embed.set_image(url=choice(self.gallery[category]))
+
+        try:
+            embed.set_image(url=choice(self.gallery[category]))
+        except KeyError:
+            await ctx.respond("Images are currently being updated. Please try again in several minutes.")
+            return
+
         embed.set_footer(text="Provided by PornPics")
         await ctx.respond(embed=embed)
 
