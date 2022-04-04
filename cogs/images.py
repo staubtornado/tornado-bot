@@ -28,7 +28,7 @@ class Images(Cog):
             if category == "cat-pictures":
                 url = "https://www.rd.com/list/cat-pictures/"
 
-            images: list = await ImageSystem(url).get_all_images()
+            images: list = ImageSystem(url).get_all_images()
             self.gallery[category] = images
 
     async def send(self, ctx: ApplicationContext, category: str, message: str):

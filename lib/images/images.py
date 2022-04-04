@@ -1,4 +1,4 @@
-from asyncio import sleep
+from time import sleep
 from urllib.parse import urlparse, urljoin
 
 from bs4 import BeautifulSoup
@@ -17,7 +17,7 @@ class ImageSystem:
         parsed = urlparse(url)
         return bool(parsed.netloc) and bool(parsed.scheme)
 
-    async def get_all_images(self):
+    def get_all_images(self):
         options = Options()
         options.headless = True
         options.add_argument('user-agent=fake-useragent')
@@ -28,7 +28,7 @@ class ImageSystem:
             driver = Chrome(executable_path="/usr/lib/chromium-browser/chromedriver", chrome_options=options)
         driver.get(self.url)
         driver.execute_script("window.scrollTo(0, 2000)")
-        await sleep(3)
+            sleep(0.5)
         soup = BeautifulSoup(driver.page_source, "html.parser")
         driver.quit()
 
