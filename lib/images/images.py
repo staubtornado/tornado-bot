@@ -3,6 +3,7 @@ from urllib.parse import urlparse, urljoin
 
 from bs4 import BeautifulSoup
 from selenium.webdriver import Chrome
+from selenium.webdriver.chrome.options import Options
 from tqdm import tqdm
 
 
@@ -16,7 +17,11 @@ class ImageSystem:
         return bool(parsed.netloc) and bool(parsed.scheme)
 
     async def get_all_images(self):
-        driver = Chrome(executable_path="./chromedriver.exe")
+        options = Options()
+        options.headless = True
+        options.add_argument('user-agent=fake-useragent')
+
+        driver = Chrome(executable_path="./chromedriver.exe", chrome_options=options)
         driver.get(self.url)
         driver.execute_script("window.scrollTo(0, 2000)")
         await sleep(3)
