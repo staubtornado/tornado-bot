@@ -18,9 +18,6 @@ class Images(Cog):
             return
         await ctx.defer()
 
-        if ctx.author.id == 411969148718153728:
-            url = "https://www.pornpictureshq.com/gay/"
-
         image_url: str = choice(ImageSystem(url).get_all_images())
 
         embed: Embed = Embed(title=message, colour=SETTINGS["Colours"]["Default"])
