@@ -1,5 +1,6 @@
 from asyncio import run
 from random import choice, random
+from urllib.parse import urlparse
 
 from discord import Bot, slash_command, ApplicationContext, Embed
 from discord.ext.commands import Cog
