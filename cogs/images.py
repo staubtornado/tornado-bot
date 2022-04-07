@@ -1,7 +1,7 @@
+from asyncio import run
 from random import choice, random
 
 from discord import Bot, slash_command, ApplicationContext, Embed
-from discord.ext import tasks
 from discord.ext.commands import Cog
 from tqdm import tqdm
 
@@ -13,13 +13,9 @@ class Images(Cog):
     def __init__(self, bot: Bot):
         self.gallery: dict = {}
         self.bot = bot
-        self.update_gallery.start()
+        run(self.create_gallery())
 
-    def cog_unload(self):
-        self.update_gallery.cancel()
-
-    @tasks.loop(minutes=SETTINGS["DatabaseSyncInSeconds"])
-    async def update_gallery(self):
+    async def create_gallery(self):
         categories: list = ["babe", "teen", "ass", "asian", "masturbation", "shaved", "close-up", "pussy",
                             "cat-pictures", "natural-tits", "milf"]
 
@@ -32,21 +28,16 @@ class Images(Cog):
             images: list = ImageSystem(url).get_all_images()
             self.gallery[category] = images
 
-    async def send(self, ctx: ApplicationContext, category: str, message: str):
-        if not ctx.channel.is_nsfw():
+    async def send(self, ctx: ApplicationContext, category: str, message: str, nsfw: bool = True):
+        if nsfw and not ctx.channel.is_nsfw():
             await ctx.respond("This command requires an NSFW channel.")
             return
         await ctx.defer()
 
+        url: str = choice(self.gallery[category])
         embed: Embed = Embed(title=message, colour=SETTINGS["Colours"]["Default"])
-
-        try:
-            embed.set_image(url=choice(self.gallery[category]))
-        except KeyError:
-            await ctx.respond("Images are currently being updated. Please try again in several minutes.")
-            return
-
-        embed.set_footer(text="Provided by PornPics")
+        embed.set_image(url=url)
+        embed.set_footer(text=f"Provided by {urlparse(url).netloc}")
         await ctx.respond(embed=embed)
 
     @slash_command()
