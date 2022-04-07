@@ -1,5 +1,6 @@
 from time import sleep
-from urllib.parse import urlparse, urljoin
+from typing import AnyStr
+from urllib.parse import urlparse, urljoin, ParseResult
 
 from bs4 import BeautifulSoup
 from selenium.common.exceptions import WebDriverException
@@ -12,24 +13,24 @@ class ImageSystem:
         self.url = url
 
     @classmethod
-    def is_valid(cls, url: str):
-        parsed = urlparse(url)
+    def is_valid(cls, url: str) -> bool:
+        parsed: ParseResult = urlparse(url)
         return bool(parsed.netloc) and bool(parsed.scheme)
 
-    def get_all_images(self):
-        options = Options()
+    def get_all_images(self) -> list:
+        options: Options = Options()
         options.headless = True
         options.add_argument('user-agent=fake-useragent')
 
         try:
-            driver = Chrome(executable_path="./chromedriver.exe", chrome_options=options)
+            driver: Chrome = Chrome(executable_path="./chromedriver.exe", chrome_options=options)
         except WebDriverException or FileNotFoundError:
-            driver = Chrome(executable_path="/usr/lib/chromium-browser/chromedriver", chrome_options=options)
+            driver: Chrome = Chrome(executable_path="/usr/lib/chromium-browser/chromedriver", chrome_options=options)
         driver.get(self.url)
         for i in range(10):
             driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
             sleep(0.5)
-        soup = BeautifulSoup(driver.page_source, "html.parser")
+        soup: BeautifulSoup = BeautifulSoup(driver.page_source, "html.parser")
         driver.quit()
 
         urls: list = []
@@ -37,10 +38,10 @@ class ImageSystem:
             img_url = img.attrs.get("src")
             if not img_url:
                 continue
-            img_url = urljoin(self.url, img_url)
+            img_url: AnyStr = urljoin(self.url, img_url)
 
             try:
-                pos = img_url.index("?")
+                pos: int = img_url.index("?")
                 img_url = img_url[:pos]
             except ValueError:
                 pass
