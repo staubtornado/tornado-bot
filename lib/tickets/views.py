@@ -1,6 +1,8 @@
 from discord import ButtonStyle, Interaction
 from discord.ui import View, button as ui_button, Button
 
+from lib.tickets.tickets import TicketSystem
+
 
 class ClosedTicketControl(View):
     def __init__(self):
@@ -12,7 +14,7 @@ class ClosedTicketControl(View):
         custom_id="454295622",
     )
     async def delete(self, button: Button, interaction: Interaction):
-        pass
+        await TicketSystem(interaction).delete()
 
     @ui_button(
         label="Open",
@@ -20,7 +22,7 @@ class ClosedTicketControl(View):
         custom_id="824046886",
     )
     async def reopen(self, button: Button, interaction: Interaction):
-        pass
+        await TicketSystem(interaction).open()
 
 
 class OpenedTicketControl(View):
@@ -33,7 +35,7 @@ class OpenedTicketControl(View):
         custom_id="715703656",
     )
     async def close(self, button: Button, interaction: Interaction):
-        pass
+        await TicketSystem(interaction).close()
 
     @ui_button(
         label="Transcript",
@@ -41,7 +43,7 @@ class OpenedTicketControl(View):
         custom_id="339931015",
     )
     async def transcript(self, button: Button, interaction: Interaction):
-        pass
+        await TicketSystem(interaction).transcript()
 
 
 class Support(View):
@@ -54,4 +56,4 @@ class Support(View):
         custom_id="516669005",
     )
     async def support(self, button: Button, interaction: Interaction):
-        pass
+        await TicketSystem(interaction).create()
