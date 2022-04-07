@@ -18,14 +18,15 @@ class Images(Cog):
 
     async def create_gallery(self):
         categories: list = ["babe", "teen", "ass", "asian", "masturbation", "shaved", "close-up", "pussy",
-                            "cat-pictures", "natural-tits", "milf"]
+                            "cat-pictures", "natural-tits", "milf", "meme"]
 
         self.gallery.clear()
         for category in tqdm(categories, "Extracting images"):
             url: str = f"https://www.pornpics.de/{category}/"
             if category == "cat-pictures":
                 url = "https://www.rd.com/list/cat-pictures/"
-
+            if category == "meme":
+                url = "https://www.pinterest.de/Mcnicollke/meme-page/"
             images: list = ImageSystem(url).get_all_images()
             self.gallery[category] = images
 
@@ -93,6 +94,13 @@ class Images(Cog):
     async def milf(self, ctx: ApplicationContext):
         """Sends a milf image. Requires NSFW channel."""
         await self.send(ctx, "milf", "Hey mom!")
+
+    #####################################################################
+
+    @slash_command()
+    async def meme(self, ctx: ApplicationContext):
+        """Sends a (hopefully) funny meme."""
+        await self.send(ctx, "meme", "Here we go.", nsfw=False)
 
 
 def setup(bot: Bot):
