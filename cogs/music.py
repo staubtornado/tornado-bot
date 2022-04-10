@@ -808,8 +808,8 @@ class Music(Cog):
                           .add_field(name="Spotify", value="✅ Tracks\n✅ Playlists\n✅ Albums\n✅ Artists")
                           .add_field(name="Soundcloud", value="✅ Tracks\n❌ Playlists\n❌ Albums\n❌ Artists")
                           .add_field(name="Twitch", value="⚠ Livestreams")
-                          .add_field(name="🐞 Troubleshooting", value="If you are experiencing issues, please execute "
-                                                                      "**/**`leave`. This should fix most errors.",
+                          .add_field(name="🐞 Troubleshooting", value="If you are experiencing issues, please execute" 
+                                                                     " **/**`leave`. This should fix most errors.",
                                      inline=False))
 
 
