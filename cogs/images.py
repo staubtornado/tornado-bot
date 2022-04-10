@@ -18,17 +18,18 @@ class Images(Cog):
 
     async def create_gallery(self):
         categories: list = ["babe", "teen", "ass", "asian", "masturbation", "shaved", "close-up", "pussy",
-                            "cat-pictures", "natural-tits", "milf", "meme"]
+                            "cat-pictures", "natural-tits", "milf", "meme", "porn-gif"]
 
         self.gallery.clear()
-        for category in tqdm(categories, "Extracting images"):
+        for category in tqdm(categories, "Scraping image urls"):
             url: str = f"https://www.pornpics.de/{category}/"
             if category == "cat-pictures":
                 url = "https://www.rd.com/list/cat-pictures/"
             if category == "meme":
                 url = "https://www.pinterest.de/Mcnicollke/meme-page/"
-            images: list = ImageSystem(url).get_all_images()
-            self.gallery[category] = images
+            if category == "porn-gif":
+                url = "https://gifsex.blog/24-teen-sex-gifs.html"
+            self.gallery[category] = ImageSystem(url).get_all_images()
 
     async def send(self, ctx: ApplicationContext, category: str, message: str, nsfw: bool = True):
         if nsfw and not ctx.channel.is_nsfw():
@@ -36,16 +37,20 @@ class Images(Cog):
             return
         await ctx.defer()
 
-        url: str = choice(self.gallery[category])
+        url = choice(self.gallery[category])
         embed: Embed = Embed(title=message, colour=SETTINGS["Colours"]["Default"])
         embed.set_image(url=url)
         embed.set_footer(text=f"Provided by {urlparse(url).netloc}")
+        print(url)
         await ctx.respond(embed=embed)
 
     @slash_command()
-    async def porn(self, ctx: ApplicationContext):
+    async def porn(self, ctx: ApplicationContext, gif: bool = False):
         """Sends a porn image. Requires NSFW channel."""
-        await self.send(ctx, "babe", "Here, take that porn!")
+        if not gif:
+            await self.send(ctx, "babe", "Here, take that porn!")
+            return
+        await self.send(ctx, "porn-gif", "More frames? You're welcome.")
 
     @slash_command()
     async def teen(self, ctx: ApplicationContext):

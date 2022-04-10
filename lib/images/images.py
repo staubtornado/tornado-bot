@@ -29,7 +29,7 @@ class ImageSystem:
         driver.get(self.url)
         for i in range(10):
             driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
-            sleep(0.5)
+            sleep(0.3)
         soup: BeautifulSoup = BeautifulSoup(driver.page_source, "html.parser")
         driver.quit()
 
@@ -47,6 +47,9 @@ class ImageSystem:
                 pass
 
             if self.is_valid(img_url):
-                if "static.pornpics.de" not in img_url:
+                if not any(x in img_url for x in ["static.pornpics.de"]):
+                    if "https://gifsex.blog/gif2png.php" in img_url:
+                        img_url = urljoin(self.url, img.attrs.get("data-srcgif"))
                     urls.append(img_url)
+        # print(len(urls))
         return urls
