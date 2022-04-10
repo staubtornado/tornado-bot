@@ -15,7 +15,7 @@ bot: Bot = Bot(owner_ids=SETTINGS["OwnerIDs"], description=SETTINGS["Description
 db_initialized: bool = False
 
 
-@loop(seconds=SETTINGS["DatabaseSyncInSeconds"])
+@loop(seconds=SETTINGS["ServiceSyncInSeconds"])
 async def sync_database():
     global db_initialized
     local_db: connect = connect("./data/db/database.db", check_same_thread=False)
