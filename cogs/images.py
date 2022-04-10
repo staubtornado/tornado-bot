@@ -33,7 +33,7 @@ class Images(Cog):
 
     async def send(self, ctx: ApplicationContext, category: str, message: str, nsfw: bool = True):
         if nsfw and not ctx.channel.is_nsfw():
-            await ctx.respond("This command requires an NSFW channel.")
+            await ctx.respond("🔞 This command **requires** an **NSFW** channel.")
             return
         await ctx.defer()
 
