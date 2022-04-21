@@ -214,8 +214,8 @@ class Song:
         return millify(count, precision=2)
 
     def create_embed(self, songs):
-        description = f"[Video]({self.source.url}) | [{self.source.uploader}]({self.source.uploader_url}) | " \
-                      f"{self.source.duration} | {self.requester.mention}"
+        description = f"[Video]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) **|** " \
+                      f"{self.source.duration} **|** {self.requester.mention}"
 
         date = self.source.upload_date
         timestamp = f"<t:{str(datetime(int(date[6:]), int(date[3:-5]), int(date[:-8])).timestamp())[:-2]}:R>"
