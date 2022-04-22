@@ -8,7 +8,7 @@ from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
 
 
-class ImageSystem:
+class ImageScraping:
     def __init__(self, url: str):
         self.url = url
 
