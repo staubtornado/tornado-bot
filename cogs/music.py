@@ -214,8 +214,8 @@ class Song:
         return millify(count, precision=2)
 
     def create_embed(self, songs):
-        description = f"[Video]({self.source.url}) | [{self.source.uploader}]({self.source.uploader_url}) | " \
-                      f"{self.source.duration} | {self.requester.mention}"
+        description = f"[Video]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) **|** " \
+                      f"{self.source.duration} **|** {self.requester.mention}"
 
         date = self.source.upload_date
         timestamp = f"<t:{str(datetime(int(date[6:]), int(date[3:-5]), int(date[:-8])).timestamp())[:-2]}:R>"
@@ -289,6 +289,7 @@ class VoiceState:
         self.times_looped = 0
 
         self._loop = False
+        self._queue_loop = False
         self._volume = 0.5
         self.skip_votes = set()
 
@@ -305,6 +306,14 @@ class VoiceState:
     def loop(self, value: bool):
         self._loop = value
         self.times_looped = 0
+
+    @property
+    def queue_loop(self):
+        return self._queue_loop
+
+    @queue_loop.setter
+    def queue_loop(self, value: bool):
+        self._queue_loop = value
 
     @property
     def volume(self):
@@ -324,8 +333,6 @@ class VoiceState:
             self.now = None
 
             if not self.loop:
-                self.times_looped = 0
-
                 try:
                     async with timeout(180):
                         self.current = await self.songs.get()
@@ -334,6 +341,10 @@ class VoiceState:
                     self.exists = False
                     await self._ctx.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to **inactivity**.")
                     return
+
+                if self.queue_loop:
+                    await self.songs.put(Song(await YTDLSource.create_source(self._ctx, self.current.source.url,
+                                                                             loop=self.bot.loop)))
 
                 self.current.source.volume = self._volume
                 self.voice.play(self.current.source, after=self.play_next_song)
@@ -684,7 +695,7 @@ class Music(Cog):
 
     @slash_command()
     async def loop(self, ctx):
-        """Loops the currently playing song. Invoke this command again to disable loop the song."""
+        """Loops the currently playing song. Invoke this command again to disable song loop."""
         await ctx.defer()
 
         instance = await ensure_voice_state(ctx)
@@ -694,11 +705,45 @@ class Music(Cog):
         if not ctx.voice_state.is_playing:
             return await ctx.respond("❌ **Nothing** is currently **playing**.")
 
+        ctx.voice_state.queue_loop = False
         ctx.voice_state.loop = not ctx.voice_state.loop
 
         if ctx.voice_state.loop:
             return await ctx.respond("🔁 **Looped** song, use **/**`loop` to **disable** loop.")
         await ctx.respond("🔁 **Unlooped** song, use **/**`loop` to **enable** loop.")
+
+    @slash_command()
+    async def loopqueue(self, ctx):
+        """Loops the whole queue. Invoke this command again to disable loop."""
+        await ctx.defer()
+
+        instance = await ensure_voice_state(ctx)
+        if isinstance(instance, str):
+            await ctx.respond(instance)
+            return
+
+        if not ctx.voice_state.is_playing:
+            await ctx.respond("❌ **Nothing** is currently **playing**.")
+            return
+
+        duration: int = 0
+        for song in ctx.voice_state.songs:
+            try:
+                duration += int(song.source.data.get("duration"))
+            except TypeError:
+                continue
+
+        if duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
+            await ctx.respond("❌ The **queue is too long** to be looped.")
+            return
+
+        ctx.voice_state.loop = False
+        ctx.voice_state.queue_loop = not ctx.voice_state.queue_loop
+
+        if ctx.voice_state.queue_loop:
+            await ctx.respond("🔁 **Looped** queue, use **/**`loopqueue` to **disable** loop.")
+            return
+        await ctx.respond("🔁 **Unlooped** queue, use **/**`loopqueue` to **enable** loop.")
 
     @slash_command()
     async def play(self, ctx, *, search: str):

@@ -7,7 +7,7 @@ from discord.ext.commands import Cog
 from tqdm import tqdm
 
 from data.config.settings import SETTINGS
-from lib.images.images import ImageSystem
+from lib.images.scraping import ImageScraping
 
 
 class Images(Cog):
@@ -29,7 +29,7 @@ class Images(Cog):
                 url = "https://www.pinterest.de/Mcnicollke/meme-page/"
             if category == "porn-gif":
                 url = "https://gifsex.blog/24-teen-sex-gifs.html"
-            self.gallery[category] = ImageSystem(url).get_all_images()
+            self.gallery[category] = ImageScraping(url).get_all_images()
 
     async def send(self, ctx: ApplicationContext, category: str, message: str, nsfw: bool = True):
         if nsfw and not ctx.channel.is_nsfw():
