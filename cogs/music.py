@@ -448,6 +448,8 @@ class Music(Cog):
                 await ctx.respond('❌ The **queue** is **empty**.')
                 return
             ctx.voice_state.songs.clear()
+            ctx.voice_state.loop = False
+            ctx.voice_state.queue_loop = False
             await ctx.respond('🧹 **Cleared** the queue.')
         else:
             await ctx.respond('⚠ I am **currently processing** the previous **request**.')
@@ -576,11 +578,16 @@ class Music(Cog):
             return await ctx.respond(instance)
 
         if not ctx.voice_state.is_playing:
-            return await ctx.respond("❌ **Nothing** is currently **playing**.")
+            await ctx.respond("❌ **Nothing** is currently **playing**.")
+            return
+
+        loop_note: str = "."
+        if ctx.voice_state.queue_loop:
+            loop_note: str = " and **removed song from** queue **loop**."
 
         voter = ctx.author
         if voter == ctx.voice_state.current.requester:
-            await ctx.respond("⏭ **Skipped** the **song directly**, cause **you** added it.")
+            await ctx.respond(f"⏭ **Skipped** the **song directly**, cause **you** added it{loop_note}")
             ctx.voice_state.skip()
 
         elif voter.id not in ctx.voice_state.skip_votes:
@@ -590,7 +597,7 @@ class Music(Cog):
             required_votes: int = ceil((len(ctx.author.voice.channel.members) - 1) * (1 / 3))
 
             if total_votes >= required_votes:
-                await ctx.respond(f"⏭ **Skipped song**, as **{total_votes}/{required_votes}** users voted.")
+                await ctx.respond(f"⏭ **Skipped song**, as **{total_votes}/{required_votes}** users voted{loop_note}")
                 ctx.voice_state.skip()
             else:
                 await ctx.respond(f"🗳️ **Skip vote** added: **{total_votes}/{required_votes}**")
