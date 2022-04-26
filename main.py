@@ -1,3 +1,4 @@
+from asyncio import run
 from os import getenv, listdir
 from sqlite3 import connect, Error
 from traceback import format_exc
@@ -57,11 +58,12 @@ def main():
                 bot.load_extension(f'cogs.{filename[:-3]}')
             except Exception as e:
                 print(f"Failed to load {filename}: {e} \n{format_exc()}")
-    try:
-        bot.run(getenv("DISCORD_BOT_TOKEN"))  # TODO: FIX STRG + C NOT MAKING A SAVE BEFORE EXIT
-    except KeyboardInterrupt:
-        bot.close()
+    bot.run(getenv("DISCORD_BOT_TOKEN"))  # TODO: FIX STRG + C NOT MAKING A SAVE BEFORE EXIT
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        bot.close()
+        run(sync_database())
