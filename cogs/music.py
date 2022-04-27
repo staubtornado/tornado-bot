@@ -708,7 +708,7 @@ class Music(Cog):
         await ctx.respond(f"🗑 **Removed** the **{ordinal(n=index)} song** in queue.")
 
     @slash_command()
-    async def loop(self, ctx, queue: bool = False):
+    async def loop(self, ctx, queue: bool):
         """Loops the currently playing song or queue. Invoke this command again to disable loop."""
         await ctx.defer()
 
@@ -719,8 +719,8 @@ class Music(Cog):
         if not ctx.voice_state.is_playing:
             return await ctx.respond("❌ **Nothing** is currently **playing**.")
 
-        mode: str = "song"
-        if not queue:
+        mode: str = "song, use **/**`loop`"
+        if queue is None:
             ctx.voice_state.queue_loop = False
             ctx.voice_state.loop = not ctx.voice_state.loop
         else:
@@ -737,12 +737,15 @@ class Music(Cog):
 
             ctx.voice_state.loop = False
             ctx.voice_state.queue_loop = queue
-            mode: str = "queue"
+
+            mode: str = "queue, use **/**`loop True`"
+            if queue:
+                mode: str = "queue, use **/**`loop False`"
 
         if ctx.voice_state.loop or ctx.voice_state.queue_loop:
-            await ctx.respond(f"🔁 **Looped** {mode}, use **/**`loop` to **disable** loop.")
+            await ctx.respond(f"🔁 **Looped** {mode} to **disable** loop.")
             return
-        await ctx.respond(f"🔁 **Unlooped** {mode}, use **/**`loop` to **enable** loop.")
+        await ctx.respond(f"🔁 **Unlooped** {mode} to **enable** loop.")
 
     @slash_command()
     async def play(self, ctx, *, search: str):
@@ -852,7 +855,7 @@ class Music(Cog):
                           .add_field(name="Spotify", value="✅ Tracks\n✅ Playlists\n✅ Albums\n✅ Artists")
                           .add_field(name="Soundcloud", value="✅ Tracks\n❌ Playlists\n❌ Albums\n❌ Artists")
                           .add_field(name="Twitch", value="⚠ Livestreams")
-                          .add_field(name="🐞 Troubleshooting", value="If you are experiencing issues, please execute" 
+                          .add_field(name="🐞 Troubleshooting", value="If you are experiencing issues, please execute"
                                                                      " **/**`leave`. This should fix most errors.",
                                      inline=False))
 
