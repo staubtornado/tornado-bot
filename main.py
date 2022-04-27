@@ -65,5 +65,5 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        bot.close()
+        run(bot.close())
         run(sync_database())
