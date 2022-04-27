@@ -708,8 +708,8 @@ class Music(Cog):
         await ctx.respond(f"🗑 **Removed** the **{ordinal(n=index)} song** in queue.")
 
     @slash_command()
-    async def loop(self, ctx):
-        """Loops the currently playing song. Invoke this command again to disable song loop."""
+    async def loop(self, ctx, queue: bool = False):
+        """Loops the currently playing song or queue. Invoke this command again to disable loop."""
         await ctx.defer()
 
         instance = await ensure_voice_state(ctx)
@@ -719,45 +719,30 @@ class Music(Cog):
         if not ctx.voice_state.is_playing:
             return await ctx.respond("❌ **Nothing** is currently **playing**.")
 
-        ctx.voice_state.queue_loop = False
-        ctx.voice_state.loop = not ctx.voice_state.loop
+        mode: str = "song"
+        if not queue:
+            ctx.voice_state.queue_loop = False
+            ctx.voice_state.loop = not ctx.voice_state.loop
+        else:
+            duration: int = 0
+            for song in ctx.voice_state.songs:
+                try:
+                    duration += int(song.source.data.get("duration"))
+                except TypeError:
+                    continue
 
-        if ctx.voice_state.loop:
-            return await ctx.respond("🔁 **Looped** song, use **/**`loop` to **disable** loop.")
-        await ctx.respond("🔁 **Unlooped** song, use **/**`loop` to **enable** loop.")
+            if duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
+                await ctx.respond("❌ The **queue is too long** to be looped.")
+                return
 
-    @slash_command()
-    async def loopqueue(self, ctx):
-        """Loops the whole queue. Invoke this command again to disable loop."""
-        await ctx.defer()
+            ctx.voice_state.loop = False
+            ctx.voice_state.queue_loop = queue
+            mode: str = "queue"
 
-        instance = await ensure_voice_state(ctx)
-        if isinstance(instance, str):
-            await ctx.respond(instance)
+        if ctx.voice_state.loop or ctx.voice_state.queue_loop:
+            await ctx.respond(f"🔁 **Looped** {mode}, use **/**`loop` to **disable** loop.")
             return
-
-        if not ctx.voice_state.is_playing:
-            await ctx.respond("❌ **Nothing** is currently **playing**.")
-            return
-
-        duration: int = 0
-        for song in ctx.voice_state.songs:
-            try:
-                duration += int(song.source.data.get("duration"))
-            except TypeError:
-                continue
-
-        if duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
-            await ctx.respond("❌ The **queue is too long** to be looped.")
-            return
-
-        ctx.voice_state.loop = False
-        ctx.voice_state.queue_loop = not ctx.voice_state.queue_loop
-
-        if ctx.voice_state.queue_loop:
-            await ctx.respond("🔁 **Looped** queue, use **/**`loopqueue` to **disable** loop.")
-            return
-        await ctx.respond("🔁 **Unlooped** queue, use **/**`loopqueue` to **enable** loop.")
+        await ctx.respond(f"🔁 **Unlooped** {mode}, use **/**`loop` to **enable** loop.")
 
     @slash_command()
     async def play(self, ctx, *, search: str):
