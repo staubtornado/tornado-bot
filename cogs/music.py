@@ -19,7 +19,6 @@ from lib.utils.utils import ordinal
 
 utils.bug_reports_message = lambda: ''
 
-
 sp: Spotify = Spotify(auth_manager=SpotifyClientCredentials(client_id=environ['SPOTIFY_CLIENT_ID'],
                                                             client_secret=environ['SPOTIFY_CLIENT_SECRET']))
 
@@ -320,10 +319,15 @@ class Music(Cog):
             except TypeError:
                 continue
 
-        embed = Embed(title="Queue", description=f"**Songs:** {len(ctx.voice_state.songs)}\n**Duration:** "
-                                                 f"{YTDLSource.parse_duration(duration)}\n\n{queue}",
-                      colour=0xFF0000)
-
+        embed: Embed = Embed(title="Queue", description=f"**Songs:** {len(ctx.voice_state.songs)}\n**Duration:** "
+                                                        f"{YTDLSource.parse_duration(duration)}\n\n"
+                                                        f"**Now Playing:**\n"
+                                                        f"[{ctx.voice_state.current.source.title_limited_embed}]"
+                                                        f"({ctx.voice_state.current.source.url}) - "
+                                                        f"[{ctx.voice_state.current.source.uploader}]"
+                                                        f"({ctx.voice_state.current.source.uploader_url}) "
+                                                        f"{ctx.voice_state.current.source.duration}\n\n{queue}",
+                             colour=0xFF0000)
         embed.set_footer(text=f"Page {page}/{pages}")
         await ctx.respond(embed=embed)
 
@@ -526,7 +530,7 @@ class Music(Cog):
                           .add_field(name="Soundcloud", value="✅ Tracks\n❌ Playlists\n❌ Albums\n❌ Artists")
                           .add_field(name="Twitch", value="⚠ Livestreams")
                           .add_field(name="🐞 Troubleshooting", value="If you are experiencing issues, please execute"
-                                                                     " **/**`leave`. This should fix most errors.",
+                                                                      " **/**`leave`. This should fix most errors.",
                                      inline=False))
 
 
