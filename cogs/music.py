@@ -1,38 +1,23 @@
-from asyncio import get_event_loop, Queue, Event, TimeoutError, Task
-from datetime import datetime, timedelta
-from functools import partial as func_partial
-from itertools import islice
-from json import loads
 from math import ceil
 from os import environ
-from random import shuffle
-from time import gmtime, strftime
 from traceback import format_exc
 
-from async_timeout import timeout
-from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio, Embed, Bot, slash_command, VoiceChannel, \
-    ClientException
+from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException
 from discord.commands.permissions import has_role
 from discord.ext.commands import Cog
 from discord.utils import get
-from millify import millify
 from psutil import virtual_memory
-from requests import get as req_get
 from spotipy import Spotify, SpotifyClientCredentials, SpotifyException
-from yt_dlp import utils, YoutubeDL
+from yt_dlp import utils
 
 from data.config.settings import SETTINGS
+from lib.music.exceptions import YTDLError
+from lib.music.extraction import YTDLSource
+from lib.music.song import Song
+from lib.music.voicestate import VoiceState
 from lib.utils.utils import ordinal
 
 utils.bug_reports_message = lambda: ''
-
-
-class VoiceError(Exception):
-    pass
-
-
-class YTDLError(Exception):
-    pass
 
 
 sp: Spotify = Spotify(auth_manager=SpotifyClientCredentials(client_id=environ['SPOTIFY_CLIENT_ID'],
@@ -76,322 +61,7 @@ def get_artist_top_songs(artist_id) -> list:
     return songs
 
 
-class YTDLSource(PCMVolumeTransformer):
-    YTDL_OPTIONS = {
-        'format': 'bestaudio/best',
-        'extractaudio': True,
-        'audioformat': 'mp3',
-        'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
-        'restrictfilenames': True,
-        'noplaylist': True,
-        'nocheckcertificate': True,
-        'ignoreerrors': False,
-        'logtostderr': False,
-        'quiet': True,
-        'no_warnings': False,
-        'default_search': 'ytsearch',
-        'source_address': '0.0.0.0',
-    }
-
-    FFMPEG_OPTIONS = {
-        'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-        'options': '-vn',
-    }
-
-    ytdl = YoutubeDL(YTDL_OPTIONS)
-
-    def __init__(self, ctx: ApplicationContext, source: FFmpegPCMAudio, *, data: dict, volume: float = 0.5):
-        super().__init__(source, volume)
-
-        self.requester = ctx.user
-        self.channel = ctx.channel
-        self.data = data
-
-        self.uploader = data.get("uploader")
-        self.uploader_url = data.get("uploader_url")
-        date = data.get('upload_date')
-        self.upload_date = f"{date[6:8]}.{date[4:6]}.{date[0:4]}"
-        self.title = data.get("title")
-        self.title_limited = self.parse_limited_title(self.title)
-        self.title_limited_embed = self.parse_limited_title_embed(self.title)
-        self.thumbnail = data.get("thumbnail")
-        self.duration = self.parse_duration(data.get("duration"))
-        self.url = data.get("webpage_url")
-        self.views = data.get("view_count")
-        self.likes = data.get("like_count") if data.get("like_count") is not None else -1
-        self.stream_url = data.get("url")
-
-        try:
-            self.dislikes = int(
-                dict(loads(req_get(f"https://returnyoutubedislikeapi.com/votes?videoId={data.get('id')}")
-                           .text))["dislikes"])
-        except KeyError:
-            self.dislikes = -1
-
-    def __str__(self):
-        return f"**{self.title_limited}** by **{self.uploader}**"
-
-    @classmethod
-    async def create_source(cls, ctx, search: str, *, loop=None):
-        loop = loop or get_event_loop()
-
-        partial = func_partial(cls.ytdl.extract_info, search, download=False, process=False)
-        data = await loop.run_in_executor(None, partial)
-
-        if data is None:
-            raise YTDLError(f"**Could not find anything** that matches `{search}`")
-
-        if "entries" not in data:
-            process_info = data
-        else:
-            process_info = None
-            for entry in data["entries"]:
-                if entry:
-                    process_info = entry
-                    break
-
-            if process_info is None:
-                raise YTDLError(f"**Could not find anything** that matches `{search}`.")
-
-        webpage_url = process_info["webpage_url"]
-        partial = func_partial(cls.ytdl.extract_info, webpage_url, download=False)
-        processed_info = await loop.run_in_executor(None, partial)
-
-        if processed_info is None:
-            raise YTDLError(f"**Could not fetch** `{webpage_url}`")
-
-        if "entries" not in processed_info:
-            info = processed_info
-        else:
-            info = None
-            while info is None:
-                try:
-                    info = processed_info["entries"].pop(0)
-                except IndexError:
-                    raise YTDLError(f"**Could not retrieve any matches** for `{webpage_url}`")
-
-        if int(info["duration"]) > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
-            raise YTDLError("**Songs** can not be **longer than three hours**. Use **/**`loop` to repeat songs.")
-        return cls(ctx, FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
-
-    @staticmethod
-    def parse_duration(duration: str or None):
-        if duration is None:
-            return "LIVE"
-        duration: int = int(duration)
-        if duration > 0:
-            if duration < 3600:
-                return strftime('%M:%S', gmtime(duration))
-            elif 86400 > duration >= 3600:
-                return strftime('%H:%M:%S', gmtime(duration))
-            return timedelta(seconds=duration)
-        return "Error"
-
-    @staticmethod
-    def parse_limited_title(title: str):
-        title = title.replace('||', '')
-        if len(title) > 72:
-            return f"{title[:72]}..."
-        return title
-
-    @staticmethod
-    def parse_limited_title_embed(title: str):
-        title = title.replace("[", "").replace("]", "").replace("||", "")
-        if len(title) > 45:
-            return f"{title[:43]}..."
-        return title
-
-
-class Song:
-    __slots__ = ("source", "requester")
-
-    def __init__(self, source: YTDLSource):
-        self.source = source
-        self.requester = source.requester
-
-    @staticmethod
-    def parse_counts(count: int):
-        return millify(count, precision=2)
-
-    def create_embed(self, songs):
-        description = f"[Video]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) **|** " \
-                      f"{self.source.duration} **|** {self.requester.mention}"
-
-        date = self.source.upload_date
-        timestamp = f"<t:{str(datetime(int(date[6:]), int(date[3:-5]), int(date[:-8])).timestamp())[:-2]}:R>"
-
-        len_songs: int = len(songs)
-        queue = ""
-        if len_songs == 0:
-            pass
-        else:
-            for i, song in enumerate(songs[0:5], start=0):
-                queue += f"`{i + 1}.` [{song.source.title_limited_embed}]({song.source.url} '{song.source.title}')\n"
-
-        if len_songs > 6:
-            queue += f"Use **/**`queue` to show **{len_songs - 5}** more..."
-
-        embed = Embed(title=f"🎶 {self.source.title_limited_embed}", description=description, colour=0xFF0000) \
-            .add_field(name="Views", value=self.parse_counts(self.source.views), inline=True) \
-            .add_field(name="Likes / Dislikes", value=f"{self.parse_counts(self.source.likes)} **/** "
-                                                      f"{self.parse_counts(self.source.dislikes)}", inline=True) \
-            .add_field(name="Uploaded", value=timestamp, inline=True) \
-            .set_thumbnail(url=self.source.thumbnail)
-        embed.add_field(name="Queue", value=queue, inline=False) if queue != "" else None
-        return embed
-
-
-class SongQueue(Queue):
-    _queue = None
-
-    def __getitem__(self, item):
-        if isinstance(item, slice):
-            return list(islice(self._queue, item.start, item.stop, item.step))
-        else:
-            return self._queue[item]
-
-    def __iter__(self):
-        return self._queue.__iter__()
-
-    def __len__(self):
-        return self.qsize()
-
-    def clear(self):
-        self._queue.clear()
-
-    def shuffle(self):
-        shuffle(self._queue)
-
-    def reverse(self):
-        length: int = self.qsize()
-
-        for i in range(int(length / 2)):
-            n = self._queue[i]
-            self._queue[i] = self._queue[length - i - 1]
-            self._queue[length - i - 1] = n
-
-    def remove(self, index: int):
-        del self._queue[index]
-
-
-class VoiceState:
-    def __init__(self, bot: Bot, ctx):
-        self.bot = bot
-        self._ctx = ctx
-
-        self.processing: bool = False
-        self.now = None
-        self.current = None
-        self.voice = None
-        self.next: Event = Event()
-        self.songs: SongQueue = SongQueue()
-        self.exists: bool = True
-        self.loop_amount_song: int = 0
-        self.loop_amount_queue: int = 0
-
-        self._loop: bool = False
-        self._queue_loop: bool = False
-        self._volume: float = 0.5
-        self.skip_votes: set = set()
-
-        self.audio_player: Task = bot.loop.create_task(self.audio_player_task())
-
-    def __del__(self):
-        self.audio_player.cancel()
-
-    @property
-    def loop(self):
-        return self._loop
-
-    @loop.setter
-    def loop(self, value: bool):
-        self._loop = value
-        self.loop_amount_song = 0
-
-    @property
-    def queue_loop(self):
-        return self._queue_loop
-
-    @queue_loop.setter
-    def queue_loop(self, value: bool):
-        self.loop_amount_queue = 0
-        self._queue_loop = value
-
-    @property
-    def volume(self):
-        return self._volume
-
-    @volume.setter
-    def volume(self, value: float):
-        self._volume = value
-
-    @property
-    def is_playing(self):
-        return self.voice and self.current
-
-    async def audio_player_task(self):
-        while True:
-            self.next.clear()
-            self.now = None
-
-            if not self.loop:
-                try:
-                    async with timeout(180):
-                        self.current = await self.songs.get()
-                except TimeoutError:
-                    self.bot.loop.create_task(self.stop())
-                    self.exists = False
-                    await self._ctx.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to **inactivity**.")
-                    return
-
-                if self.queue_loop:
-                    await self.songs.put(Song(await YTDLSource.create_source(self._ctx, self.current.source.url,
-                                                                             loop=self.bot.loop)))
-                    if self.loop_amount_queue > SETTINGS["Cog"]["Music"]["MaxDuration"]:
-                        self.queue_loop = False
-                        await self.current.source.channel.send("🔂 **The queue loop** has been **disabled** due to "
-                                                               "**inactivity**.")
-                    self.loop_amount_queue += self.current.source.duration
-
-                self.current.source.volume = self._volume
-                self.voice.play(self.current.source, after=self.play_next_song)
-                await self.current.source.channel.send(embed=self.current.create_embed(self.songs))
-
-            elif self.loop:
-                if self.loop_amount_song * self.current.source.duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
-                    self.loop = False
-                    await self.current.source.channel.send("🔂 **The loop** has been **disabled** due to "
-                                                           "**inactivity**.")
-
-                self.loop_amount_song += 1
-                self.now = FFmpegPCMAudio(self.current.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
-                self.voice.play(self.now, after=self.play_next_song)
-
-            await self.next.wait()
-
-    def play_next_song(self, error=None):
-        if error:
-            raise VoiceError(str(error))
-
-        self.next.set()
-        self.skip_votes.clear()
-
-    def skip(self):
-        self.skip_votes.clear()
-
-        if self.is_playing:
-            self.voice.stop()
-
-    async def stop(self):
-        self.songs.clear()
-        self.loop_amount_song = 0
-
-        if self.voice:
-            await self.voice.disconnect()
-            self.voice = None
-
-
-async def ensure_voice_state(ctx):
+def ensure_voice_state(ctx):
     if ctx.author.voice is None:
         return "❌ **You are not** connected to a **voice** channel."
 
@@ -424,7 +94,7 @@ class Music(Cog):
     async def join(self, ctx):
         """Joins a voice channel."""
 
-        instance = await ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx)
         if isinstance(instance, str):
             return await ctx.respond(instance)
 
@@ -497,7 +167,7 @@ class Music(Cog):
         """Sets the volume of the current song."""
         await ctx.defer()
 
-        instance = await ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx)
         if isinstance(instance, str):
             return await ctx.respond(instance)
 
@@ -532,7 +202,7 @@ class Music(Cog):
         """Pauses the currently playing song."""
         await ctx.defer()
 
-        instance = await ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx)
         if isinstance(instance, str):
             return await ctx.respond(instance)
 
@@ -546,7 +216,7 @@ class Music(Cog):
         """Resumes a currently paused song."""
         await ctx.defer()
 
-        instance = await ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx)
         if isinstance(instance, str):
             return await ctx.respond(instance)
 
@@ -560,7 +230,7 @@ class Music(Cog):
         """Stops playing song and clears the queue."""
         await ctx.defer()
 
-        instance = await ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx)
         if isinstance(instance, str):
             return await ctx.respond(instance)
 
@@ -580,7 +250,7 @@ class Music(Cog):
         """Vote to skip a song. The requester can automatically skip."""
         await ctx.defer()
 
-        instance = await ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx)
         if isinstance(instance, str):
             return await ctx.respond(instance)
 
@@ -617,7 +287,7 @@ class Music(Cog):
         """Skips a song directly."""
         await ctx.defer()
 
-        instance = await ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx)
         if isinstance(instance, str):
             return await ctx.respond(instance)
 
@@ -662,7 +332,7 @@ class Music(Cog):
         """Shuffles the queue."""
         await ctx.defer()
 
-        instance = await ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx)
         if isinstance(instance, str):
             return await ctx.respond(instance)
 
@@ -677,7 +347,7 @@ class Music(Cog):
         """Reverses the queue."""
         await ctx.defer()
 
-        instance = await ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx)
         if isinstance(instance, str):
             await ctx.respond(instance)
             return
@@ -693,7 +363,7 @@ class Music(Cog):
         """Removes a song from the queue at a given index."""
         await ctx.defer()
 
-        instance = await ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx)
         if isinstance(instance, str):
             return await ctx.respond(instance)
 
@@ -712,7 +382,7 @@ class Music(Cog):
         """Loops the currently playing song or queue. Invoke this command again to disable loop."""
         await ctx.defer()
 
-        instance = await ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx)
         if isinstance(instance, str):
             return await ctx.respond(instance)
 
@@ -756,7 +426,7 @@ class Music(Cog):
             await ctx.respond("⚠ I am **currently processing** the previous **request**.")
             return
 
-        instance = await ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx)
         if isinstance(instance, str):
             await ctx.respond(instance)
             return
