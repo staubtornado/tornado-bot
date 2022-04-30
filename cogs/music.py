@@ -61,11 +61,6 @@ class Music(Cog):
             return await ctx.respond(instance)
 
         destination: VoiceChannel = ctx.author.voice.channel
-        if ctx.voice_state.voice:
-            await ctx.voice_state.voice.move_to(destination)
-            await ctx.respond(f"👍 **Hello**! Joined {ctx.author.voice.channel.mention}.")
-            return
-
         try:
             ctx.voice_state.voice = await destination.connect()
         except ClientException:
@@ -75,6 +70,7 @@ class Music(Cog):
             else:
                 await guild_channel.disconnect(force=True)
                 ctx.voice_state.voice = await destination.connect()
+        await ctx.guild.change_voice_state(channel=destination, self_mute=False, self_deaf=True)
         await ctx.respond(f"👍 **Hello**! Joined {ctx.author.voice.channel.mention}.")
 
     @slash_command()
@@ -98,12 +94,15 @@ class Music(Cog):
         """Summons the bot to a voice channel. If no channel was specified, it joins your channel."""
 
         if not channel and not ctx.author.voice:
-            return await ctx.respond("❌ You are **not in a voice channel** and you **did not specify** a voice "
-                                     "channel.")
+            await ctx.respond("❌ You are **not in a voice channel** and you **did not specify** a voice "
+                              "channel.")
+            return
 
         destination = channel or ctx.author.voice.channel
         if ctx.voice_state.voice:
             await ctx.voice_state.voice.move_to(destination)
+            await ctx.guild.change_voice_state(channel=destination, self_mute=False, self_deaf=True)
+            await ctx.respond(f"👍 **Hello**! Joined {destination.mention}.")
             return
 
         ctx.voice_state.voice = await destination.connect()
