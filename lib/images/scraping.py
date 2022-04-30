@@ -20,7 +20,9 @@ class ImageScraping:
     def get_all_images(self) -> list:
         options: Options = Options()
         options.headless = True
-        options.add_argument('user-agent=fake-useragent')
+        options.add_argument("user-agent=fake-useragent")
+        options.add_argument("--log-level=3")
+        options.add_experimental_option("excludeSwitches", ["enable-logging"])
 
         try:
             driver: Chrome = Chrome(executable_path="./chromedriver.exe", chrome_options=options)
@@ -51,5 +53,4 @@ class ImageScraping:
                     if "https://gifsex.blog/gif2png.php" in img_url:
                         img_url = urljoin(self.url, img.attrs.get("data-srcgif"))
                     urls.append(img_url)
-        # print(len(urls))
         return urls
