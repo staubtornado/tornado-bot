@@ -31,9 +31,8 @@ class ExperienceSystem:
         self._cur: Cursor = database.cursor()
 
         self._cur.execute(f"""
-            SELECT XP, Level, Messages from experience where (GuildID, UserID) = (
-                {self.message.guild.id}, {self.message.author.id})
-        """)
+            SELECT XP, Level, Messages from experience where (GuildID, UserID) = (?, ?)
+        """, (self.message.guild.id, self.message.author.id))
 
         try:
             self.xp, self.level, self.messages = self._cur.fetchone()
