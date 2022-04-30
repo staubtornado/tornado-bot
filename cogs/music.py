@@ -2,7 +2,6 @@ from math import ceil
 from traceback import format_exc
 
 from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member
-from discord.commands.permissions import has_role
 from discord.ext.commands import Cog
 from discord.utils import get
 from psutil import virtual_memory
@@ -225,7 +224,12 @@ class Music(Cog):
         if ctx.voice_state.queue_loop:
             loop_note: str = " and **removed song from** queue **loop**."
 
-        voter = ctx.author
+        voter: Member = ctx.author
+        if force:
+            for role in voter.roles:
+                if "DJ" in role.name:
+                    await ctx.respond(f"⏭ **Forced to skip** current song{loop_note}")
+                    return
         if voter == ctx.voice_state.current.requester:
             await ctx.respond(f"⏭ **Skipped** the **song directly**, cause **you** added it{loop_note}")
             ctx.voice_state.skip()
