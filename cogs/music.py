@@ -230,6 +230,14 @@ class Music(Cog):
                 if "DJ" in role.name:
                     await ctx.respond(f"⏭ **Forced to skip** current song{loop_note}")
                     return
+            for role in ctx.guild.roles:
+                if "DJ" in role.name:
+                    await ctx.respond(f"❌ You are **not a DJ**.")
+                    return
+            await ctx.respond(f"❌ **Only a DJ can force** song **skipping**.\nRoles that have `DJ` in their name are "
+                              f"valid.")
+            return
+
         if voter == ctx.voice_state.current.requester:
             await ctx.respond(f"⏭ **Skipped** the **song directly**, cause **you** added it{loop_note}")
             ctx.voice_state.skip()
@@ -247,21 +255,6 @@ class Music(Cog):
                 await ctx.respond(f"🗳️ **Skip vote** added: **{total_votes}/{required_votes}**")
         else:
             await ctx.respond("❌ **Cheating** not allowed**!** You **already voted**.")
-
-    @slash_command()
-    @has_role("DJ")
-    async def forceskip(self, ctx: CustomApplicationContext):
-        """Skips a song directly."""
-        await ctx.defer()
-
-        instance = ensure_voice_state(ctx)
-        if isinstance(instance, str):
-            return await ctx.respond(instance)
-
-        if not ctx.voice_state.is_playing:
-            return await ctx.respond(f"❌ **Nothing** is currently **playing**.")
-        await ctx.respond("⏭ **Forced to skip** current song.")
-        ctx.voice_state.skip()
 
     @slash_command()
     async def queue(self, ctx: CustomApplicationContext, *, page: int = 1):
