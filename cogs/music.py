@@ -1,63 +1,23 @@
 from math import ceil
-from os import environ
 from traceback import format_exc
 
-from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException
+from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member
 from discord.commands.permissions import has_role
 from discord.ext.commands import Cog
 from discord.utils import get
 from psutil import virtual_memory
-from spotipy import Spotify, SpotifyClientCredentials, SpotifyException
+from spotipy import SpotifyException
 from yt_dlp import utils
 
 from data.config.settings import SETTINGS
 from lib.music.exceptions import YTDLError
 from lib.music.extraction import YTDLSource
 from lib.music.song import Song
+from lib.music.spotify import SpotifyScraping
 from lib.music.voicestate import VoiceState
 from lib.utils.utils import ordinal
 
 utils.bug_reports_message = lambda: ''
-
-sp: Spotify = Spotify(auth_manager=SpotifyClientCredentials(client_id=environ['SPOTIFY_CLIENT_ID'],
-                                                            client_secret=environ['SPOTIFY_CLIENT_SECRET']))
-
-
-def get_track_name(track_id) -> str:
-    meta: dict = sp.track(track_id)
-    name = meta["name"]
-    artist = meta["artists"][0]["name"]
-    return f"{name} by {artist}"
-
-
-def get_playlist_track_names(playlist_id) -> list:
-    songs: list = []
-    meta: dict = sp.playlist(playlist_id)
-    for song in meta['tracks']['items']:
-        name = song["track"]["name"]
-        artist = song["track"]["artists"][0]["name"]
-        songs.append(f"{name} by {artist}")
-    return songs
-
-
-def get_album_track_names(album_id) -> list:
-    songs: list = []
-    meta: dict = sp.album(album_id)
-    for song in meta['tracks']['items']:
-        name = song["name"]
-        artist = song["artists"][0]["name"]
-        songs.append(f"{name} by {artist}")
-    return songs
-
-
-def get_artist_top_songs(artist_id) -> list:
-    songs: list = []
-    meta: dict = sp.artist_top_tracks(artist_id, country='US')
-    for song in meta["tracks"][:10]:
-        name = song["name"]
-        artist = song["artists"][0]["name"]
-        songs.append(f"{name} by {artist}")
-    return songs
 
 
 def ensure_voice_state(ctx):
@@ -473,13 +433,13 @@ class Music(Cog):
 
                 try:
                     if "playlist" in search:
-                        song_names.extend(get_playlist_track_names(search))
+                        song_names.extend(SpotifyScraping.get_playlist_track_names(search))
                     elif "album" in search:
-                        song_names.extend(get_album_track_names(search))
+                        song_names.extend(SpotifyScraping.get_album_track_names(search))
                     elif "track" in search:
-                        song_names.append(get_track_name(search))
+                        song_names.append(SpotifyScraping.get_track_name(search))
                     elif "artist" in search:
-                        song_names.extend(get_artist_top_songs(search))
+                        song_names.extend(SpotifyScraping.get_artist_top_songs(search))
                     else:
                         raise SpotifyException
 
