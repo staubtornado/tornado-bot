@@ -69,6 +69,10 @@ def ensure_voice_state(ctx):
             return f"🎶 I am **currently playing** in {ctx.voice_client.channel.mention}."
 
 
+class CustomApplicationContext(ApplicationContext):
+    voice_state: VoiceState
+
+
 class Music(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -90,7 +94,7 @@ class Music(Cog):
         ctx.voice_state = self.get_voice_state(ctx)
 
     @slash_command()
-    async def join(self, ctx):
+    async def join(self, ctx: CustomApplicationContext):
         """Joins a voice channel."""
 
         instance = ensure_voice_state(ctx)
@@ -115,7 +119,7 @@ class Music(Cog):
         await ctx.respond(f"👍 **Hello**! Joined {ctx.author.voice.channel.mention}.")
 
     @slash_command()
-    async def clear(self, ctx):
+    async def clear(self, ctx: CustomApplicationContext):
         """Clears the whole queue."""
         await ctx.defer()
 
@@ -131,7 +135,7 @@ class Music(Cog):
             await ctx.respond('⚠ I am **currently processing** the previous **request**.')
 
     @slash_command()
-    async def summon(self, ctx, *, channel: VoiceChannel = None):
+    async def summon(self, ctx: CustomApplicationContext, *, channel: VoiceChannel = None):
         """Summons the bot to a voice channel. If no channel was specified, it joins your channel."""
 
         if not channel and not ctx.author.voice:
@@ -148,7 +152,7 @@ class Music(Cog):
         await ctx.respond(f"👍 **Hello**! Joined {destination.mention}.")
 
     @slash_command()
-    async def leave(self, ctx):
+    async def leave(self, ctx: CustomApplicationContext):
         """Clears the queue and leaves the voice channel."""
         try:
             await ctx.voice_state.stop()
@@ -162,7 +166,7 @@ class Music(Cog):
         del self.voice_states[ctx.guild.id]
 
     @slash_command()
-    async def volume(self, ctx, *, volume: int):
+    async def volume(self, ctx: CustomApplicationContext, *, volume: int):
         """Sets the volume of the current song."""
         await ctx.defer()
 
@@ -187,7 +191,7 @@ class Music(Cog):
         await ctx.respond(f"{emoji} **Volume** of the song **set to {volume}%**.")
 
     @slash_command()
-    async def now(self, ctx):
+    async def now(self, ctx: CustomApplicationContext):
         """Displays the currently playing song."""
         await ctx.defer()
 
@@ -197,7 +201,7 @@ class Music(Cog):
             await ctx.respond("❌ **Nothing** is currently **playing**.")
 
     @slash_command()
-    async def pause(self, ctx):
+    async def pause(self, ctx: CustomApplicationContext):
         """Pauses the currently playing song."""
         await ctx.defer()
 
@@ -211,7 +215,7 @@ class Music(Cog):
         await ctx.respond("❌ Either is the **song already paused**, or **nothing is currently **playing**.")
 
     @slash_command()
-    async def resume(self, ctx):
+    async def resume(self, ctx: CustomApplicationContext):
         """Resumes a currently paused song."""
         await ctx.defer()
 
@@ -225,7 +229,7 @@ class Music(Cog):
         await ctx.respond("❌ Either is the **song is not paused**, or **nothing is currently **playing**.")
 
     @slash_command()
-    async def stop(self, ctx):
+    async def stop(self, ctx: CustomApplicationContext):
         """Stops playing song and clears the queue."""
         await ctx.defer()
 
@@ -245,7 +249,7 @@ class Music(Cog):
             await ctx.respond('⚠ I am **currently processing** the previous **request**.')
 
     @slash_command()
-    async def skip(self, ctx):
+    async def skip(self, ctx: CustomApplicationContext, force: bool = False):
         """Vote to skip a song. The requester can automatically skip."""
         await ctx.defer()
 
@@ -282,7 +286,7 @@ class Music(Cog):
 
     @slash_command()
     @has_role("DJ")
-    async def forceskip(self, ctx):
+    async def forceskip(self, ctx: CustomApplicationContext):
         """Skips a song directly."""
         await ctx.defer()
 
@@ -296,7 +300,7 @@ class Music(Cog):
         ctx.voice_state.skip()
 
     @slash_command()
-    async def queue(self, ctx, *, page: int = 1):
+    async def queue(self, ctx: CustomApplicationContext, *, page: int = 1):
         """Shows the queue. You can optionally specify the page to show. Each page contains 10 elements."""
         await ctx.defer()
 
@@ -332,7 +336,7 @@ class Music(Cog):
         await ctx.respond(embed=embed)
 
     @slash_command()
-    async def shuffle(self, ctx):
+    async def shuffle(self, ctx: CustomApplicationContext):
         """Shuffles the queue."""
         await ctx.defer()
 
@@ -347,7 +351,7 @@ class Music(Cog):
         await ctx.respond("🔀 **Shuffled** the queue.")
 
     @slash_command()
-    async def reverse(self, ctx):
+    async def reverse(self, ctx: CustomApplicationContext):
         """Reverses the queue."""
         await ctx.defer()
 
@@ -363,7 +367,7 @@ class Music(Cog):
         await ctx.respond("↩ **Reversed** the **queue**.")
 
     @slash_command()
-    async def remove(self, ctx, index: int):
+    async def remove(self, ctx: CustomApplicationContext, index: int):
         """Removes a song from the queue at a given index."""
         await ctx.defer()
 
@@ -382,7 +386,7 @@ class Music(Cog):
         await ctx.respond(f"🗑 **Removed** the **{ordinal(n=index)} song** in queue.")
 
     @slash_command()
-    async def loop(self, ctx, queue: bool):
+    async def loop(self, ctx: CustomApplicationContext, queue: bool):
         """Loops the currently playing song or queue. Invoke this command again to disable loop."""
         await ctx.defer()
 
@@ -422,7 +426,7 @@ class Music(Cog):
         await ctx.respond(f"🔁 **Unlooped** {mode} to **enable** loop.")
 
     @slash_command()
-    async def play(self, ctx, *, search: str):
+    async def play(self, ctx: CustomApplicationContext, *, search: str):
         """Play a song through the bot, by searching a song with the name or by URL."""
         await ctx.defer()
 
@@ -530,7 +534,7 @@ class Music(Cog):
                           .add_field(name="Soundcloud", value="✅ Tracks\n❌ Playlists\n❌ Albums\n❌ Artists")
                           .add_field(name="Twitch", value="⚠ Livestreams")
                           .add_field(name="🐞 Troubleshooting", value="If you are experiencing issues, please execute"
-                                                                      " **/**`leave`. This should fix most errors.",
+                                                                     " **/**`leave`. This should fix most errors.",
                                      inline=False))
 
 
