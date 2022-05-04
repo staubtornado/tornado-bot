@@ -23,7 +23,8 @@ class CustomApplicationContext(ApplicationContext):
     voice_state: VoiceState
 
 
-def ensure_voice_state(ctx: CustomApplicationContext, requires_song: bool = False):
+def ensure_voice_state(ctx: CustomApplicationContext, requires_song: bool = False, requires_queue: bool = False,
+                       no_processing: bool = False):
     if ctx.author.voice is None:
         return "❌ **You are not** connected to a **voice** channel."
 
@@ -33,6 +34,12 @@ def ensure_voice_state(ctx: CustomApplicationContext, requires_song: bool = Fals
 
     if not ctx.voice_state.is_playing and requires_song:
         return "❌ **Nothing** is currently **playing**."
+
+    if len(ctx.voice_state.songs) == 0 and requires_queue:
+        return "❌ The **queue** is **empty**."
+
+    if ctx.voice_state.processing and no_processing:
+        return "⚠ I am **currently processing** the previous **request**."
 
 
 class Music(Cog):
@@ -81,16 +88,15 @@ class Music(Cog):
         """Clears the whole queue."""
         await ctx.defer()
 
-        if ctx.voice_state.processing is False:
-            if len(ctx.voice_state.songs) == 0:
-                await ctx.respond('❌ The **queue** is **empty**.')
-                return
-            ctx.voice_state.songs.clear()
-            ctx.voice_state.loop = False
-            ctx.voice_state.queue_loop = False
-            await ctx.respond('🧹 **Cleared** the queue.')
-        else:
-            await ctx.respond('⚠ I am **currently processing** the previous **request**.')
+        instance = ensure_voice_state(ctx, requires_queue=True, no_processing=True)
+        if isinstance(instance, str):
+            await ctx.respond(instance)
+            return
+
+        ctx.voice_state.songs.clear()
+        ctx.voice_state.loop = False
+        ctx.voice_state.queue_loop = False
+        await ctx.respond("🧹 **Cleared** the queue.")
 
     @slash_command()
     async def summon(self, ctx: CustomApplicationContext, *, channel: VoiceChannel = None):
@@ -164,14 +170,16 @@ class Music(Cog):
         """Pauses the currently playing song."""
         await ctx.defer()
 
-        instance = ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx, requires_song=True)
         if isinstance(instance, str):
-            return await ctx.respond(instance)
+            await ctx.respond(instance)
+            return
 
         if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
             ctx.voice_state.voice.pause()
-            return await ctx.respond("⏯ **Paused** song, use **/**`resume` to **continue**.")
-        await ctx.respond("❌ Either is the **song already paused**, or **nothing is currently **playing**.")
+            await ctx.respond("⏯ **Paused** song, use **/**`resume` to **continue**.")
+            return
+        await ctx.respond("❌ The **song** is **already paused**.")
 
     @slash_command()
     async def resume(self, ctx: CustomApplicationContext):
@@ -180,7 +188,8 @@ class Music(Cog):
 
         instance = ensure_voice_state(ctx)
         if isinstance(instance, str):
-            return await ctx.respond(instance)
+            await ctx.respond(instance)
+            return
 
         if ctx.voice_state.is_playing and ctx.voice_state.voice.is_paused():
             ctx.voice_state.voice.resume()
@@ -192,20 +201,16 @@ class Music(Cog):
         """Stops playing song and clears the queue."""
         await ctx.defer()
 
-        instance = ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx, no_processing=True)
         if isinstance(instance, str):
-            return await ctx.respond(instance)
+            await ctx.respond(instance)
+            return
 
-        if ctx.voice_state.processing is False:
-            ctx.voice_state.songs.clear()
-
-            if ctx.voice_state.is_playing:
-                ctx.voice_state.voice.stop()
-                ctx.voice_state.current = None
-                return await ctx.respond("⏹ **Stopped** the player and **cleared** the **queue**.")
-            await ctx.respond("❌ **Nothing** is currently **playing**.")
-        else:
-            await ctx.respond('⚠ I am **currently processing** the previous **request**.')
+        ctx.voice_state.songs.clear()
+        ctx.voice_state.voice.stop()
+        ctx.voice_state.current = None
+        await ctx.respond("⏹ **Stopped** the player and **cleared** the **queue**.")
+        return
 
     @slash_command()
     async def skip(self, ctx: CustomApplicationContext, force: bool = False):
@@ -293,12 +298,10 @@ class Music(Cog):
         """Shuffles the queue."""
         await ctx.defer()
 
-        instance = ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx, requires_queue=True)
         if isinstance(instance, str):
-            return await ctx.respond(instance)
-
-        if len(ctx.voice_state.songs) == 0:
-            return await ctx.respond("❌ The **queue** is **empty**.")
+            await ctx.respond(instance)
+            return
 
         ctx.voice_state.songs.shuffle()
         await ctx.respond("🔀 **Shuffled** the queue.")
@@ -308,14 +311,11 @@ class Music(Cog):
         """Reverses the queue."""
         await ctx.defer()
 
-        instance = ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx, requires_queue=True)
         if isinstance(instance, str):
             await ctx.respond(instance)
             return
 
-        if len(ctx.voice_state.songs) == 0:
-            await ctx.respond("❌ The **queue** is **empty**.")
-            return
         ctx.voice_state.songs.reverse()
         await ctx.respond("↩ **Reversed** the **queue**.")
 
@@ -324,12 +324,9 @@ class Music(Cog):
         """Removes a song from the queue at a given index."""
         await ctx.defer()
 
-        instance = ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx, requires_queue=True)
         if isinstance(instance, str):
             return await ctx.respond(instance)
-
-        if len(ctx.voice_state.songs) == 0:
-            return await ctx.respond("❌ The **queue** is **empty**.")
 
         try:
             ctx.voice_state.songs.remove(index - 1)
@@ -361,7 +358,7 @@ class Music(Cog):
         """Iterates the current queue. Invoke this command again to disable iteration."""
         await ctx.defer()
 
-        instance = ensure_voice_state(ctx, requires_song=True)
+        instance = ensure_voice_state(ctx, requires_queue=True)
         if isinstance(instance, str):
             await ctx.respond(instance)
             return
@@ -390,11 +387,7 @@ class Music(Cog):
         """Play a song through the bot, by searching a song with the name or by URL."""
         await ctx.defer()
 
-        if ctx.voice_state.processing:
-            await ctx.respond("⚠ I am **currently processing** the previous **request**.")
-            return
-
-        instance = ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx, no_processing=True)
         if isinstance(instance, str):
             await ctx.respond(instance)
             return
@@ -484,7 +477,7 @@ class Music(Cog):
         ctx.voice_state.processing = False
 
     @slash_command()
-    async def supported_links(self, ctx):
+    async def supported_links(self, ctx: CustomApplicationContext):
         """Lists all supported music streaming services."""
         await ctx.respond(embed=Embed(title="Supported Links", description="All supported streaming services.",
                                       colour=0xFF0000)
