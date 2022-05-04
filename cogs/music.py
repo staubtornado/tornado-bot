@@ -342,8 +342,8 @@ class Music(Cog):
         await ctx.respond(f"🗑 **Removed** the **{ordinal(n=index)} song** in queue.")
 
     @slash_command()
-    async def loop(self, ctx: CustomApplicationContext, queue: bool):
-        """Loops the currently playing song or queue. Invoke this command again to disable loop."""
+    async def loop(self, ctx: CustomApplicationContext):
+        """Loops the currently playing song. Invoke this command again to disable loop."""
         await ctx.defer()
 
         instance = ensure_voice_state(ctx)
@@ -353,33 +353,44 @@ class Music(Cog):
         if not ctx.voice_state.is_playing:
             return await ctx.respond("❌ **Nothing** is currently **playing**.")
 
-        mode: str = "song, use **/**`loop`"
-        if queue is None:
-            ctx.voice_state.queue_loop = False
-            ctx.voice_state.loop = not ctx.voice_state.loop
-        else:
-            duration: int = 0
-            for song in ctx.voice_state.songs:
-                try:
-                    duration += int(song.source.data.get("duration"))
-                except TypeError:
-                    continue
+        ctx.voice_state.queue_loop = False
+        ctx.voice_state.loop = not ctx.voice_state.loop
 
-            if duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
-                await ctx.respond("❌ The **queue is too long** to be looped.")
-                return
-
-            ctx.voice_state.loop = False
-            ctx.voice_state.queue_loop = queue
-
-            mode: str = "queue, use **/**`loop True`"
-            if queue:
-                mode: str = "queue, use **/**`loop False`"
-
-        if ctx.voice_state.loop or ctx.voice_state.queue_loop:
-            await ctx.respond(f"🔁 **Looped** {mode} to **disable** loop.")
+        if ctx.voice_state.loop:
+            await ctx.respond("🔁 **Looped song /**`loop` to **disable** loop.")
             return
-        await ctx.respond(f"🔁 **Unlooped** {mode} to **enable** loop.")
+        await ctx.respond("🔁 **Unlooped song /**`loop` to **enable** loop.")
+
+    @slash_command()
+    async def iterate(self, ctx: CustomApplicationContext):
+        """Iterates the current queue. Invoke this command again to disable iteration."""
+        await ctx.defer()
+
+        instance = ensure_voice_state(ctx)
+        if isinstance(instance, str):
+            return await ctx.respond(instance)
+
+        if not ctx.voice_state.is_playing:
+            return await ctx.respond("❌ **Nothing** is currently **playing**.")
+
+        duration: int = 0
+        for song in ctx.voice_state.songs:
+            try:
+                duration += int(song.source.data.get("duration"))
+            except TypeError:
+                continue
+
+        if duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
+            await ctx.respond("❌ The **queue is too long** to be iterated through.")
+            return
+
+        ctx.voice_state.loop = False
+        ctx.voice_state.queue_loop = not ctx.voice_state.queue_loop
+
+        if ctx.voice_state.queue_loop:
+            await ctx.respond(f"🔁 **Looped queue /**`iterate` to **disable** loop.")
+            return
+        await ctx.respond(f"🔁 **Unlooped queue /**`iterate`e to **enable** loop.")
 
     @slash_command()
     async def play(self, ctx: CustomApplicationContext, *, search: str):
