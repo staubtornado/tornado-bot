@@ -19,7 +19,11 @@ from lib.utils.utils import ordinal
 utils.bug_reports_message = lambda: ''
 
 
-def ensure_voice_state(ctx):
+class CustomApplicationContext(ApplicationContext):
+    voice_state: VoiceState
+
+
+def ensure_voice_state(ctx: CustomApplicationContext, requires_song: bool = False):
     if ctx.author.voice is None:
         return "❌ **You are not** connected to a **voice** channel."
 
@@ -27,9 +31,8 @@ def ensure_voice_state(ctx):
         if ctx.voice_client.channel != ctx.author.voice.channel:
             return f"🎶 I am **currently playing** in {ctx.voice_client.channel.mention}."
 
-
-class CustomApplicationContext(ApplicationContext):
-    voice_state: VoiceState
+    if not ctx.voice_state.is_playing and requires_song:
+        return "❌ **Nothing** is currently **playing**."
 
 
 class Music(Cog):
@@ -128,12 +131,10 @@ class Music(Cog):
         """Sets the volume of the current song."""
         await ctx.defer()
 
-        instance = ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx, requires_song=True)
         if isinstance(instance, str):
-            return await ctx.respond(instance)
-
-        if not ctx.voice_state.is_playing:
-            return await ctx.respond("❌ **Nothing** is currently **playing**.")
+            await ctx.respond(instance)
+            return
 
         if not (0 < volume <= 100):
             return await ctx.respond("❌ The **volume** has to be **between 0 and 100**.")
@@ -211,13 +212,9 @@ class Music(Cog):
         """Vote to skip a song. The requester can automatically skip."""
         await ctx.defer()
 
-        instance = ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx, requires_song=True)
         if isinstance(instance, str):
             return await ctx.respond(instance)
-
-        if not ctx.voice_state.is_playing:
-            await ctx.respond("❌ **Nothing** is currently **playing**.")
-            return
 
         loop_note: str = "."
         if ctx.voice_state.queue_loop:
@@ -346,12 +343,10 @@ class Music(Cog):
         """Loops the currently playing song. Invoke this command again to disable loop."""
         await ctx.defer()
 
-        instance = ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx, requires_song=True)
         if isinstance(instance, str):
-            return await ctx.respond(instance)
-
-        if not ctx.voice_state.is_playing:
-            return await ctx.respond("❌ **Nothing** is currently **playing**.")
+            await ctx.respond(instance)
+            return
 
         ctx.voice_state.queue_loop = False
         ctx.voice_state.loop = not ctx.voice_state.loop
@@ -366,12 +361,10 @@ class Music(Cog):
         """Iterates the current queue. Invoke this command again to disable iteration."""
         await ctx.defer()
 
-        instance = ensure_voice_state(ctx)
+        instance = ensure_voice_state(ctx, requires_song=True)
         if isinstance(instance, str):
-            return await ctx.respond(instance)
-
-        if not ctx.voice_state.is_playing:
-            return await ctx.respond("❌ **Nothing** is currently **playing**.")
+            await ctx.respond(instance)
+            return
 
         duration: int = 0
         for song in ctx.voice_state.songs:
