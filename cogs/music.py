@@ -1,7 +1,7 @@
 from math import ceil
 from traceback import format_exc
 
-from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member
+from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option
 from discord.ext.commands import Cog
 from discord.utils import get
 from psutil import virtual_memory
@@ -47,7 +47,7 @@ class Music(Cog):
         self.bot = bot
         self.voice_states = {}
 
-    def get_voice_state(self, ctx: ApplicationContext):
+    def get_voice_state(self, ctx: ApplicationContext) -> VoiceState:
         state = self.voice_states.get(ctx.guild_id)
         if not state or not state.exists:
             state = VoiceState(self.bot, ctx)
@@ -98,7 +98,7 @@ class Music(Cog):
         ctx.voice_state.queue_loop = False
         await ctx.respond("🧹 **Cleared** the queue.")
 
-    @slash_command()
+    @slash_command()  # TODO: MERGE WITH JOIN COMMAND
     async def summon(self, ctx: CustomApplicationContext, *, channel: VoiceChannel = None):
         """Summons the bot to a voice channel. If no channel was specified, it joins your channel."""
 
@@ -382,8 +382,12 @@ class Music(Cog):
             return
         await ctx.respond(f"🔁 **Unlooped queue /**`iterate`e to **enable** loop.")
 
-    @slash_command()
-    async def play(self, ctx: CustomApplicationContext, *, search: str):
+    @slash_command()  # TODO: IMPROVEMENT NECESSARY
+    async def play(self, ctx: CustomApplicationContext,
+                   suggestion: Option(str, "Chose a preset, search is ignored if used.",
+                                      choices=["Charts", "New Releases", "Discover", "Chill", "Party", "Classical",
+                                               "K-Pop", "Gaming", "Rock"],
+                                      required=False) = None, *, search: str = None):
         """Play a song through the bot, by searching a song with the name or by URL."""
         await ctx.defer()
 
@@ -403,6 +407,9 @@ class Music(Cog):
             await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please try again **later**.")
             return
 
+        if search is None and suggestion is None:
+            await ctx.respond("❌ You have to either use one of our presets or enter the link or name of the song.")
+
         async def add_song(track_name: str):
             try:
                 source = await YTDLSource.create_source(ctx, track_name, loop=self.bot.loop)
@@ -415,6 +422,18 @@ class Music(Cog):
             song = Song(source)
             await ctx.voice_state.songs.put(song)
             return source
+
+        presets: dict = {"Charts": "https://open.spotify.com/playlist/37i9dQZEVXbNG2KDcFcKOF",
+                         "New Releases": "https://open.spotify.com/playlist/37i9dQZF1DWUW2bvSkjcJ6",
+                         "Chill": "https://open.spotify.com/playlist/37i9dQZF1DWTvNyxOwkztu",
+                         "Party": "https://open.spotify.com/playlist/37i9dQZF1DXbX3zSzB4MO0",
+                         "Classical": "https://open.spotify.com/playlist/37i9dQZF1DWWEJlAGA9gs0",
+                         "K-Pop": "https://open.spotify.com/playlist/37i9dQZF1DX9tPFwDMOaN1",
+                         "Gaming": "https://open.spotify.com/playlist/37i9dQZF1DWTyiBJ6yEqeu",
+                         "Rock": "https://open.spotify.com/playlist/37i9dQZF1DWZJhOVGWqUKF"}
+
+        if suggestion is not None:
+            search: str = presets[suggestion]
 
         async def process():
             if any(x in search for x in ["https://open.spotify.com/playlist/", "spotify:playlist:",
@@ -472,7 +491,7 @@ class Music(Cog):
         try:
             await process()
         except Exception as e:
-            await ctx.respond(f"**A fatal error has occurred**: `{e}`. **You might** execute **/**`leave` to **reset "
+            await ctx.respond(f"❌ **A fatal error has occurred**: `{e}`. **You might** execute **/**`leave` to **reset "
                               f"the voice state on** this **server**.")
         ctx.voice_state.processing = False
 
