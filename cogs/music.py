@@ -212,7 +212,8 @@ class Music(Cog):
 
     @slash_command()
     async def skip(self, ctx: CustomApplicationContext,
-                   force: Option(bool, "Decide if a skip should be forced.", choices=[True], required=False) = False):
+                   force: Option(str, "Decide if a skip should be forced.", choices=["True"],
+                                 required=False) = "False"):
         """Vote to skip a song. The requester can automatically skip."""
         await ctx.defer()
 
@@ -225,7 +226,7 @@ class Music(Cog):
             loop_note: str = " and **removed song from** queue **loop**."
 
         voter: Member = ctx.author
-        if force:
+        if bool(force):
             for role in voter.roles:
                 if "DJ" in role.name:
                     ctx.voice_state.skip()
