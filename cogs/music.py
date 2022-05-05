@@ -211,7 +211,8 @@ class Music(Cog):
         return
 
     @slash_command()
-    async def skip(self, ctx: CustomApplicationContext, force: bool = False):
+    async def skip(self, ctx: CustomApplicationContext,
+                   force: Option(bool, "Decide if a skip should be forced.", choices=[True], required=False) = False):
         """Vote to skip a song. The requester can automatically skip."""
         await ctx.defer()
 
