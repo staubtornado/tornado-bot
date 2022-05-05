@@ -193,7 +193,7 @@ class Music(Cog):
         if ctx.voice_state.is_playing and ctx.voice_state.voice.is_paused():
             ctx.voice_state.voice.resume()
             return await ctx.respond("⏯ **Resumed** song, use **/**`pause` to **pause**.")
-        await ctx.respond("❌ Either is the **song is not paused**, or **nothing is currently **playing**.")
+        await ctx.respond("❌ Either is the **song is not paused**, **or nothing** is currently **playing**.")
 
     @slash_command()
     async def stop(self, ctx: CustomApplicationContext):
