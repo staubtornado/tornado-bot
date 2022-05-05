@@ -95,7 +95,6 @@ class Music(Cog):
 
         ctx.voice_state.songs.clear()
         ctx.voice_state.loop = False
-        ctx.voice_state.queue_loop = False
         await ctx.respond("🧹 **Cleared** the queue.")
 
     @slash_command()  # TODO: MERGE WITH JOIN COMMAND
@@ -206,7 +205,6 @@ class Music(Cog):
             await ctx.respond(instance)
             return
 
-        ctx.voice_state.songs.clear()
         ctx.voice_state.voice.stop()
         ctx.voice_state.current = None
         await ctx.respond("⏹ **Stopped** the player and **cleared** the **queue**.")
@@ -222,7 +220,7 @@ class Music(Cog):
             return await ctx.respond(instance)
 
         loop_note: str = "."
-        if ctx.voice_state.queue_loop:
+        if ctx.voice_state.iterate:
             loop_note: str = " and **removed song from** queue **loop**."
 
         voter: Member = ctx.author
@@ -345,7 +343,6 @@ class Music(Cog):
             await ctx.respond(instance)
             return
 
-        ctx.voice_state.queue_loop = False
         ctx.voice_state.loop = not ctx.voice_state.loop
 
         if ctx.voice_state.loop:
@@ -374,10 +371,8 @@ class Music(Cog):
             await ctx.respond("❌ The **queue is too long** to be iterated through.")
             return
 
-        ctx.voice_state.loop = False
-        ctx.voice_state.queue_loop = not ctx.voice_state.queue_loop
-
-        if ctx.voice_state.queue_loop:
+        ctx.voice_state.iterate = not ctx.voice_state.iterate
+        if ctx.voice_state.iterate:
             await ctx.respond(f"🔁 **Looped queue /**`iterate` to **disable** loop.")
             return
         await ctx.respond(f"🔁 **Unlooped queue /**`iterate`e to **enable** loop.")
