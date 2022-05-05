@@ -228,6 +228,7 @@ class Music(Cog):
         if force:
             for role in voter.roles:
                 if "DJ" in role.name:
+                    ctx.voice_state.skip()
                     await ctx.respond(f"⏭ **Forced to skip** current song{loop_note}")
                     return
             for role in ctx.guild.roles:
