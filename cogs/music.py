@@ -207,6 +207,7 @@ class Music(Cog):
             return
 
         ctx.voice_state.loop = False
+        ctx.voice_state.songs.clear()
         ctx.voice_state.voice.stop()
         ctx.voice_state.current = None
         await ctx.respond("⏹ **Stopped** the player and **cleared** the **queue**.")
@@ -388,7 +389,7 @@ class Music(Cog):
 
     @slash_command()
     async def play(self, ctx: CustomApplicationContext,
-                   search: Option(str, "Chose a preset, search is ignored if used.",
+                   search: Option(str, "Enter the name of the song, a URL or a preset.",
                                   autocomplete=basic_autocomplete(auto_complete), required=True) = None):
         """Play a song through the bot, by searching a song with the name or by URL."""
         await ctx.defer()
