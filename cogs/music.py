@@ -1,7 +1,8 @@
 from math import ceil
 from traceback import format_exc
 
-from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option
+from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option, \
+    FFmpegPCMAudio
 from discord.ext.commands import Cog
 from discord.utils import get
 from psutil import virtual_memory
@@ -376,8 +377,9 @@ class Music(Cog):
 
         ctx.voice_state.iterate = not ctx.voice_state.iterate
         if ctx.voice_state.iterate:
-            source = await YTDLSource.create_source(ctx, ctx.voice_state.current.source.url, loop=self.bot.loop)
-            await ctx.voice_state.songs.put(Song(source))
+            new: Song = ctx.voice_state.current
+            new.source.original = FFmpegPCMAudio(new.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
+            await ctx.voice_state.songs.put(new)
 
             await ctx.respond(f"🔁 **Looped queue /**`iterate` to **disable** loop.")
             return

@@ -81,13 +81,13 @@ class VoiceState:
                 except TimeoutError:
                     self.bot.loop.create_task(self.stop())
                     self.exists = False
-                    await self.current.source.channel.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to "
-                                                           f"**inactivity**.")
+                    await self._ctx.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to **inactivity**.")
                     return
 
                 if self.iterate:
-                    source = await YTDLSource.create_source(self._ctx, self.current.source.url, loop=self.bot.loop)
-                    await self.songs.put(Song(source))
+                    new: Song = self.current
+                    new.source.original = FFmpegPCMAudio(new.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
+                    await self.songs.put(new)
 
                     self.loop_duration += int(self.current.source.data.get("duration"))
                     if self.loop_duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
