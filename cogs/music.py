@@ -4,7 +4,7 @@ from traceback import format_exc
 from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option, \
     FFmpegPCMAudio
 from discord.ext.commands import Cog
-from discord.utils import get
+from discord.utils import get, basic_autocomplete
 from psutil import virtual_memory
 from spotipy import SpotifyException
 from yt_dlp import utils
@@ -15,7 +15,7 @@ from lib.music.extraction import YTDLSource
 from lib.music.song import Song
 from lib.music.spotify import SpotifyScraping
 from lib.music.voicestate import VoiceState
-from lib.utils.utils import ordinal
+from lib.utils.utils import ordinal, auto_complete
 
 utils.bug_reports_message = lambda: ''
 
@@ -206,6 +206,7 @@ class Music(Cog):
             await ctx.respond(instance)
             return
 
+        ctx.voice_state.loop = False
         ctx.voice_state.voice.stop()
         ctx.voice_state.current = None
         await ctx.respond("⏹ **Stopped** the player and **cleared** the **queue**.")
@@ -385,12 +386,10 @@ class Music(Cog):
             return
         await ctx.respond(f"🔁 **Unlooped queue /**`iterate`e to **enable** loop.")
 
-    @slash_command()  # TODO: IMPROVEMENT NECESSARY
+    @slash_command()
     async def play(self, ctx: CustomApplicationContext,
-                   suggestion: Option(str, "Chose a preset, search is ignored if used.",
-                                      choices=["Charts", "New Releases", "Discover", "Chill", "Party", "Classical",
-                                               "K-Pop", "Gaming", "Rock"],
-                                      required=False) = None, *, search: str = None):
+                   search: Option(str, "Chose a preset, search is ignored if used.",
+                                  autocomplete=basic_autocomplete(auto_complete), required=True) = None):
         """Play a song through the bot, by searching a song with the name or by URL."""
         await ctx.defer()
 
@@ -399,19 +398,21 @@ class Music(Cog):
             await ctx.respond(instance)
             return
 
-        if not ctx.voice_state.voice:
-            await self.join(self, ctx)
-
         if len(ctx.voice_state.songs) >= SETTINGS["Cogs"]["Music"]["MaxQueueLength"]:
             await ctx.respond("🥵 **Too many** songs in queue.")
             return
 
         if virtual_memory().percent > 75 and SETTINGS["Production"]:
-            await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please try again **later**.")
+            await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please **try again later**.")
             return
 
-        if search is None and suggestion is None:
-            await ctx.respond("❌ You have to either use one of our presets or enter the link or name of the song.")
+        if search is None:
+            await ctx.respond("❌ You have to **enter** the **name** of the song, a **URL or** a **preset**. Use "
+                              "**/**`resume` to resume a song.")
+            return
+
+        if not ctx.voice_state.voice:
+            await self.join(self, ctx)
 
         async def add_song(track_name: str):
             try:
@@ -435,8 +436,7 @@ class Music(Cog):
                          "Gaming": "https://open.spotify.com/playlist/37i9dQZF1DWTyiBJ6yEqeu",
                          "Rock": "https://open.spotify.com/playlist/37i9dQZF1DWZJhOVGWqUKF"}
 
-        if suggestion is not None:
-            search: str = presets[suggestion]
+        search: str = presets[search] if search in presets else search
 
         async def process():
             if any(x in search for x in ["https://open.spotify.com/playlist/", "spotify:playlist:",
