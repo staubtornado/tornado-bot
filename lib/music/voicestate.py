@@ -81,18 +81,20 @@ class VoiceState:
                 except TimeoutError:
                     self.bot.loop.create_task(self.stop())
                     self.exists = False
-                    await self._ctx.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to **inactivity**.")
+                    await self.current.source.channel.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to "
+                                                           f"**inactivity**.")
                     return
 
                 if self.iterate:
-                    await self.songs.put(Song(await YTDLSource.create_source(self._ctx, self.current.source.url,
-                                                                             loop=self.bot.loop)))
-                    if self.loop_duration > SETTINGS["Cog"]["Music"]["MaxDuration"]:
+                    source = await YTDLSource.create_source(self._ctx, self.current.source.url, loop=self.bot.loop)
+                    await self.songs.put(Song(source))
+
+                    self.loop_duration += int(self.current.source.data.get("duration"))
+                    if self.loop_duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
                         self.iterate = False
+
                         await self.current.source.channel.send("🔂 **The queue loop** has been **disabled** due to "
                                                                "**inactivity**.")
-                    else:
-                        self.loop_duration += self.current.source.duration
 
                 self.current.source.volume = self._volume
                 self.voice.play(self.current.source, after=self.play_next_song)

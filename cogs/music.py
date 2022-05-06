@@ -376,6 +376,9 @@ class Music(Cog):
 
         ctx.voice_state.iterate = not ctx.voice_state.iterate
         if ctx.voice_state.iterate:
+            source = await YTDLSource.create_source(ctx, ctx.voice_state.current.source.url, loop=self.bot.loop)
+            await ctx.voice_state.songs.put(Song(source))
+
             await ctx.respond(f"🔁 **Looped queue /**`iterate` to **disable** loop.")
             return
         await ctx.respond(f"🔁 **Unlooped queue /**`iterate`e to **enable** loop.")
