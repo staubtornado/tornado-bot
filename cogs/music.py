@@ -266,7 +266,8 @@ class Music(Cog):
         await ctx.defer()
 
         if len(ctx.voice_state.songs) == 0:
-            return await ctx.respond('❌ The **queue** is **empty**.')
+            await ctx.respond('❌ The **queue** is **empty**.')
+            return
 
         items_per_page = 10
         pages = ceil(len(ctx.voice_state.songs) / items_per_page)
@@ -285,14 +286,12 @@ class Music(Cog):
                 continue
 
         embed: Embed = Embed(title="Queue", description=f"**Songs:** {len(ctx.voice_state.songs)}\n**Duration:** "
-                                                        f"{YTDLSource.parse_duration(duration)}\n\n"
-                                                        f"**Now Playing:**\n"
-                                                        f"[{ctx.voice_state.current.source.title_limited_embed}]"
-                                                        f"({ctx.voice_state.current.source.url}) - "
-                                                        f"[{ctx.voice_state.current.source.uploader}]"
-                                                        f"({ctx.voice_state.current.source.uploader_url}) "
-                                                        f"{ctx.voice_state.current.source.duration}\n\n{queue}",
-                             colour=0xFF0000)
+                                                        f"{YTDLSource.parse_duration(duration)}\n⠀", colour=0xFF0000)
+        embed.add_field(name="🎶 Now Playing", value=f"[{ctx.voice_state.current.source.title_limited_embed}]"
+                                                    f"({ctx.voice_state.current.source.url})\n"
+                                                    f"[{ctx.voice_state.current.source.uploader}]"
+                                                    f"({ctx.voice_state.current.source.uploader_url})", inline=False)
+        embed.add_field(name="⠀", value=queue, inline=False)
         embed.set_footer(text=f"Page {page}/{pages}")
         await ctx.respond(embed=embed)
 
