@@ -224,9 +224,9 @@ class Music(Cog):
         loop_note: str = "."
         if ctx.voice_state.iterate:
             loop_note: str = " and **removed song from** queue **loop**."
-
         voter: Member = ctx.author
-        if bool(force):
+
+        if force == "True":
             for role in voter.roles:
                 if "DJ" in role.name:
                     ctx.voice_state.skip()
