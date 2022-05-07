@@ -252,7 +252,8 @@ class Music(Cog):
             ctx.voice_state.skip_votes.add(voter.id)
             total_votes = len(ctx.voice_state.skip_votes)
 
-            required_votes: int = ceil((len(ctx.author.voice.channel.members) - 1) * (1 / 3))
+            required_votes: int = ceil(len([member for member in ctx.author.voice.channel.members if not member.bot])
+                                       * (1 / 3))
 
             if total_votes >= required_votes:
                 await ctx.respond(f"⏭ **Skipped song**, as **{total_votes}/{required_votes}** users voted{loop_note}")
