@@ -28,7 +28,7 @@ SETTINGS: dict = {
             "MaxDuration": 10800
         }
     },
-    "Version": "0.0.1a",
+    "Version": "0.0.2a",
     "Production": False,
     "ServiceSyncInSeconds": 500
 }
