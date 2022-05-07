@@ -225,15 +225,24 @@ class Music(Cog):
             await ctx.respond(instance)
             return
 
+        songs_to_skip: list = []
         loop_note: str = "."
         if ctx.voice_state.iterate:
             loop_note: str = " and **removed song from** queue **loop**."
+
+            for i, song in enumerate(ctx.voice_state.songs):
+                if song.source.url == ctx.voice_state.current.source.url:
+                    songs_to_skip.append(i)
+
         voter: Member = ctx.author
 
         if force == "True":
             for role in voter.roles:
                 if "DJ" in role.name:
                     ctx.voice_state.skip()
+                    for i in songs_to_skip:
+                        ctx.voice_state.songs.remove(i)
+
                     await ctx.respond(f"⏭ **Forced to skip** current song{loop_note}")
                     return
             for role in ctx.guild.roles:
@@ -247,6 +256,8 @@ class Music(Cog):
         if voter == ctx.voice_state.current.requester:
             await ctx.respond(f"⏭ **Skipped** the **song directly**, cause **you** added it{loop_note}")
             ctx.voice_state.skip()
+            for i in songs_to_skip:
+                ctx.voice_state.songs.remove(i)
 
         elif voter.id not in ctx.voice_state.skip_votes:
             ctx.voice_state.skip_votes.add(voter.id)
@@ -258,6 +269,8 @@ class Music(Cog):
             if total_votes >= required_votes:
                 await ctx.respond(f"⏭ **Skipped song**, as **{total_votes}/{required_votes}** users voted{loop_note}")
                 ctx.voice_state.skip()
+                for i in songs_to_skip:
+                    ctx.voice_state.songs.remove(i)
             else:
                 await ctx.respond(f"🗳️ **Skip vote** added: **{total_votes}/{required_votes}**")
         else:
