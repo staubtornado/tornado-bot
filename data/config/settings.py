@@ -4,31 +4,32 @@ intents: Intents = Intents.default()
 intents.__setattr__("members", True)
 intents.__setattr__("messages", True)
 
+# Bot settings, apply to all servers. Server specific settings are saved in the database.
 SETTINGS: dict = {
-    "OwnerIDs": [272446903940153345],
-    "Description": "A feature-rich bot based on Python 3.9 and Pycord.",
-    "Intents": intents,
+    "OwnerIDs": [272446903940153345],  # List of owner IDs
+    "Description": "A feature-rich bot based on Python 3.9 and Pycord.",  # Bot description
+    "Intents": intents,  # Bot intents
     "Colours": {
-        "Default": Colour.blue(),
-        "Error": Colour.red()
+        "Default": Colour.blue(),  # Default colour
+        "Error": Colour.red()  # Error colour
     },
     "Cogs": {
         "Experience": {
-            "Multiplication": 1,
-            "BaseLevel": 250,
-            "MinXP": 15,
-            "MaxXP": 25,
-            "Cooldown": 60,
+            "Multiplication": 1,  # Multiplication factor for experience gained.
+            "BaseLevel": 250,  # Required experience to level 1.
+            "MinXP": 15,  # minimum experience per message
+            "MaxXP": 25,   # maximum experience per message
+            "Cooldown": 60,  # seconds
             "Leaderboard": {
-                "ItemsPerPage": 25
+                "ItemsPerPage": 25  # Number of members to show on each page
             }
         },
         "Music": {
-            "MaxQueueLength": 100,
-            "MaxDuration": 10800
+            "MaxQueueLength": 100,  # Max amount of songs that can be queued
+            "MaxDuration": 10800  # seconds
         }
     },
-    "Version": "0.0.2a",
-    "Production": False,
-    "ServiceSyncInSeconds": 500
+    "Version": "0.0.2a",  # Bot version
+    "Production": False,  # If the bot is running in production or not
+    "ServiceSyncInSeconds": 500  # How often the bot should sync with the service
 }
