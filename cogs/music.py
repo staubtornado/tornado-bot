@@ -429,7 +429,11 @@ class Music(Cog):
         if not ctx.voice_state.voice:
             await self.join(self, ctx)
 
-        async def add_song(track_name: str):
+        async def add_song(track_name: str, fetch_source: bool = False):
+            if not fetch_source:
+                await ctx.voice_state.songs.put(SongStr(track_name, ctx))
+                return
+
             try:
                 source = await YTDLSource.create_source(ctx, track_name, loop=self.bot.loop)
             except Exception as error:
@@ -491,7 +495,7 @@ class Music(Cog):
                 await ctx.respond(f":white_check_mark: Added **{info}** from **Spotify**.")
                 return
 
-            name = await add_song(search)
+            name = await add_song(search, fetch_source=True)
             if isinstance(name, YTDLError):
                 await ctx.respond(f"❌ {name}")
             elif isinstance(name, utils.GeoRestrictedError):
