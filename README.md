@@ -15,7 +15,7 @@ Dank Memer, and other bots.
  2. Install Python 3.8
  3. Install all the dependencies 
     - pip install -r requirements.txt
-    - install selenium drivers for chrome, firefox, or edge
+    - install selenium drivers for chrome, Firefox, or edge
     - install ffmpeg
  4. Create a bot in the discord developer portal
  5. Create an application in the spotify developer portal
@@ -23,7 +23,7 @@ Dank Memer, and other bots.
     #####
         DISCORD_BOT_TOKEN = your token from the discord developer portal
         SPOTIFY_CLIENT_ID = client id from the spotify developer portal
-        SPOTIFY_CLIENT_SECRET = client secret from the spotify developer portal
+        SPOTIFY_CLIENT_SECRET = client secret from the Spotify developer portal
  7. Save your `.env` file
  8. Run the bot with `main.py` file in the root directory  
 
@@ -38,7 +38,8 @@ The bot has the following features:
     - **[/]** `pause` Pauses the music
     - **[/]** `resume` Resumes the music
     - **[/]** `stop` Stops the music and clears the queue
-    - **[/]** `skip [force]` Skips the current song or forces the bot to skip the current song if force is used by a DJ.
+    - **[/]** `skip [force]` Skips the current song or forces the bot to skip the current song if a DJ uses force 
+                              parameter
     - **[/]** `queue [page]` Shows the queue with 10 songs per page.
     - **[/]** `clear` Clears the queue
     - **[/]** `remove [index]` Removes a song from the queue
@@ -67,7 +68,7 @@ The bot has the following features:
       - **[/]** `milf` Sends a random image of a milf.
 #####
 - Experience
-  - This is a level system for servers that is similar to MEE6. Leaderboards, Ranks and 
+  - This is a level system for guilds that works like the one from MEE6. 
     - **[/]** `leaderboard [page]` Sends a page of the leaderboard.
     - **[/]** `rank [user]` Sends the rank of the user.
 
@@ -94,12 +95,12 @@ The bot has the following features:
 ---
 
 ## Why is the development process so slow?
-The bot needs to be able to work on linux and windows and is currently only developed by a single person.
+The bot needs to be able to work on Linux and Windows and is currently only developed by a single person.
 
 ---
 
 ## How can I help?
-Feel free to contribute to the bot's development this would help the project a lot.
+Feel free to contribute to the bot's development. This would help the project a lot.
 ######
 Requirements:
    - A GitHub account
