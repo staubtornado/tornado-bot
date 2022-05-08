@@ -6,6 +6,12 @@ from millify import millify
 from lib.music.extraction import YTDLSource
 
 
+class SongStr:
+    def __init__(self, search: str, ctx):
+        self.search = search
+        self.ctx = ctx
+
+
 class Song:
     __slots__ = ("source", "requester")
 
