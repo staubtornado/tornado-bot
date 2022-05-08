@@ -2,6 +2,8 @@ from asyncio import Queue
 from itertools import islice
 from random import shuffle
 
+from lib.music.song import Song
+
 
 class SongQueue(Queue):
     _queue = None
@@ -33,3 +35,13 @@ class SongQueue(Queue):
 
     def remove(self, index: int):
         del self._queue[index]
+
+    def get_duration(self) -> int:
+        duration = 0
+
+        for song in self._queue:
+            if isinstance(song, Song):
+                duration += int(song.source.data.get("duration"))
+                continue
+            duration += 210
+        return duration

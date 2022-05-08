@@ -296,19 +296,12 @@ class Music(Cog):
             if isinstance(song, Song):
                 queue += f"`{i + 1}`. [{song.source.title_limited_embed}]({song.source.url})\n"
             else:
-                queue += f"`{i + 1}`. {song.search}\n"
-        duration: int = 0
-        for song in ctx.voice_state.songs:
-            if isinstance(song, Song):
-                try:
-                    duration += int(song.source.data.get("duration"))
-                except TypeError:
-                    pass
-                continue
-            duration += 210
+                queue += f"`{i + 1}`. {YTDLSource.parse_limited_title(song.search)}\n"
 
-        embed: Embed = Embed(title="Queue", description=f"**Songs:** {len(ctx.voice_state.songs)}\n**Duration:** "
-                                                        f"{YTDLSource.parse_duration(duration)}\n⠀", colour=0xFF0000)
+        embed: Embed = Embed(title="Queue",
+                             description=f"**Songs:** {len(ctx.voice_state.songs)}\n**Duration:** "
+                                         f"{YTDLSource.parse_duration(ctx.voice_state.songs.get_duration())}\n⠀",
+                             colour=0xFF0000)
         embed.add_field(name="🎶 Now Playing", value=f"[{ctx.voice_state.current.source.title_limited_embed}]"
                                                     f"({ctx.voice_state.current.source.url})\n"
                                                     f"[{ctx.voice_state.current.source.uploader}]"
@@ -386,14 +379,7 @@ class Music(Cog):
             await ctx.respond(instance)
             return
 
-        duration: int = 0
-        for song in ctx.voice_state.songs:
-            try:
-                duration += int(song.source.data.get("duration"))
-            except TypeError:
-                continue
-
-        if duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
+        if ctx.voice_state.songs.get_duration() > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
             await ctx.respond("❌ The **queue is too long** to be iterated through.")
             return
 
