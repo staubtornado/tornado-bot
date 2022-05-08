@@ -12,7 +12,7 @@ from yt_dlp import utils
 from data.config.settings import SETTINGS
 from lib.music.exceptions import YTDLError
 from lib.music.extraction import YTDLSource
-from lib.music.song import Song
+from lib.music.song import Song, SongStr
 from lib.music.spotify import SpotifyScraping
 from lib.music.voicestate import VoiceState
 from lib.utils.utils import ordinal, auto_complete
@@ -293,13 +293,19 @@ class Music(Cog):
 
         queue: str = ""
         for i, song in enumerate(ctx.voice_state.songs[start:end], start=start):
-            queue += f"`{i + 1}`. [{song.source.title_limited_embed}]({song.source.url})\n"
+            if isinstance(song, Song):
+                queue += f"`{i + 1}`. [{song.source.title_limited_embed}]({song.source.url})\n"
+            else:
+                queue += f"`{i + 1}`. {song.search}\n"
         duration: int = 0
         for song in ctx.voice_state.songs:
-            try:
-                duration += int(song.source.data.get("duration"))
-            except TypeError:
+            if isinstance(song, Song):
+                try:
+                    duration += int(song.source.data.get("duration"))
+                except TypeError:
+                    pass
                 continue
+            duration += 210
 
         embed: Embed = Embed(title="Queue", description=f"**Songs:** {len(ctx.voice_state.songs)}\n**Duration:** "
                                                         f"{YTDLSource.parse_duration(duration)}\n⠀", colour=0xFF0000)
