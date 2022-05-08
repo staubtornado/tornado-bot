@@ -1,14 +1,15 @@
 from asyncio import Event
+from traceback import format_exc
 
 from _asyncio import Task
 from async_timeout import timeout
-from discord import Bot, FFmpegPCMAudio
+from discord import Bot, FFmpegPCMAudio, Embed
 
 from data.config.settings import SETTINGS
 from lib.music.exceptions import VoiceError
 from lib.music.extraction import YTDLSource
 from lib.music.queue import SongQueue
-from lib.music.song import Song
+from lib.music.song import Song, SongStr
 
 
 class VoiceState:
@@ -83,6 +84,16 @@ class VoiceState:
                     self.exists = False
                     await self._ctx.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to **inactivity**.")
                     return
+
+                if isinstance(self.current, SongStr):
+                    try:
+                        source = await YTDLSource.create_source(self.current.ctx, self.current.search,
+                                                                loop=self.bot.loop)
+                    except Exception as error:
+                        await self.current.ctx.send(embed=Embed(description=f"💥 **Error**: {error}"))
+                        continue
+                    else:
+                        self.current = Song(source)
 
                 if self.iterate:
                     new: Song = self.current
