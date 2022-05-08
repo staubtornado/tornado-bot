@@ -36,7 +36,11 @@ class Song:
             pass
         else:
             for i, song in enumerate(songs[0:5], start=0):
-                queue += f"`{i + 1}.` [{song.source.title_limited_embed}]({song.source.url} '{song.source.title}')\n"
+                if isinstance(song, Song):
+                    queue += f"`{i + 1}.` [{song.source.title_limited_embed}]({song.source.url} '{song.source.title}" \
+                             f"')\n"
+                else:
+                    queue += f"`{i + 1}.` {song.search}\n"
 
         if len_songs > 6:
             queue += f"Use **/**`queue` to show **{len_songs - 5}** more..."
