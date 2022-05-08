@@ -1,5 +1,4 @@
 from asyncio import Event
-from traceback import format_exc
 
 from _asyncio import Task
 from async_timeout import timeout
