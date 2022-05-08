@@ -5,7 +5,7 @@ the newest discord API features and is built on top of the Py-Cord (discord.py f
 ---
 
 ## What is the purpose of this project?
-The goal of this project is to create an open source discord bot that has the capability to compete with other MEE6, 
+The goal of this project is to create an open-source discord bot that has the capability to compete with other MEE6, 
 Dank Memer, and other bots. 
 
 ---
@@ -18,11 +18,11 @@ Dank Memer, and other bots.
     - install selenium drivers for chrome, Firefox, or edge
     - install ffmpeg
  4. Create a bot in the discord developer portal
- 5. Create an application in the spotify developer portal
+ 5. Create an application in the Spotify developer portal
  6. Create a `.env` file in `./data/config` and paste in the following information: 
     #####
         DISCORD_BOT_TOKEN = your token from the discord developer portal
-        SPOTIFY_CLIENT_ID = client id from the spotify developer portal
+        SPOTIFY_CLIENT_ID = client id from the Spotify developer portal
         SPOTIFY_CLIENT_SECRET = client secret from the Spotify developer portal
  7. Save your `.env` file
  8. Run the bot with `main.py` file in the root directory  
@@ -40,7 +40,7 @@ The bot has the following features:
     - **[/]** `stop` Stops the music and clears the queue
     - **[/]** `skip [force]` Skips the current song or forces the bot to skip the current song if a DJ uses force 
                               parameter
-    - **[/]** `queue [page]` Shows the queue with 10 songs per page.
+    - **[/]** `queue [page]` Shows the queue with ten songs per page.
     - **[/]** `clear` Clears the queue
     - **[/]** `remove [index]` Removes a song from the queue
     - **[/]** `shuffle` Shuffles the queue
@@ -59,7 +59,7 @@ The bot has the following features:
       - **[/]** `porn` Sends a random porn image.
       - **[/]** `teen` Sends a random teen (> 18) porn image.
       - **[/]** `ass` Sends a random image of an ass.
-      - **[/]** `asian` Sends a random porn image of an asian person.
+      - **[/]** `asian` Sends a random porn image of an Asian person.
       - **[/]** `masturbation` Sends a random image of a person masturbating.
       - **[/]** `shaved` Sends a random image of a shaved vagina.
       - **[/]** `closeup` Sends a random closeup image of a vagina.
