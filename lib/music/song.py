@@ -40,7 +40,7 @@ class Song:
                     queue += f"`{i + 1}.` [{song.source.title_limited_embed}]({song.source.url} '{song.source.title}" \
                              f"')\n"
                 else:
-                    queue += f"`{i + 1}.` {song.search}\n"
+                    queue += f"`{i + 1}.` {YTDLSource.parse_limited_title(song.search)}\n"
 
         if len_songs > 6:
             queue += f"Use **/**`queue` to show **{len_songs - 5}** more..."
