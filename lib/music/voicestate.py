@@ -24,6 +24,7 @@ class VoiceState:
         self.songs: SongQueue = SongQueue()
         self.exists: bool = True
         self.loop_duration: int = 0
+        self.error: int = 0
 
         self._loop: bool = False
         self._iterate: bool = False
@@ -71,57 +72,63 @@ class VoiceState:
 
     async def audio_player_task(self):
         while True:
-            self.next.clear()
-            self.now = None
+            try:
+                self.next.clear()
+                self.now = None
 
-            if not self.loop:
-                try:
-                    async with timeout(180):
-                        self.current = await self.songs.get()
-                except TimeoutError:
-                    self.bot.loop.create_task(self.stop())
-                    self.exists = False
-                    await self._ctx.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to **inactivity**.")
-                    return
-
-                if isinstance(self.current, SongStr):
+                if not self.loop:
                     try:
-                        source = await YTDLSource.create_source(self.current.ctx, self.current.search,
-                                                                loop=self.bot.loop)
-                    except Exception as error:
-                        await self.current.ctx.send(embed=Embed(description=f"💥 **Error**: {error}"))
-                        continue
-                    else:
-                        self.current = Song(source)
+                        async with timeout(180):
+                            self.current = await self.songs.get()
+                    except TimeoutError:
+                        self.bot.loop.create_task(self.stop())
+                        self.exists = False
+                        await self._ctx.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to **inactivity**.")
+                        return
 
-                if self.iterate:
-                    new: Song = self.current
-                    new.source.original = FFmpegPCMAudio(new.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
-                    await self.songs.put(new)
+                    if isinstance(self.current, SongStr):
+                        try:
+                            source = await YTDLSource.create_source(self.current.ctx, self.current.search,
+                                                                    loop=self.bot.loop)
+                        except Exception as error:
+                            await self.current.ctx.send(embed=Embed(description=f"💥 **Error**: {error}"))
+                            continue
+                        else:
+                            self.current = Song(source)
 
+                    if self.iterate:
+                        new: Song = self.current
+                        new.source.original = FFmpegPCMAudio(new.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
+                        await self.songs.put(new)
+
+                        self.loop_duration += int(self.current.source.data.get("duration"))
+                        if self.loop_duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
+                            self.iterate = False
+
+                            await self.current.source.channel.send("🔂 **The queue loop** has been **disabled** due to "
+                                                                   "**inactivity**.")
+
+                    self.current.source.volume = self._volume
+                    self.voice.play(self.current.source, after=self.play_next_song)
+                    await self.current.source.channel.send(embed=self.current.create_embed(self.songs))
+
+                elif self.loop:
                     self.loop_duration += int(self.current.source.data.get("duration"))
-                    if self.loop_duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
-                        self.iterate = False
-
-                        await self.current.source.channel.send("🔂 **The queue loop** has been **disabled** due to "
+                    if self.loop_duration > 10:
+                        self.loop = False
+                        await self.current.source.channel.send("🔂 **The loop** has been **disabled** due to "
                                                                "**inactivity**.")
 
-                self.current.source.volume = self._volume
-                self.voice.play(self.current.source, after=self.play_next_song)
-                await self.current.source.channel.send(embed=self.current.create_embed(self.songs))
+                    self.now = FFmpegPCMAudio(self.current.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
+                    self.voice.play(self.now, after=self.play_next_song)
 
-            elif self.loop:
-                if self.loop_duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
-                    self.loop = False
-                    await self.current.source.channel.send("🔂 **The loop** has been **disabled** due to "
-                                                           "**inactivity**.")
-                else:
-                    self.loop_duration += self.current.source.duration
+                await self.next.wait()
 
-                self.now = FFmpegPCMAudio(self.current.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
-                self.voice.play(self.now, after=self.play_next_song)
-
-            await self.next.wait()
+            except Exception as error:
+                await self._ctx.send(embed=Embed(description=f"💥 **Error**: {error}"))
+                self.error += 1
+                if self.error > 3:
+                    self.bot.loop.create_task(self.stop())
 
     def play_next_song(self, error=None):
         if error:
