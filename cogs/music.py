@@ -231,8 +231,9 @@ class Music(Cog):
             loop_note: str = " and **removed song from** queue **loop**."
 
             for i, song in enumerate(ctx.voice_state.songs):
-                if song.source.url == ctx.voice_state.current.source.url:
-                    songs_to_skip.append(i)
+                if isinstance(song, Song):
+                    if song.source.url == ctx.voice_state.current.source.url:
+                        songs_to_skip.append(i)
 
         voter: Member = ctx.author
 
