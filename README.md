@@ -5,8 +5,8 @@ the newest discord API features and is built on top of the Py-Cord (discord.py f
 ---
 
 ## What is the purpose of this project?
-The goal of this project is to create an open-source discord bot that has the capability to compete with other MEE6, 
-Dank Memer, and other bots. 
+The goal of this project is to create an open-source discord bot that has the capability to compete with other bots like
+MEE6, Dank Memer, or Dyno.
 
 ---
 
