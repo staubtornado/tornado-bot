@@ -296,7 +296,7 @@ class Music(Cog):
             if isinstance(song, Song):
                 queue += f"`{i + 1}`. [{song.source.title_limited_embed}]({song.source.url})\n"
             else:
-                queue += f"`{i + 1}`. {YTDLSource.parse_limited_title(song.search)}\n"
+                queue += f"`{i + 1}`. {YTDLSource.parse_limited_title_embed(song.search)}\n"
 
         embed: Embed = Embed(title="Queue",
                              description=f"**Songs:** {len(ctx.voice_state.songs)}\n**Duration:** "
