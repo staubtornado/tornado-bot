@@ -11,7 +11,7 @@ Dank Memer, and other bots.
 ---
 
 ## How do I install TornadoBot?
- 1. Clone the repository
+ 1. [Download the latest release](https://github.com/staubtornado/tornado-bot/releases) or clone the repository if you want to use the development version.
  2. Install Python 3.8
  3. Install all the dependencies 
     - pip install -r requirements.txt
@@ -19,8 +19,10 @@ Dank Memer, and other bots.
     - install ffmpeg
  4. Create a bot in the discord developer portal
  5. Create an application in the Spotify developer portal
- 6. Create a `.env` file in `./data/config` and paste in the following information: 
+ 6. Create a `.env` file in `./data/config` and paste in the following information:
+
     #####
+
         DISCORD_BOT_TOKEN = your token from the discord developer portal
         SPOTIFY_CLIENT_ID = client id from the Spotify developer portal
         SPOTIFY_CLIENT_SECRET = client secret from the Spotify developer portal
@@ -51,7 +53,9 @@ The bot has the following features:
     - **[/]** `join` Joins the bot to the voice channel.
     - **[/]** `leave` Leaves the bot from the voice channel.
     - **[/]** `summon` Joins the bot to the voice channel.
+
 #####
+
 - Images
     - The bot can scrape images from various sources. This is done via Selenium to support JavaScript rendered websites.
     - **[/]** `meme` Scrapes a random meme from Pinterest.
@@ -66,7 +70,9 @@ The bot has the following features:
       - **[/]** `pussy` Sends a random image of a pussy.
       - **[/]** `boob` Sends a random image of boobs.
       - **[/]** `milf` Sends a random image of a milf.
+      
 #####
+
 - Experience
   - This is a level system for guilds that works like the one from MEE6. 
     - **[/]** `leaderboard [page]` Sends a page of the leaderboard.
@@ -101,7 +107,9 @@ The bot needs to be able to work on Linux and Windows and is currently only deve
 
 ## How can I help?
 Feel free to contribute to the bot's development. This would help the project a lot.
+
 ######
+
 Requirements:
    - A GitHub account
    - A Discord account
