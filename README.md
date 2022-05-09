@@ -97,6 +97,7 @@ The bot has the following features:
 - [ ] Apply the premium and beta functionality to the commands
 - [ ] Add multiple languages to the bot
 - [ ] Create a requirements.txt file
+- [ ] Improve SQL so it can add missing columns
 
 ---
 
