@@ -16,7 +16,7 @@ from lib.currency.wallet import Wallet
 # Users are limited to a specific amount of transactions per server every day and have a daily global limit
 # Every stat is public, but only the user themselves can see their accurate stats. Others only see estimations
 # Every bot has it own economy, meaning that self-hosted versions cannot access the official economy
-# Users can livest their balance: Daily revenue is linear and investments can be percentage increases
+# Users can invest their balance: Daily revenue is linear and investments can be percentage increases
 
 
 class Currency(Cog):
