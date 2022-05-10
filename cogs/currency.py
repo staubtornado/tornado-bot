@@ -1,5 +1,9 @@
-from discord import Bot, slash_command, ApplicationContext
+from typing import Union
+
+from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Role
 from discord.ext.commands import Cog
+from discord.state import Channel
+from discord.utils import basic_autocomplete
 
 from lib.currency.wallet import Wallet
 
@@ -25,6 +29,16 @@ class Currency(Cog):
 
         wallet: Wallet = Wallet(ctx.author)
         await ctx.respond(embed=wallet.create_embed())
+
+    @slash_command()
+    async def claim(self, ctx: ApplicationContext,
+                    offer: Option(str, "Choose what you want to claim. Options might vary.",
+                                  autocomplete=basic_autocomplete(get_claim_options), required=True)):
+        pass
+
+    @slash_command()
+    async def buy(self, subject: Union[Channel, Role]):
+        pass
 
 
 def setup(bot: Bot):
