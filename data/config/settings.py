@@ -11,7 +11,8 @@ SETTINGS: dict = {
     "Intents": intents,  # Bot intents
     "Colours": {
         "Default": Colour.blue(),  # Default colour
-        "Error": Colour.red()  # Error colour
+        "Error": Colour.red(),  # Error colour
+        "Special": Colour.gold()  # Event Colour
     },
     "Cogs": {
         "Experience": {
