@@ -1,8 +1,8 @@
 from typing import Union
 
-from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Role
+from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Role, CategoryChannel, \
+    TextChannel, StageChannel, VoiceChannel
 from discord.ext.commands import Cog
-from discord.state import Channel
 from discord.utils import basic_autocomplete
 
 from lib.currency.wallet import Wallet
@@ -19,12 +19,13 @@ from lib.currency.wallet import Wallet
 # Users can invest their balance: Daily revenue is linear and investments can be percentage increases
 
 
+def get_claim_options(ctx: AutocompleteContext) -> list:
+    return ["Daily", "Monthly", "Special"]
+
+
 class Currency(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-
-    def get_claim_options(self, ctx: AutocompleteContext) -> list:
-        return ["Daily", "Monthly", "Special"]
 
     @slash_command()
     async def wallet(self, ctx: ApplicationContext, *, user: Member = None):
@@ -41,7 +42,7 @@ class Currency(Cog):
         pass
 
     @slash_command()
-    async def buy(self, subject: Union[Channel, Role]):
+    async def buy(self, subject: Union[VoiceChannel, StageChannel, TextChannel, CategoryChannel, Role]):
         pass
 
 
