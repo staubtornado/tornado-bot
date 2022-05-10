@@ -27,10 +27,11 @@ class Currency(Cog):
         return ["Daily", "Monthly", "Special"]
 
     @slash_command()
-    async def wallet(self, ctx: ApplicationContext):
+    async def wallet(self, ctx: ApplicationContext, *, user: Member = None):
         """Displays information about your wallet."""
+        await ctx.defer()
 
-        wallet: Wallet = Wallet(ctx.author)
+        wallet: Wallet = Wallet(ctx.author, target=user)
         await ctx.respond(embed=wallet.create_embed())
 
     @slash_command()
