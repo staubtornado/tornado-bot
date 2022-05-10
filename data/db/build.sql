@@ -28,9 +28,12 @@ CREATE TABLE IF NOT EXISTS keys (
 
 CREATE TABLE IF NOT EXISTS wallets (
     UserID integer PRIMARY KEY,
+    Balance integer DEFAULT 0,
     Revenue integer DEFAULT 0,
     LastModified integer DEFAULT NULL,
     GlobalTransactions integer DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS settings (
+    GuildID integer PRIMARY KEY
+)
