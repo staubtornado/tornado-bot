@@ -98,6 +98,7 @@ The bot has the following features:
 - [ ] Add multiple languages to the bot
 - [ ] Create a requirements.txt file
 - [ ] Improve SQL so it can add missing columns
+- [ ] Add currency economy
 
 ---
 
