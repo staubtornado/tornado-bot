@@ -1,8 +1,8 @@
+from copy import copy
 from math import ceil
 from traceback import format_exc
 
-from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option, \
-    FFmpegPCMAudio
+from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option
 from discord.ext.commands import Cog
 from discord.utils import get, basic_autocomplete
 from psutil import virtual_memory
@@ -35,6 +35,8 @@ def ensure_voice_state(ctx: CustomApplicationContext, requires_song: bool = Fals
 
     if not ctx.voice_state.is_playing and requires_song:
         return "❌ **Nothing** is currently **playing**."
+    if isinstance(ctx.voice_state.current, SongStr) and (requires_song or no_processing):
+        return "❌ Next **song is** currently **processing**, please **wait**."
 
     if len(ctx.voice_state.songs) == 0 and requires_queue:
         return "❌ The **queue** is **empty**."
@@ -386,9 +388,7 @@ class Music(Cog):
 
         ctx.voice_state.iterate = not ctx.voice_state.iterate
         if ctx.voice_state.iterate:
-            new: Song = ctx.voice_state.current
-            new.source.original = FFmpegPCMAudio(new.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
-            await ctx.voice_state.songs.put(new)
+            await ctx.voice_state.songs.put(copy(ctx.voice_state.current))
 
             await ctx.respond(f"🔁 **Looped queue /**`iterate` to **disable** loop.")
             return
