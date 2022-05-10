@@ -1,3 +1,5 @@
+from datetime import date
+
 from discord import Member, Guild, Embed
 
 from data.config.settings import SETTINGS
@@ -18,14 +20,21 @@ class Wallet:
         get_revenue = """SELECT Revenue from wallets where UserID = ?"""
         get_timestamp = """SELECT LastModified from wallets where UserID = ?"""
 
-        self._cur.execute(get_balance, self.user.id)
+        self._cur.execute(get_balance, (self.user.id, ))
         balance = self._cur.fetchone()
+        if balance is None:
+            self._cur.execute("""INSERT INTO wallets (UserID) VALUES (?)""", (self.user.id, ))
+            balance = 0
 
-        self._cur.execute(get_revenue, self.user.id)
-        revenue = self._cur.fetchone()
-        self._cur.execute(get_timestamp, self.user.id)
-        if self._cur.fetchone() != "today":  # TODO: ADD CHECK
+        today = date.today().strftime("%d/%m/%Y")
+        self._cur.execute(get_timestamp, (self.user.id, ))
+        if self._cur.fetchone() != today:
+            self._cur.execute("""Update wallets SET LastModified = ? where UserID = ?""", (today, self.user.id))
+            self._cur.execute("""Update wallets SET Revenue = 0 where UserID = ?""", (self.user.id, ))
             revenue = 0
+        else:
+            self._cur.execute(get_revenue, self.user.id)
+            revenue = self._cur.fetchone()
 
         if self._estimated:
             balance = shortened(balance, precision=0)
