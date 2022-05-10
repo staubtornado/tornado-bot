@@ -23,6 +23,9 @@ class Currency(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
+    def get_claim_options(self, ctx: AutocompleteContext) -> list:
+        return ["Daily", "Monthly", "Special"]
+
     @slash_command()
     async def wallet(self, ctx: ApplicationContext):
         """Displays information about your wallet."""
