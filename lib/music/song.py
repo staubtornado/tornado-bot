@@ -1,9 +1,9 @@
 from datetime import datetime
 
 from discord import Embed
-from millify import millify
 
 from lib.music.extraction import YTDLSource
+from lib.utils.utils import shortened
 
 
 class SongStr:
@@ -18,10 +18,6 @@ class Song:
     def __init__(self, source: YTDLSource):
         self.source = source
         self.requester = source.requester
-
-    @staticmethod
-    def parse_counts(count: int):
-        return millify(count, precision=2)
 
     def create_embed(self, songs):
         description = f"[Video]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) **|** " \
@@ -46,9 +42,9 @@ class Song:
             queue += f"Use **/**`queue` to show **{len_songs - 5}** more..."
 
         embed = Embed(title=f"🎶 {self.source.title_limited_embed}", description=description, colour=0xFF0000) \
-            .add_field(name="Views", value=self.parse_counts(self.source.views), inline=True) \
-            .add_field(name="Likes / Dislikes", value=f"{self.parse_counts(self.source.likes)} **/** "
-                                                      f"{self.parse_counts(self.source.dislikes)}", inline=True) \
+            .add_field(name="Views", value=shortened(self.source.views), inline=True) \
+            .add_field(name="Likes / Dislikes", value=f"{shortened(self.source.likes)} **/** "
+                                                      f"{shortened(self.source.dislikes)}", inline=True) \
             .add_field(name="Uploaded", value=timestamp, inline=True) \
             .set_thumbnail(url=self.source.thumbnail)
         embed.add_field(name="Queue", value=queue, inline=False) if queue != "" else None
