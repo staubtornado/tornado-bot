@@ -24,4 +24,12 @@ CREATE TABLE IF NOT EXISTS keys (
     KeyString message_text PRIMARY KEY,
     EnablesPremium integer,
     EnablesBeta integer
-)
+);
+
+CREATE TABLE IF NOT EXISTS wallets (
+    UserID integer PRIMARY KEY,
+    Balance integer,
+    Revenue integer,
+    LastModified integer,
+    GlobalTransactions integer
+);
