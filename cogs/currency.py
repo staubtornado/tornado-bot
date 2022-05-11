@@ -1,3 +1,4 @@
+from math import ceil
 from typing import Union
 
 from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Role, \
@@ -5,7 +6,9 @@ from discord import Bot, slash_command, ApplicationContext, Member, Autocomplete
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 
+from data.config.settings import SETTINGS
 from lib.currency.bank import Bank
+from lib.currency.views import ConfirmTransaction
 from lib.currency.wallet import Wallet
 
 
@@ -71,8 +74,43 @@ class Currency(Cog):
             return
         await ctx.respond(embed=self.get_bank(ctx.guild).wallet.create_embed(estimated=bool(user)))
 
-        wallet: Wallet = Wallet(ctx.author, target=user)
-        await ctx.respond(embed=wallet.create_embed())
+    @slash_command()
+    async def transfer(self, ctx: ApplicationContext, amount: int, user: Member):
+        """Sends an amount of coins from your wallet to a selected user."""
+        await ctx.defer()
+
+        bank = self.get_bank(ctx.guild)
+        source = self.get_wallet(ctx.guild, ctx.author)
+        destination = self.get_wallet(ctx.guild, user)
+
+        amount_with_fee = amount + ceil(amount * (bank.fee + SETTINGS["Cogs"]["Economy"]["WallstreetFee"]))
+
+        if source.balance - amount_with_fee < 0:
+            await ctx.respond("❌ You do **not** have **enough coins**.")
+            return
+        if destination.is_bank:
+            await ctx.respond(f"❌ {user} owns a server, meaning he owns his bank. Therefore, you cannot pay him.")
+            return
+
+        embed = Embed(title="Confirm", description=f"You are about to send {amount} coins to another user.",
+                      colour=SETTINGS["Colours"]["Default"])
+        embed.add_field(name="Fee", value=bank.fee + SETTINGS["Cogs"]["Economy"]["WallstreetFee"])
+        embed.add_field(name="Costs for you", value=amount_with_fee)
+        embed.set_footer(text="You agree and understand, that this transaction is not reversible.")
+
+        view = ConfirmTransaction()
+        await ctx.respond(embed=embed, view=view, ephemeral=True)
+        await view.wait()
+
+        if view.value:
+            destination.balance -= amount_with_fee
+            source.balance += amount
+            source.revenue += amount
+            bank.wallet.add_money(ceil(amount * bank.fee))
+            self.wallstreet.wallet.add_money(ceil(amount * SETTINGS["Cogs"]["Economy"]["WallstreetFee"]))
+            await ctx.respond(f"❌ **Transaction confirmed**: Transferred {amount} to {user.mention}.")
+            return
+        await ctx.respond("❌ **Transaction canceled**.", ephemeral=True)
 
     @slash_command()
     async def claim(self, ctx: ApplicationContext,
