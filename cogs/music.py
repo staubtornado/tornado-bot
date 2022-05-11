@@ -349,6 +349,8 @@ class Music(Cog):
             return await ctx.respond(instance)
 
         try:
+            if index < 0:
+                raise IndexError
             ctx.voice_state.songs.remove(index - 1)
         except IndexError:
             await ctx.respond(f"❌ There is **no song with** the **{ordinal(n=index)} position** in queue.")
