@@ -13,13 +13,6 @@ CREATE TABLE IF NOT EXISTS guilds (
     HasBeta integer DEFAULT 0
 );
 
-CREATE TABLE IF NOT EXISTS ticket_settings (
-    GuildID integer PRIMARY KEY,
-    CreateVoiceChannel integer DEFAULT 0,
-    RoleID message_text,
-    CategoryID integer
-);
-
 CREATE TABLE IF NOT EXISTS keys (
     KeyString message_text PRIMARY KEY,
     EnablesPremium integer,
@@ -36,4 +29,8 @@ CREATE TABLE IF NOT EXISTS wallets (
 
 CREATE TABLE IF NOT EXISTS settings (
     GuildID integer PRIMARY KEY
+--  Tickets
+    TicketsCreateVoiceChannel integer DEFAULT 0,
+    TicketsSupportRoleID integer,
+    TicketsCategoryID integer
 )
