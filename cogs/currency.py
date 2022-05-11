@@ -74,7 +74,22 @@ class Currency(Cog):
     async def claim(self, ctx: ApplicationContext,
                     offer: Option(str, "Choose what you want to claim. Options might vary.",
                                   autocomplete=basic_autocomplete(get_claim_options), required=True)):
-        pass
+        """Claim your current offers."""
+        await ctx.defer()
+        wallet = self.get_wallet(ctx.guild, ctx.author)
+
+        if offer == "Daily":
+            wallet.add_money(100)
+
+            await ctx.respond("Here are 100 Coins.")
+            return
+        if offer == "Monthly":
+            wallet.add_money(1000)
+
+            await ctx.respond("Here are 1000 Coins.")
+            return
+        wallet.add_money(9999)
+        await ctx.respond("Here is your Special!")
 
     @slash_command()
     async def buy(self, subject: Union[VoiceChannel, StageChannel, TextChannel, CategoryChannel, Role]):
