@@ -23,9 +23,6 @@ class Song:
         description = f"[Video]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) **|** " \
                       f"{self.source.duration} **|** {self.requester.mention}"
 
-        date = self.source.upload_date
-        timestamp = f"<t:{str(datetime(int(date[6:]), int(date[3:-5]), int(date[:-8])).timestamp())[:-2]}:R>"
-
         embed = Embed(title=f"🎶 {self.source.title_limited_embed}", description=description, colour=0xFF0000)
         embed.set_thumbnail(url=self.source.thumbnail)
 
@@ -35,6 +32,9 @@ class Song:
         embed.add_field(name="Views", value=shortened(self.source.views), inline=True)
         embed.add_field(name="Likes / Dislikes", value=f"{shortened(self.source.likes)} **/** "
                                                        f"{shortened(self.source.dislikes)}", inline=True)
+
+        date = self.source.upload_date
+        timestamp = f"<t:{str(datetime(int(date[6:]), int(date[3:-5]), int(date[:-8])).timestamp())[:-2]}:R>"
         embed.add_field(name="Uploaded", value=timestamp, inline=True)
 
         if size == 1:
@@ -42,9 +42,7 @@ class Song:
 
         len_songs: int = len(songs)
         queue = ""
-        if len_songs == 0:
-            pass
-        else:
+        if len_songs != 0:
             for i, song in enumerate(songs[0:5], start=0):
                 if isinstance(song, Song):
                     queue += f"`{i + 1}.` [{song.source.title_limited_embed}]({song.source.url} '{song.source.title}" \
