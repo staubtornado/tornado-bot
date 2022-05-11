@@ -1,10 +1,11 @@
 from typing import Union
 
-from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Role, CategoryChannel, \
-    TextChannel, StageChannel, VoiceChannel
+from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Role, \
+    CategoryChannel, TextChannel, StageChannel, VoiceChannel, Guild, Embed
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 
+from lib.currency.bank import Bank
 from lib.currency.wallet import Wallet
 
 
@@ -17,6 +18,7 @@ from lib.currency.wallet import Wallet
 # Every stat is public, but only the user themselves can see their accurate stats. Others only see estimations
 # Every bot has it own economy, meaning that self-hosted versions cannot access the official economy
 # Users can invest their balance: Daily revenue is linear and investments can be percentage increases
+from lib.currency.wallstreet import Wallstreet
 
 
 def get_claim_options(ctx: AutocompleteContext) -> list:
@@ -26,6 +28,39 @@ def get_claim_options(ctx: AutocompleteContext) -> list:
 class Currency(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
+
+        self.wallstreet = None
+        self.banks = {}
+
+    def get_bank(self, guild: Guild):
+        return self.banks[guild.id]
+
+    def get_wallet(self, guild: Guild, member: Member) -> Wallet:
+        return self.banks[guild.id].wallets[member.id]
+
+    async def cog_before_invoke(self, ctx: ApplicationContext):
+        if self.wallstreet is None:
+            self.wallstreet = Wallstreet(self.bot)
+
+        try:
+            self.banks[ctx.guild.id]
+        except KeyError:
+            self.banks[ctx.guild.id] = Bank(ctx.guild)
+        except AttributeError:
+            return
+
+        try:
+            self.banks[ctx.guild.id].wallets[ctx.author.id]
+        except KeyError:
+            for bank in self.banks:
+                try:
+                    self.banks[bank].wallets[ctx.author.id]
+                except KeyError:
+                    continue
+                else:
+                    self.banks[ctx.guild.id].wallets[ctx.author.id] = self.banks[bank].wallets[ctx.author.id]
+                    break
+            self.banks[ctx.guild.id].wallets[ctx.author.id] = Wallet(ctx.author)
 
     @slash_command()
     async def wallet(self, ctx: ApplicationContext, *, user: Member = None):
