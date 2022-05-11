@@ -28,6 +28,9 @@ SETTINGS: dict = {
         "Music": {
             "MaxQueueLength": 100,  # Max amount of songs that can be queued
             "MaxDuration": 10800  # seconds
+        },
+        "Economy": {
+            "WallstreetFee": 0.003
         }
     },
     "Version": "0.0.2a",  # Bot version
