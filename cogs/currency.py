@@ -66,6 +66,10 @@ class Currency(Cog):
     async def wallet(self, ctx: ApplicationContext, *, user: Member = None):
         """Displays information about your wallet."""
         await ctx.defer()
+        if ctx.guild.owner not in [ctx.author, user]:
+            await ctx.respond(embed=self.get_wallet(ctx.guild, ctx.author).create_embed(estimated=bool(user)))
+            return
+        await ctx.respond(embed=self.get_bank(ctx.guild).wallet.create_embed(estimated=bool(user)))
 
         wallet: Wallet = Wallet(ctx.author, target=user)
         await ctx.respond(embed=wallet.create_embed())
