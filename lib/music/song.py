@@ -19,12 +19,26 @@ class Song:
         self.source = source
         self.requester = source.requester
 
-    def create_embed(self, songs):
+    def create_embed(self, songs, size: int = 2):
         description = f"[Video]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) **|** " \
                       f"{self.source.duration} **|** {self.requester.mention}"
 
         date = self.source.upload_date
         timestamp = f"<t:{str(datetime(int(date[6:]), int(date[3:-5]), int(date[:-8])).timestamp())[:-2]}:R>"
+
+        embed = Embed(title=f"🎶 {self.source.title_limited_embed}", description=description, colour=0xFF0000)
+        embed.set_thumbnail(url=self.source.thumbnail)
+
+        if size == 0:
+            return embed
+
+        embed.add_field(name="Views", value=shortened(self.source.views), inline=True)
+        embed.add_field(name="Likes / Dislikes", value=f"{shortened(self.source.likes)} **/** "
+                                                       f"{shortened(self.source.dislikes)}", inline=True)
+        embed.add_field(name="Uploaded", value=timestamp, inline=True)
+
+        if size == 1:
+            return embed
 
         len_songs: int = len(songs)
         queue = ""
@@ -41,11 +55,5 @@ class Song:
         if len_songs > 6:
             queue += f"Use **/**`queue` to show **{len_songs - 5}** more..."
 
-        embed = Embed(title=f"🎶 {self.source.title_limited_embed}", description=description, colour=0xFF0000) \
-            .add_field(name="Views", value=shortened(self.source.views), inline=True) \
-            .add_field(name="Likes / Dislikes", value=f"{shortened(self.source.likes)} **/** "
-                                                      f"{shortened(self.source.dislikes)}", inline=True) \
-            .add_field(name="Uploaded", value=timestamp, inline=True) \
-            .set_thumbnail(url=self.source.thumbnail)
         embed.add_field(name="Queue", value=queue, inline=False) if queue != "" else None
         return embed
