@@ -1,6 +1,6 @@
 from datetime import date
 
-from discord import Member, Guild, Embed
+from discord import Member, Embed, User
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
@@ -8,38 +8,40 @@ from lib.utils.utils import shortened
 
 
 class Wallet:
-    def __init__(self, member: Member, target: Member = None):
-        self.user = target or member
+    def __init__(self, member: Member or User):
+        self.user = member
         self.guild = self.user.guild
 
-        self._estimated = target is not None
         self._cur = database.cursor()
 
-    def create_embed(self) -> Embed:
-        get_balance = """SELECT Balance from wallets where UserID = ?"""
-        get_revenue = """SELECT Revenue from wallets where UserID = ?"""
-        get_timestamp = """SELECT LastModified from wallets where UserID = ?"""
-
-        self._cur.execute(get_balance, (self.user.id, ))
-        balance = self._cur.fetchone()
-        if balance is None:
+        self._cur.execute("""SELECT Balance from wallets where UserID = ?""", (self.user.id, ))
+        self.balance = self._cur.fetchone()
+        if self.balance is None:
             self._cur.execute("""INSERT INTO wallets (UserID) VALUES (?)""", (self.user.id, ))
-            balance = 0
+            self.balance = 0
 
         today = date.today().strftime("%d/%m/%Y")
-        self._cur.execute(get_timestamp, (self.user.id, ))
+        self._cur.execute("""SELECT LastModified from wallets where UserID = ?""", (self.user.id, ))
         if self._cur.fetchone() != today:
             self._cur.execute("""Update wallets SET LastModified = ? where UserID = ?""", (today, self.user.id))
             self._cur.execute("""Update wallets SET Revenue = 0 where UserID = ?""", (self.user.id, ))
-            revenue = 0
+            self.revenue = 0
         else:
-            self._cur.execute(get_revenue, self.user.id)
-            revenue = self._cur.fetchone()
+            self._cur.execute("""SELECT Revenue from wallets where UserID = ?""", (self.user.id, ))
+            self.revenue = self._cur.fetchone()
 
-        if self._estimated:
-            balance = shortened(balance, precision=0)
-            revenue = shortened(revenue, precision=0)
+        self.is_bank = False
 
+    def add_money(self, amount: int):
+        self._cur.execute("""Update wallets SET Balance = Balance + ? where UserID = ?""", (amount, self.user.id))
+        self.balance += amount
+        self.revenue += amount
+
+    def remove_money(self, amount: int):
+        self._cur.execute("""Update wallets SET Balance = Balance - ? where UserID = ?""", (amount, self.user.id))
+        self.balance -= amount
+
+    def create_embed(self, estimated: bool = False) -> Embed:
         embed = Embed(title="Wallet", colour=SETTINGS["Colours"]["Default"])
 
         try:
@@ -47,17 +49,14 @@ class Wallet:
         except AttributeError:
             embed.set_author(name=self.user, icon_url=self.user.default_avatar)
 
-        embed.add_field(name=f"{'Estimated ' if self._estimated else ''}Balance", value=balance)
-        embed.add_field(name=f"{'Estimated ' if self._estimated else ''}Revenue", value=revenue)
+        if estimated:
+            balance = shortened(self.balance, precision=0)
+            revenue = shortened(self.revenue, precision=0)
+        else:
+            balance = self.balance
+            revenue = self.revenue
 
+        embed.add_field(name=f"{'Estimated ' if estimated else ''}Balance", value=balance)
+        embed.add_field(name=f"Today's {'estimated ' if estimated else ''}Revenue", value=revenue)
         embed.set_footer(text="Re-execute command again to update information.")
         return embed
-
-
-class GuildBank:
-    def __init__(self, guild: Guild):
-        self.guild = guild
-
-
-class GlobalBank:
-    pass
