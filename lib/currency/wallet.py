@@ -10,36 +10,53 @@ from lib.utils.utils import shortened
 class Wallet:
     def __init__(self, member: Member or User):
         self.user = member
-        self.guild = self.user.guild
+        self.is_bank = False
 
         self._cur = database.cursor()
+        self._revenue = None
 
         self._cur.execute("""SELECT Balance from wallets where UserID = ?""", (self.user.id, ))
-        self.balance = self._cur.fetchone()
-        if self.balance is None:
+        self._balance = self._cur.fetchone()
+        if self._balance is None:
             self._cur.execute("""INSERT INTO wallets (UserID) VALUES (?)""", (self.user.id, ))
-            self.balance = 0
+            self._balance = 0
 
+        self._check_revenue()
+        if self._revenue != 0:
+            self._cur.execute("""SELECT Revenue from wallets where UserID = ?""", (self.user.id, ))
+            self._revenue = self._cur.fetchone()
+
+    def _check_revenue(self, changed: bool = False):
         today = date.today().strftime("%d/%m/%Y")
         self._cur.execute("""SELECT LastModified from wallets where UserID = ?""", (self.user.id, ))
         if self._cur.fetchone() != today:
             self._cur.execute("""Update wallets SET LastModified = ? where UserID = ?""", (today, self.user.id))
             self._cur.execute("""Update wallets SET Revenue = 0 where UserID = ?""", (self.user.id, ))
-            self.revenue = 0
-        else:
-            self._cur.execute("""SELECT Revenue from wallets where UserID = ?""", (self.user.id, ))
-            self.revenue = self._cur.fetchone()
+            self._revenue = 0
+        if changed:
+            self._cur.execute("""Update wallets SET Revenue = ? where UserID = ?""", (self._revenue, self.user.id))
 
-        self.is_bank = False
+    @property
+    def revenue(self):
+        self._check_revenue()
+        return self._revenue
 
-    def add_money(self, amount: int):
+    @revenue.setter
+    def revenue(self, amount: int):
+        self._check_revenue()
+        self._revenue += amount
+        self._check_revenue(changed=True)
+
+    @property
+    def balance(self):
+        return self._balance
+
+    @balance.setter
+    def balance(self, amount: int):
+        if amount > 0:
+            self.revenue += amount
         self._cur.execute("""Update wallets SET Balance = Balance + ? where UserID = ?""", (amount, self.user.id))
-        self.balance += amount
-        self.revenue += amount
-
-    def remove_money(self, amount: int):
-        self._cur.execute("""Update wallets SET Balance = Balance - ? where UserID = ?""", (amount, self.user.id))
-        self.balance -= amount
+        self._balance += amount
 
     def create_embed(self, estimated: bool = False) -> Embed:
         embed = Embed(title="Wallet", colour=SETTINGS["Colours"]["Default"])
@@ -50,10 +67,10 @@ class Wallet:
             embed.set_author(name=self.user, icon_url=self.user.default_avatar)
 
         if estimated:
-            balance = shortened(self.balance, precision=0)
+            balance = shortened(self._balance, precision=0)
             revenue = shortened(self.revenue, precision=0)
         else:
-            balance = self.balance
+            balance = self._balance
             revenue = self.revenue
 
         embed.add_field(name=f"{'Estimated ' if estimated else ''}Balance", value=balance)
