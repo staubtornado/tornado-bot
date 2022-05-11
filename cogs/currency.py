@@ -11,16 +11,15 @@ from lib.currency.bank import Bank
 from lib.currency.views import ConfirmTransaction
 from lib.currency.wallet import Wallet
 
-
 # Concept:
-# Every user has a global balance and a tab that shows the revenue on the current server
-# They can buy roles, channels, messages, advertisement, users aso with their global balance on every server
+# Every user has a global _balance and a tab that shows the revenue on the current server
+# They can buy roles, channels, messages, advertisement, users aso with their global _balance on every server
 # Every transaction gives a small percentage to the global bank and to the guild-bank for the specific server
 # User can claim their money by executing a command every day /claim [daily | monthly | special] for example
 # Users are limited to a specific amount of transactions per server every day and have a daily global limit
 # Every stat is public, but only the user themselves can see their accurate stats. Others only see estimations
 # Every bot has it own economy, meaning that self-hosted versions cannot access the official economy
-# Users can invest their balance: Daily revenue is linear and investments can be percentage increases
+# Users can invest their _balance: Daily revenue is linear and investments can be percentage increases
 from lib.currency.wallstreet import Wallstreet
 
 
@@ -121,20 +120,28 @@ class Currency(Cog):
         wallet = self.get_wallet(ctx.guild, ctx.author)
 
         if offer == "Daily":
-            wallet.add_money(100)
+            wallet.balance += 100
 
             await ctx.respond("Here are 100 Coins.")
             return
         if offer == "Monthly":
-            wallet.add_money(1000)
+            wallet.balance += 1000
 
             await ctx.respond("Here are 1000 Coins.")
             return
-        wallet.add_money(9999)
+        wallet.balance += 9999
         await ctx.respond("Here is your Special!")
 
     @slash_command()
-    async def buy(self, subject: Union[VoiceChannel, StageChannel, TextChannel, CategoryChannel, Role]):
+    async def buy(self, ctx: ApplicationContext,
+                  subject: Union[VoiceChannel, StageChannel, TextChannel, CategoryChannel, Role]):
+        """Buy something on this server."""
+        pass
+
+    @slash_command()
+    async def sell(self, ctx: ApplicationContext,
+                   subject: Union[VoiceChannel, StageChannel, TextChannel, CategoryChannel, Role]):
+        """Sell something you own on this server."""
         pass
 
 
