@@ -11,15 +11,20 @@ class Wallet:
     def __init__(self, member: Member or User):
         self.user = member
         self.is_bank = False
+        self.fee = 0
 
         self._cur = database.cursor()
         self._revenue = None
 
         self._cur.execute("""SELECT Balance from wallets where UserID = ?""", (self.user.id, ))
         self._balance = self._cur.fetchone()
-        if self._balance is None:
+
+        try:
+            self._balance = self._balance[0]
+        except TypeError:
             self._cur.execute("""INSERT INTO wallets (UserID) VALUES (?)""", (self.user.id, ))
             self._balance = 0
+        print(member)
 
         self._check_revenue()
         if self._revenue != 0:
@@ -47,16 +52,14 @@ class Wallet:
         self._revenue += amount
         self._check_revenue(changed=True)
 
-    @property
-    def balance(self):
+    def get_balance(self) -> int:
         return self._balance
 
-    @balance.setter
-    def balance(self, amount: int):
-        if amount > 0:
+    def set_balance(self, amount: int):
+        if amount > self.revenue:
             self.revenue += amount
+        self._balance = amount
         self._cur.execute("""Update wallets SET Balance = Balance + ? where UserID = ?""", (amount, self.user.id))
-        self._balance += amount
 
     def create_embed(self, estimated: bool = False) -> Embed:
         embed = Embed(title="Wallet", colour=SETTINGS["Colours"]["Default"])
@@ -75,5 +78,5 @@ class Wallet:
 
         embed.add_field(name=f"{'Estimated ' if estimated else ''}Balance", value=balance)
         embed.add_field(name=f"Today's {'estimated ' if estimated else ''}Revenue", value=revenue)
-        embed.set_footer(text="Re-execute command again to update information.")
+        embed.set_footer(text=f"Re-execute command again to update information. {self} | {self.is_bank}")
         return embed
