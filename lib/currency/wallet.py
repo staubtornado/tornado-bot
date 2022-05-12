@@ -29,35 +29,24 @@ class Wallet:
         self._check_revenue()
         if self._revenue != 0:
             self._cur.execute("""SELECT Revenue from wallets where UserID = ?""", (self.user.id, ))
-            self._revenue = self._cur.fetchone()
+            self._revenue = self._cur.fetchone()[0]
 
-    def _check_revenue(self, changed: bool = False):
+    def _check_revenue(self):
         today = date.today().strftime("%d/%m/%Y")
         self._cur.execute("""SELECT LastModified from wallets where UserID = ?""", (self.user.id, ))
-        if self._cur.fetchone() != today:
+        if self._cur.fetchone()[0] != today:
+
             self._cur.execute("""Update wallets SET LastModified = ? where UserID = ?""", (today, self.user.id))
             self._cur.execute("""Update wallets SET Revenue = 0 where UserID = ?""", (self.user.id, ))
             self._revenue = 0
-        if changed:
-            self._cur.execute("""Update wallets SET Revenue = ? where UserID = ?""", (self._revenue, self.user.id))
-
-    @property
-    def revenue(self):
-        self._check_revenue()
-        return self._revenue
-
-    @revenue.setter
-    def revenue(self, amount: int):
-        self._check_revenue()
-        self._revenue += amount
-        self._check_revenue(changed=True)
 
     def get_balance(self) -> int:
         return self._balance
 
     def set_balance(self, amount: int):
-        if amount > self.revenue:
-            self.revenue += amount
+        if amount > self._revenue:
+            self._revenue += amount - self._balance
+            self._cur.execute("""Update wallets SET Revenue = ? where UserID = ?""", (self._revenue, self.user.id))
         self._balance = amount
         self._cur.execute("""Update wallets SET Balance = Balance + ? where UserID = ?""", (amount, self.user.id))
 
@@ -71,10 +60,10 @@ class Wallet:
 
         if estimated:
             balance = shortened(self._balance, precision=0)
-            revenue = shortened(self.revenue, precision=0)
+            revenue = shortened(self._revenue, precision=0)
         else:
             balance = self._balance
-            revenue = self.revenue
+            revenue = self._revenue
 
         embed.add_field(name=f"{'Estimated ' if estimated else ''}Balance", value=balance)
         embed.add_field(name=f"Today's {'estimated ' if estimated else ''}Revenue", value=revenue)
