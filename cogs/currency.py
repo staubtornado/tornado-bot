@@ -1,15 +1,13 @@
 from math import ceil
-from typing import Union
 
-from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Role, \
-    CategoryChannel, TextChannel, StageChannel, VoiceChannel, Guild, Embed
+from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 
 from data.config.settings import SETTINGS
-from lib.currency.bank import Bank
 from lib.currency.views import ConfirmTransaction
 from lib.currency.wallet import Wallet
+
 
 # Concept:
 # Every user has a global _balance and a tab that shows the revenue on the current server
@@ -20,7 +18,6 @@ from lib.currency.wallet import Wallet
 # Every stat is public, but only the user themselves can see their accurate stats. Others only see estimations
 # Every bot has it own economy, meaning that self-hosted versions cannot access the official economy
 # Users can invest their _balance: Daily revenue is linear and investments can be percentage increases
-from lib.currency.wallstreet import Wallstreet
 
 
 def get_claim_options(ctx: AutocompleteContext) -> list:
@@ -31,70 +28,73 @@ class Currency(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-        self.wallstreet = None
-        self.banks = {}
+        self.wallets = {}
 
-    def get_bank(self, guild: Guild):
-        return self.banks[guild.id]
-
-    def get_wallet(self, guild: Guild, member: Member) -> Wallet:
-        return self.banks[guild.id].wallets[member.id]
+    def get_wallet(self, member: Member) -> Wallet:
+        try:
+            self.wallets[member.id]
+        except KeyError:
+            self.wallets[member.id] = Wallet(member)
+        return self.wallets[member.id]
 
     async def cog_before_invoke(self, ctx: ApplicationContext):
-        if self.wallstreet is None:
-            self.wallstreet = Wallstreet(self.bot)
+        try:
+            self.wallets[SETTINGS["OwnerIDs"][0]]
+        except KeyError:
+            self.wallets[SETTINGS["OwnerIDs"][0]] = Wallet(self.bot.get_user(SETTINGS["OwnerIDs"][0]))
 
         try:
-            self.banks[ctx.guild.id]
+            self.wallets[ctx.author.id]
         except KeyError:
-            self.banks[ctx.guild.id] = Bank(ctx.guild)
-        except AttributeError:
-            return
-
-        try:
-            self.banks[ctx.guild.id].wallets[ctx.author.id]
-        except KeyError:
-            for bank in self.banks:
-                try:
-                    self.banks[bank].wallets[ctx.author.id]
-                except KeyError:
-                    continue
-                else:
-                    self.banks[ctx.guild.id].wallets[ctx.author.id] = self.banks[bank].wallets[ctx.author.id]
-                    break
-            self.banks[ctx.guild.id].wallets[ctx.author.id] = Wallet(ctx.author)
+            self.wallets[ctx.author.id] = Wallet(ctx.author)
 
     @slash_command()
     async def wallet(self, ctx: ApplicationContext, *, user: Member = None):
         """Displays information about your wallet."""
         await ctx.defer()
-        if ctx.guild.owner not in [ctx.author, user]:
-            await ctx.respond(embed=self.get_wallet(ctx.guild, ctx.author).create_embed(estimated=bool(user)))
+        target = user or ctx.author
+
+        try:
+            self.wallets[target.id]
+        except KeyError:
+            await ctx.respond("❌ This **user** is currently **not active**.")
             return
-        await ctx.respond(embed=self.get_bank(ctx.guild).wallet.create_embed(estimated=bool(user)))
+
+        wallet: Wallet = self.wallets[target.id]
+        await ctx.respond(embed=wallet.create_embed(estimated=bool(user)))
 
     @slash_command()
     async def transfer(self, ctx: ApplicationContext, amount: int, user: Member):
         """Sends an amount of coins from your wallet to a selected user."""
         await ctx.defer()
 
-        bank = self.get_bank(ctx.guild)
-        source = self.get_wallet(ctx.guild, ctx.author)
-        destination = self.get_wallet(ctx.guild, user)
+        source: Wallet = self.wallets[ctx.author.id]
+        try:
+            self.wallets[user.id]
+        except KeyError:
+            await ctx.respond("❌ This **user** is currently **not active**.")
+            return
+        destination: Wallet = self.wallets[user.id]
 
-        amount_with_fee = amount + ceil(amount * (bank.fee + SETTINGS["Cogs"]["Economy"]["WallstreetFee"]))
+        try:
+            self.wallets[ctx.guild.owner_id]
+        except KeyError:
+            self.wallets[ctx.guild.owner_id] = Wallet(ctx.guild.owner_id)
+        local_fee: float = self.wallets[ctx.guild.owner_id].fee
+        global_fee: float = SETTINGS["Cogs"]["Economy"]["WallstreetFee"]
+        costs = amount + ceil(amount * (local_fee + global_fee))
 
-        if source.balance - amount_with_fee < 0:
+        if source.get_balance() - costs < 0:
             await ctx.respond("❌ You do **not** have **enough coins**.")
             return
-        if destination.is_bank:
-            await ctx.respond(f"❌ {user} owns a server, meaning he owns his bank. Therefore, you cannot pay him.")
+        if destination.fee != 0:
+            await ctx.respond(f"❌ {user} makes **money through fees** on this server: You **cannot pay him**.")
             return
 
         embed = Embed(title="Confirm", description=f"You are about to send {amount} coins to another user.",
                       colour=SETTINGS["Colours"]["Default"])
-        embed.add_field(name="Fee", value=bank.fee + SETTINGS["Cogs"]["Economy"]["WallstreetFee"])
-        embed.add_field(name="Costs for you", value=amount_with_fee)
+        embed.add_field(name="Fee", value=f"{local_fee + global_fee}%")
+        embed.add_field(name="Costs for you", value=costs)
         embed.set_footer(text="You agree and understand, that this transaction is not reversible.")
 
         view = ConfirmTransaction()
@@ -102,12 +102,14 @@ class Currency(Cog):
         await view.wait()
 
         if view.value:
-            destination.balance -= amount_with_fee
-            source.balance += amount
-            source.revenue += amount
-            bank.wallet.add_money(ceil(amount * bank.fee))
-            self.wallstreet.wallet.add_money(ceil(amount * SETTINGS["Cogs"]["Economy"]["WallstreetFee"]))
-            await ctx.respond(f"❌ **Transaction confirmed**: Transferred {amount} to {user.mention}.")
+            source.set_balance(source.get_balance() - costs)
+            destination.set_balance(source.get_balance() + amount)
+            self.wallets[ctx.guild.owner_id].set_balance(self.wallets[ctx.guild.owner_id].get_balance() +
+                                                         ceil(amount * local_fee))
+            self.wallets[SETTINGS["OwnerIDs"][0]].set_balance(self.wallets[ctx.guild.owner_id].get_balance() +
+                                                              ceil(amount *
+                                                                   SETTINGS["Cogs"]["Economy"]["WallstreetFee"]))
+            await ctx.respond(f":white_check_mark: **Transaction confirmed**: Transferred {amount} to {user.mention}.")
             return
         await ctx.respond("❌ **Transaction canceled**.", ephemeral=True)
 
@@ -117,32 +119,20 @@ class Currency(Cog):
                                   autocomplete=basic_autocomplete(get_claim_options), required=True)):
         """Claim your current offers."""
         await ctx.defer()
-        wallet = self.get_wallet(ctx.guild, ctx.author)
+        wallet = self.get_wallet(ctx.author)
 
         if offer == "Daily":
-            wallet.balance += 100
+            wallet.set_balance(wallet.get_balance() + 100)
 
             await ctx.respond("Here are 100 Coins.")
             return
         if offer == "Monthly":
-            wallet.balance += 1000
+            wallet.set_balance(wallet.get_balance() + 1000)
 
             await ctx.respond("Here are 1000 Coins.")
             return
-        wallet.balance += 9999
+        wallet.set_balance(wallet.get_balance() + 9999)
         await ctx.respond("Here is your Special!")
-
-    @slash_command()
-    async def buy(self, ctx: ApplicationContext,
-                  subject: Union[VoiceChannel, StageChannel, TextChannel, CategoryChannel, Role]):
-        """Buy something on this server."""
-        pass
-
-    @slash_command()
-    async def sell(self, ctx: ApplicationContext,
-                   subject: Union[VoiceChannel, StageChannel, TextChannel, CategoryChannel, Role]):
-        """Sell something you own on this server."""
-        pass
 
 
 def setup(bot: Bot):
