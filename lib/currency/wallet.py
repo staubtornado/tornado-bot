@@ -10,11 +10,12 @@ from lib.utils.utils import shortened
 class Wallet:
     def __init__(self, member: Member or User):
         self.user = member
-        self.is_bank = False
-        self.fee = 0
 
         self._cur = database.cursor()
         self._revenue = None
+
+        self._cur.execute("""SELECT Fee from wallets where UserID = ?""", (self.user.id, ))
+        self.fee = self._cur.fetchone()
 
         self._cur.execute("""SELECT Balance from wallets where UserID = ?""", (self.user.id, ))
         self._balance = self._cur.fetchone()
@@ -67,5 +68,5 @@ class Wallet:
 
         embed.add_field(name=f"{'Estimated ' if estimated else ''}Balance", value=balance)
         embed.add_field(name=f"Today's {'estimated ' if estimated else ''}Revenue", value=revenue)
-        embed.set_footer(text=f"Re-execute command again to update information. {self} | {self.is_bank}")
+        embed.set_footer(text=f"Re-execute command again to update information.")
         return embed
