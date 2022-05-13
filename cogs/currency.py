@@ -146,6 +146,25 @@ class Currency(Cog):
         wallet.set_balance(wallet.get_balance() + 9999)
         await ctx.respond("Here is your Special!")
 
+    @slash_command()
+    async def sell(self, ctx: ApplicationContext, subject: Union[VoiceChannel, TextChannel], price: int):
+        embed = Embed(title="Confirm", description=f"You are about to sell {subject.mention} for {price}.",
+                      colour=SETTINGS["Colours"]["Default"])
+        embed.set_footer(text="I understand that my transaction may be canceled by a server admin or bot admin, and I "
+                              "may lose the subject I am selling. This cannot be reverted.")
+
+        view = ConfirmTransaction()
+        await ctx.respond(embed=embed, view=view, ephemeral=True)
+        await view.wait()
+
+        if view.value:
+            cur = database.cursor()
+            cur.execute("""INSERT INTO subjects (GuildID, Subject, Seller, Price, Added) VALUES (?, ?, ?, ?, ?)""",
+                        (ctx.guild.id, subject.id, ctx.author.id, price, date.today().strftime("%d/%m/%Y")))
+            await ctx.respond(f":white_check_mark: Successfully **sold** {subject.mention} **for {price}**.")
+            return
+        await ctx.respond("❌ **Successfully canceled**.", ephemeral=True)
+
 
 def setup(bot: Bot):
     bot.add_cog(Currency(bot))
