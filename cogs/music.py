@@ -399,7 +399,7 @@ class Music(Cog):
     @slash_command()
     async def play(self, ctx: CustomApplicationContext,
                    search: Option(str, "Enter the name of the song, a URL or a preset.",
-                                  autocomplete=basic_autocomplete(auto_complete), required=True) = None):
+                                  autocomplete=basic_autocomplete(auto_complete), required=True)):
         """Play a song through the bot, by searching a song with the name or by URL."""
         await ctx.defer()
 
@@ -414,11 +414,6 @@ class Music(Cog):
 
         if virtual_memory().percent > 75 and SETTINGS["Production"]:
             await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please **try again later**.")
-            return
-
-        if search is None:
-            await ctx.respond("❌ You have to **enter** the **name** of the song, a **URL or** a **preset**. Use "
-                              "**/**`resume` to resume a song.")
             return
 
         if not ctx.voice_state.voice:
