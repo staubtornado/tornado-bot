@@ -1,10 +1,15 @@
+from datetime import date
 from math import ceil
+from random import choice
+from typing import Union
 
-from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed
+from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, VoiceChannel, \
+    TextChannel
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 
 from data.config.settings import SETTINGS
+from data.db.memory import database
 from lib.currency.views import ConfirmTransaction
 from lib.currency.wallet import Wallet
 
@@ -21,7 +26,11 @@ from lib.currency.wallet import Wallet
 
 
 def get_claim_options(ctx: AutocompleteContext) -> list:
-    return ["Daily", "Monthly", "Special"]
+    return [choice(["Daily", "Monthly", "Special"])]
+
+def get_server_subjects(ctx: AutocompleteContext) -> list:
+
+    guild = ctx.interaction.guild
 
 
 class Currency(Cog):
@@ -58,12 +67,12 @@ class Currency(Cog):
                                                                SETTINGS["Cogs"]["Economy"]["WallstreetFee"]))
         return f":white_check_mark: **Transaction confirmed**: Transferred {amount} to {destination.user.mention}."
 
-    def get_wallet(self, member: Member) -> Wallet:
-        try:
-            self.wallets[member.id]
-        except KeyError:
-            self.wallets[member.id] = Wallet(member)
-        return self.wallets[member.id]
+    # def get_wallet(self, member: Member) -> Wallet:
+    #     try:
+    #         self.wallets[member.id]
+    #     except KeyError:
+    #         self.wallets[member.id] = Wallet(member)
+    #     return self.wallets[member.id]
 
     async def cog_before_invoke(self, ctx: ApplicationContext):
         try:
@@ -131,7 +140,7 @@ class Currency(Cog):
                                   autocomplete=basic_autocomplete(get_claim_options), required=True)):
         """Claim your current offers."""
         await ctx.defer()
-        wallet = self.get_wallet(ctx.author)
+        wallet = self.wallets[ctx.author.id]
 
         if offer == "Daily":
             wallet.set_balance(wallet.get_balance() + 100)
