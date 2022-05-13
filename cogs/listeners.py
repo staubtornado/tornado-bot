@@ -1,9 +1,10 @@
 from sqlite3 import Cursor
 
-from discord import Guild, Member, Message
+from discord import Guild, Member, Message, Embed
 from discord.ext.commands import Cog
 
 from cogs.experience import ExperienceSystem
+from data.config.settings import SETTINGS
 from data.db.memory import database
 
 
@@ -15,6 +16,9 @@ class Listeners(Cog):
     async def on_guild_join(self, guild: Guild):
         database.cursor().execute("""INSERT INTO guilds (GuildID) VALUES (?)""", [guild.id])
         database.commit()
+        await guild.owner.send(embed=Embed(title="Welcome!", description=f"Thanks for adding TornadoBot to "
+                                                                         f"`{guild.name}`.",
+                                           colour=SETTINGS["Colours"]["Default"]))
 
     @Cog.listener()
     async def on_guild_remove(self, guild: Guild):
