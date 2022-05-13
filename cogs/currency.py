@@ -50,7 +50,7 @@ class Currency(Cog):
             global_fee: float = SETTINGS["Cogs"]["Economy"]["WallstreetFee"]
             costs = amount + ceil(amount * (local_fee + global_fee))
 
-            if source.get_balance() - costs < 0:
+            if source.get_balance() - costs < 0 or amount < 0:
                 return "❌ You do **not** have **enough coins**."
             if destination.fee != 0 and not transaction:
                 return f"❌ {destination.user} makes **money through fees** on this server: You **cannot pay him**."
