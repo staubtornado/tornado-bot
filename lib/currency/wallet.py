@@ -44,11 +44,11 @@ class Wallet:
         return self._balance
 
     def set_balance(self, amount: int):
-        if amount - self._balance > self._balance:
+        if amount > self._balance:
             self._revenue += amount - self._balance
             self._cur.execute("""Update wallets SET Revenue = ? where UserID = ?""", (self._revenue, self.user.id))
         self._balance = amount
-        self._cur.execute("""Update wallets SET Balance = Balance + ? where UserID = ?""", (amount, self.user.id))
+        self._cur.execute("""Update wallets SET Balance = ? where UserID = ?""", (self._balance, self.user.id))
 
     def create_embed(self, estimated: bool = False) -> Embed:
         embed = Embed(title="Wallet", colour=SETTINGS["Colours"]["Default"])
