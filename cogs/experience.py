@@ -29,10 +29,15 @@ class ExperienceSystem:
         self.messages = None
 
         self._cur: Cursor = database.cursor()
+        self._valid = False
 
-        self._cur.execute(f"""
-            SELECT XP, Level, Messages from experience where (GuildID, UserID) = (?, ?)
-        """, (self.message.guild.id, self.message.author.id))
+        try:
+            self._cur.execute(f"""
+                SELECT XP, Level, Messages from experience where (GuildID, UserID) = (?, ?)
+            """, (self.message.guild.id, self.message.author.id))
+        except AttributeError:
+            return
+        self._valid = True
 
         try:
             self.xp, self.level, self.messages = self._cur.fetchone()
@@ -55,6 +60,8 @@ class ExperienceSystem:
         return self.messages
 
     async def start(self) -> bool:
+        if not self._valid:
+            return False
         if self.message.author.bot or self.message.guild is None:
             return False
         await self.add_xp()
