@@ -30,6 +30,34 @@ class Currency(Cog):
 
         self.wallets = {}
 
+    def _transfer(self, ctx: ApplicationContext, amount: int, source: Wallet, destination: Wallet,
+                  transaction: tuple = None):
+        if not bool(transaction):
+            try:
+                self.wallets[ctx.guild.owner_id]
+            except KeyError:
+                self.wallets[ctx.guild.owner_id] = Wallet(ctx.guild.owner_id)
+            local_fee: float = self.wallets[ctx.guild.owner_id].fee
+            global_fee: float = SETTINGS["Cogs"]["Economy"]["WallstreetFee"]
+            costs = amount + ceil(amount * (local_fee + global_fee))
+
+            if source.get_balance() - costs < 0:
+                return "❌ You do **not** have **enough coins**."
+            if destination.fee != 0 and not transaction:
+                return f"❌ {destination.user} makes **money through fees** on this server: You **cannot pay him**."
+            return costs, local_fee, global_fee
+
+        costs, local_fee, global_fee = transaction
+
+        source.set_balance(source.get_balance() - costs)
+        destination.set_balance(destination.get_balance() + amount)
+        self.wallets[ctx.guild.owner_id].set_balance(self.wallets[ctx.guild.owner_id].get_balance() +
+                                                     ceil(amount * local_fee))
+        self.wallets[SETTINGS["OwnerIDs"][0]].set_balance(self.wallets[ctx.guild.owner_id].get_balance() +
+                                                          ceil(amount *
+                                                               SETTINGS["Cogs"]["Economy"]["WallstreetFee"]))
+        return f":white_check_mark: **Transaction confirmed**: Transferred {amount} to {destination.user.mention}."
+
     def get_wallet(self, member: Member) -> Wallet:
         try:
             self.wallets[member.id]
@@ -66,7 +94,7 @@ class Currency(Cog):
     @slash_command()
     async def transfer(self, ctx: ApplicationContext, amount: int, user: Member):
         """Sends an amount of coins from your wallet to a selected user."""
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         source: Wallet = self.wallets[ctx.author.id]
         try:
@@ -76,20 +104,11 @@ class Currency(Cog):
             return
         destination: Wallet = self.wallets[user.id]
 
-        try:
-            self.wallets[ctx.guild.owner_id]
-        except KeyError:
-            self.wallets[ctx.guild.owner_id] = Wallet(ctx.guild.owner_id)
-        local_fee: float = self.wallets[ctx.guild.owner_id].fee
-        global_fee: float = SETTINGS["Cogs"]["Economy"]["WallstreetFee"]
-        costs = amount + ceil(amount * (local_fee + global_fee))
-
-        if source.get_balance() - costs < 0:
-            await ctx.respond("❌ You do **not** have **enough coins**.")
+        transaction = self._transfer(ctx, amount, source, destination)
+        if isinstance(transaction, str):
+            await ctx.respond(transaction)
             return
-        if destination.fee != 0:
-            await ctx.respond(f"❌ {user} makes **money through fees** on this server: You **cannot pay him**.")
-            return
+        costs, local_fee, global_fee = transaction
 
         embed = Embed(title="Confirm", description=f"You are about to send {amount} coins to another user.",
                       colour=SETTINGS["Colours"]["Default"])
@@ -102,14 +121,7 @@ class Currency(Cog):
         await view.wait()
 
         if view.value:
-            source.set_balance(source.get_balance() - costs)
-            destination.set_balance(source.get_balance() + amount)
-            self.wallets[ctx.guild.owner_id].set_balance(self.wallets[ctx.guild.owner_id].get_balance() +
-                                                         ceil(amount * local_fee))
-            self.wallets[SETTINGS["OwnerIDs"][0]].set_balance(self.wallets[ctx.guild.owner_id].get_balance() +
-                                                              ceil(amount *
-                                                                   SETTINGS["Cogs"]["Economy"]["WallstreetFee"]))
-            await ctx.respond(f":white_check_mark: **Transaction confirmed**: Transferred {amount} to {user.mention}.")
+            await ctx.respond(self._transfer(ctx, amount, source, destination, transaction=transaction))
             return
         await ctx.respond("❌ **Transaction canceled**.", ephemeral=True)
 
