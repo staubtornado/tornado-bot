@@ -45,7 +45,7 @@ class Currency(Cog):
             try:
                 self.wallets[ctx.guild.owner_id]
             except KeyError:
-                self.wallets[ctx.guild.owner_id] = Wallet(ctx.guild.owner_id)
+                self.wallets[ctx.guild.owner_id] = Wallet(ctx.guild.owner)
             local_fee: float = self.wallets[ctx.guild.owner_id].fee
             global_fee: float = SETTINGS["Cogs"]["Economy"]["WallstreetFee"]
             costs = amount + ceil(amount * (local_fee + global_fee))
