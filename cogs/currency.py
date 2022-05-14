@@ -28,9 +28,19 @@ from lib.currency.wallet import Wallet
 def get_claim_options(ctx: AutocompleteContext) -> list:
     return [choice(["Daily", "Monthly", "Special"])]
 
-def get_server_subjects(ctx: AutocompleteContext) -> list:
 
-    guild = ctx.interaction.guild
+def get_server_subjects(ctx: Union[AutocompleteContext, ApplicationContext]) -> list:
+    cur = database.cursor()
+    cur.execute("""SELECT Subject, Price FROM subjects WHERE GuildID = ?""", (ctx.interaction.guild.id,))
+
+    subjects = cur.fetchall()
+    rtrn = []
+    if subjects is not None:
+        for subject in subjects:
+            channel = ctx.bot.get_channel(subject[0])
+            rtrn.append(f"{channel.name} ({channel.id}) for {subject[1]}")
+        return rtrn
+    return rtrn
 
 
 class Currency(Cog):
