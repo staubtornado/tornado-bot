@@ -4,7 +4,7 @@ from random import choice
 from typing import Union
 
 from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, VoiceChannel, \
-    TextChannel
+    TextChannel, User
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 
@@ -182,6 +182,60 @@ class Currency(Cog):
             cur.execute("""INSERT INTO subjects (GuildID, Subject, Seller, Price, Added) VALUES (?, ?, ?, ?, ?)""",
                         (ctx.guild.id, subject.id, ctx.author.id, price, date.today().strftime("%d/%m/%Y")))
             await ctx.respond(f":white_check_mark: Successfully **sold** {subject.mention} **for {price}**.")
+            return
+        await ctx.respond("❌ **Successfully canceled**.", ephemeral=True)
+
+    @slash_command()
+    async def buy(self, ctx: ApplicationContext,
+                  subject: Option(str, "The subject you want to buy. If nothing appears, nothing is available.",
+                                  autocomplete=get_server_subjects, required=True)):
+        """Buy subjects on this server. Users need to /sell something before you can buy it."""
+        await ctx.defer()
+
+        if subject not in get_server_subjects(ctx):
+            await ctx.respond(f"❌ {subject} is **not for sale**.")
+            return
+
+        price = int(subject.split(" for ")[1])
+        subject = self.bot.get_channel(int(subject.split("(")[1][0:18]))
+        cur = database.cursor()
+
+        cur.execute("""SELECT Seller FROM subjects WHERE (GuildID, Subject) = (?, ?)""", (ctx.guild.id, subject.id))
+
+        try:
+            user = self.bot.get_user(cur.fetchone()[0])
+            if user is None:
+                raise IndexError
+            destination = self.save_get_wallet(user)
+        except IndexError:
+            cur.execute("""DELETE FROM subjects WHERE (GuildID, Subject) = (?, ?)""", (ctx.guild.id, subject.id))
+            await ctx.respond(f"❌ {subject.mention} **cannot be bought**.")
+            return
+
+        transaction = self._transfer(ctx, price, self.wallets[ctx.author.id], destination)
+        if isinstance(transaction, str):
+            await ctx.respond(transaction)
+            return
+        costs, local_fee, global_fee = transaction
+
+        embed = Embed(title="Confirm", description=f"You are about to buy **{subject.mention}** for **{price}**.",
+                      colour=SETTINGS["Colours"]["Default"])
+        embed.add_field(name="Fee", value=local_fee + global_fee)
+        embed.add_field(name="Total costs", value=costs)
+        embed.set_footer(text="I understand that I only receive the permission to use the subject and that I do not "
+                              "own it. I may loose it due to server or bot admins.")
+
+        view = ConfirmTransaction()
+        await ctx.respond(embed=embed, view=view, ephemeral=True)
+        await view.wait()
+
+        if view.value:
+            await ctx.respond(self._transfer(ctx, price, self.wallets[ctx.author.id], destination,
+                                             transaction=transaction))
+
+            cur = database.cursor()
+            cur.execute("""DELETE FROM subjects WHERE (GuildID, Subject) = (?, ?)""", (ctx.guild.id, subject.id))
+            await ctx.respond(f":white_check_mark: Successfully **bought** {subject.mention} **for {price}**.")
             return
         await ctx.respond("❌ **Successfully canceled**.", ephemeral=True)
 
