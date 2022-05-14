@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Union
 
 from discord import Member, Embed, User
 
@@ -8,14 +9,17 @@ from lib.utils.utils import shortened
 
 
 class Wallet:
-    def __init__(self, member: Member or User):
+    def __init__(self, member: Union[Member, User]):
         self.user = member
 
         self._cur = database.cursor()
         self._revenue = None
 
         self._cur.execute("""SELECT Fee from wallets where UserID = ?""", (self.user.id, ))
-        self.fee = self._cur.fetchone()
+        try:
+            self.fee = self._cur.fetchone()[0]
+        except TypeError:
+            self.fee = 0
 
         self._cur.execute("""SELECT Balance from wallets where UserID = ?""", (self.user.id, ))
         self._balance = self._cur.fetchone()
