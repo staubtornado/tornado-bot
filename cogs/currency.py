@@ -167,6 +167,7 @@ class Currency(Cog):
 
     @slash_command()
     async def sell(self, ctx: ApplicationContext, subject: Union[VoiceChannel, TextChannel], price: int):
+        """Sell something you own on this server. You receive the money once a user buys it."""
         embed = Embed(title="Confirm", description=f"You are about to sell {subject.mention} for {price}.",
                       colour=SETTINGS["Colours"]["Default"])
         embed.set_footer(text="I understand that my transaction may be canceled by a server admin or bot admin, and I "
