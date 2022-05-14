@@ -77,12 +77,12 @@ class Currency(Cog):
                                                                SETTINGS["Cogs"]["Economy"]["WallstreetFee"]))
         return f":white_check_mark: **Transaction confirmed**: Transferred {amount} to {destination.user.mention}."
 
-    # def get_wallet(self, member: Member) -> Wallet:
-    #     try:
-    #         self.wallets[member.id]
-    #     except KeyError:
-    #         self.wallets[member.id] = Wallet(member)
-    #     return self.wallets[member.id]
+    def save_get_wallet(self, member: Union[Member, User]) -> Wallet:
+        try:
+            self.wallets[member.id]
+        except KeyError:
+            self.wallets[member.id] = Wallet(member)
+        return self.wallets[member.id]
 
     async def cog_before_invoke(self, ctx: ApplicationContext):
         try:
