@@ -38,14 +38,14 @@ CREATE TABLE IF NOT EXISTS subjects (
 );
 
 CREATE TABLE IF NOT EXISTS settings (
-    GuildID integer PRIMARY KEY,
+    GuildID INTEGER PRIMARY KEY,
 --  Experience
-    ExpIsActivated integer DEFAULT 0,
+    ExpIsActivated INTEGER DEFAULT 0,
     ExpMultiplication REAL DEFAULT 1,
 --  Music
-    MusicEmbedSize integer DEFAULT 2,
+    MusicEmbedSize INTEGER DEFAULT 2,
 --  Tickets
-    TicketsCreateVoiceChannel integer DEFAULT 0,
-    TicketsSupportRoleID integer,
-    TicketsCategoryID integer
+    TicketsCreateVoiceChannel INTEGER DEFAULT 0,
+    TicketsSupportRoleID INTEGER,
+    TicketsCategoryID INTEGER
 )
