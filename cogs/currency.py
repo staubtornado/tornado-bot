@@ -1,10 +1,11 @@
 from datetime import date
 from math import ceil
 from random import choice
+from re import findall
+from sqlite3 import IntegrityError
 from typing import Union
 
-from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, VoiceChannel, \
-    TextChannel, User
+from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, User
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 
@@ -29,6 +30,16 @@ def get_claim_options(ctx: AutocompleteContext) -> list:
     return [choice(["Daily", "Monthly", "Special"])]
 
 
+def get_property(ctx: Union[AutocompleteContext, ApplicationContext]) -> list:
+    rtrn = []
+    for role in ctx.interaction.guild.roles:
+        if "(property-owner)" in role.name:
+            if str(ctx.interaction.user.id) in role.name:
+                subject = ctx.bot.get_channel(list(map(int, findall(r'\d+', role.name)))[1])
+                rtrn.append(f"{subject.name} ({subject.id})") if subject is not None else None
+    return rtrn
+
+
 def get_server_subjects(ctx: Union[AutocompleteContext, ApplicationContext]) -> list:
     cur = database.cursor()
     cur.execute("""SELECT Subject, Price FROM subjects WHERE GuildID = ?""", (ctx.interaction.guild.id,))
@@ -39,7 +50,6 @@ def get_server_subjects(ctx: Union[AutocompleteContext, ApplicationContext]) -> 
         for subject in subjects:
             channel = ctx.bot.get_channel(subject[0])
             rtrn.append(f"{channel.name} ({channel.id}) for {subject[1]}")
-        return rtrn
     return rtrn
 
 
@@ -166,8 +176,13 @@ class Currency(Cog):
         await ctx.respond("Here is your Special!")
 
     @slash_command()
-    async def sell(self, ctx: ApplicationContext, subject: Union[VoiceChannel, TextChannel], price: int):
+    async def sell(self, ctx: ApplicationContext,
+                   subject: Option(str, "The subject you want to sell. If nothing appears, nothing is available.",
+                                   autocomplete=get_property, required=True), price: int):
         """Sell something you own on this server. You receive the money once a user buys it."""
+
+        integers_in_subject = list(map(int, findall(r'\d+', subject)))
+        subject = ctx.bot.get_channel(integers_in_subject[len(integers_in_subject) - 1])
         embed = Embed(title="Confirm", description=f"You are about to sell {subject.mention} for {price}.",
                       colour=SETTINGS["Colours"]["Default"])
         embed.set_footer(text="I understand that my transaction may be canceled by a server admin or bot admin, and I "
@@ -178,9 +193,14 @@ class Currency(Cog):
         await view.wait()
 
         if view.value:
-            cur = database.cursor()
-            cur.execute("""INSERT INTO subjects (GuildID, Subject, Seller, Price, Added) VALUES (?, ?, ?, ?, ?)""",
-                        (ctx.guild.id, subject.id, ctx.author.id, price, date.today().strftime("%d/%m/%Y")))
+            try:
+
+                cur = database.cursor()
+                cur.execute("""INSERT INTO subjects (GuildID, Subject, Seller, Price, Added) VALUES (?, ?, ?, ?, ?)""",
+                            (ctx.guild.id, subject.id, ctx.author.id, price, date.today().strftime("%d/%m/%Y")))
+            except IntegrityError:
+                await ctx.respond("❌ You **cannot sell this property** anymore.", ephemeral=True)
+                return
             await ctx.respond(f":white_check_mark: Successfully **sold** {subject.mention} **for {price}**.")
             return
         await ctx.respond("❌ **Successfully canceled**.", ephemeral=True)
