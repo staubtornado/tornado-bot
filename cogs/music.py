@@ -2,7 +2,8 @@ from copy import copy
 from math import ceil
 from traceback import format_exc
 
-from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option
+from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option, \
+    AutocompleteContext
 from discord.ext.commands import Cog
 from discord.utils import get, basic_autocomplete
 from psutil import virtual_memory
@@ -15,13 +16,17 @@ from lib.music.extraction import YTDLSource
 from lib.music.song import Song, SongStr
 from lib.music.spotify import SpotifyScraping
 from lib.music.voicestate import VoiceState
-from lib.utils.utils import ordinal, auto_complete
+from lib.utils.utils import ordinal
 
 utils.bug_reports_message = lambda: ''
 
 
 class CustomApplicationContext(ApplicationContext):
     voice_state: VoiceState
+
+
+async def auto_complete(ctx: AutocompleteContext) -> list:
+    return ["Charts", "New Releases", "Chill", "Party", "Classical", "K-Pop", "Gaming", "Rock"]
 
 
 def ensure_voice_state(ctx: CustomApplicationContext, requires_song: bool = False, requires_queue: bool = False,

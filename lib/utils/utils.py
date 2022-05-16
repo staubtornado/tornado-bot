@@ -1,6 +1,5 @@
 from typing import Union
 
-from discord import AutocompleteContext
 from millify import millify
 
 
@@ -12,7 +11,3 @@ def ordinal(n: Union[int, float]) -> str:
 
 def shortened(n: Union[int, float], precision: int = 2) -> str:
     return millify(n, precision=precision)
-
-
-async def auto_complete(ctx: AutocompleteContext) -> list:
-    return ["Charts", "New Releases", "Chill", "Party", "Classical", "K-Pop", "Gaming", "Rock"]
