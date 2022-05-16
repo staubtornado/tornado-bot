@@ -141,7 +141,7 @@ class Currency(Cog):
 
         embed = Embed(title="Confirm", description=f"You are about to send {amount} coins to another user.",
                       colour=SETTINGS["Colours"]["Default"])
-        embed.add_field(name="Fee", value=f"{local_fee + global_fee}%")
+        embed.add_field(name="Fee", value=f"{(local_fee + global_fee) * 100}%")
         embed.add_field(name="Costs for you", value=costs)
         embed.set_footer(text="You agree and understand, that this transaction is not reversible.")
 
@@ -165,12 +165,12 @@ class Currency(Cog):
         if offer == "Daily":
             wallet.set_balance(wallet.get_balance() + 100)
 
-            await ctx.respond("Here are 100 Coins.")
+            await ctx.respond("👉 Here are your daily **one hundred Coins on this server**.")
             return
         if offer == "Monthly":
             wallet.set_balance(wallet.get_balance() + 1000)
 
-            await ctx.respond("Here are 1000 Coins.")
+            await ctx.respond("👉 Here is your monthly reward, one thousand coins, on this server.")
             return
         wallet.set_balance(wallet.get_balance() + 9999)
         await ctx.respond("Here is your Special!")
@@ -240,7 +240,7 @@ class Currency(Cog):
 
         embed = Embed(title="Confirm", description=f"You are about to buy **{subject.mention}** for **{price}**.",
                       colour=SETTINGS["Colours"]["Default"])
-        embed.add_field(name="Fee", value=local_fee + global_fee)
+        embed.add_field(name="Fee", value=f"{(local_fee + global_fee) * 100}%")
         embed.add_field(name="Total costs", value=costs)
         embed.set_footer(text="I understand that I only receive the permission to use the subject and that I do not "
                               "own it. I may loose it due to server or bot admins.")
