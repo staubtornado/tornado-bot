@@ -58,47 +58,52 @@ The bot has the following features:
 
 - Images
     - The bot can scrape images from various sources. This is done via Selenium to support JavaScript rendered websites.
-    - **[/]** `meme` Scrapes a random meme from Pinterest.
-    - **NSFW!** Requires a NSFW channel and replaces the NSFW commands from Dank Memer.
-      - **[/]** `porn` Sends a random porn image.
-      - **[/]** `teen` Sends a random teen (> 18) porn image.
-      - **[/]** `ass` Sends a random image of an ass.
-      - **[/]** `asian` Sends a random porn image of an Asian person.
-      - **[/]** `masturbation` Sends a random image of a person masturbating.
-      - **[/]** `shaved` Sends a random image of a shaved vagina.
-      - **[/]** `closeup` Sends a random closeup image of a vagina.
-      - **[/]** `pussy` Sends a random image of a pussy.
-      - **[/]** `boob` Sends a random image of boobs.
-      - **[/]** `milf` Sends a random image of a milf.
-      
+    - **[/]** `images [category]` Scrapes a random image by the given category from the web.
+
 #####
 
 - Experience
   - This is a level system for guilds that works like the one from MEE6. 
-    - **[/]** `leaderboard [page]` Sends a page of the leaderboard.
-    - **[/]** `rank [user]` Sends the rank of the user.
+  - **[/]** `leaderboard [page]` Sends a page of the leaderboard.
+  - **[/]** `rank [user]` Sends the rank of the user.
+
+####
+
+- Economy (Not finished)
+  - Everyone can claim coins everyday on every server the bot is in. They can trade, buy text or voice channels and 
+    roles. Server owner earn coins by fees on transactions on their servers.
+  - **[/]** `wallet [user]` Shows information about the users' wallet.
+  - **[/]** `transfer [amount] [user]` Transfer coins to another users' wallet.
+  - **[/]** `buy [subject]` Buy text or voice channel and roles, that are sold by other users.
+  - **[/]** `sell [subject] [price]` Sell an object you own to someone.
+  - **[/]** `claim [Daily | Monthly | Special]` Claim available coins or prices.
+
+####
+
+- Utilities (Not finished)
+  - **[/]** `ban [user] [reason]` Bans a user from the guild and tells them the reason.
+  - **[/]** `unban [user]` Unbans a user from the guild.
 
 ---
 
 ## What needs to be done?
 - [ ] Add image processing commands
 - [ ] Make music streaming more efficient and more stable
-- [ ] Add premium functionality
+- [ ] Add premium and beta functionality
 - [ ] Add auto updates
 - [ ] Add a ticket system
-- [ ] Only display NSFW commands in NSFW channels (While they do not work in non-NSFW channels, they should still not 
+- [x] Only display NSFW commands in NSFW channels (While they do not work in non-NSFW channels, they should still not 
       be displayed there)
 - [ ] Add a command to get the bot's uptime
 - [ ] Add a command to get the bot's ping
-- [ ] Add a welcome message to the bot
+- [x] Add a welcome message to the bot
 - [ ] Add server specific settings
 - [ ] Add a help command
 - [ ] Add games to the bot
-- [ ] Apply the premium and beta functionality to the commands
 - [ ] Add multiple languages to the bot
 - [ ] Create a requirements.txt file
 - [ ] Improve SQL so it can add missing columns
-- [ ] Add currency economy
+- [ ] Add economy system
 
 ---
 
