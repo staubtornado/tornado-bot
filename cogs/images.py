@@ -2,12 +2,22 @@ from asyncio import run
 from random import choice, random
 from urllib.parse import urlparse
 
-from discord import Bot, slash_command, ApplicationContext, Embed
+from discord import Bot, slash_command, ApplicationContext, Embed, Option, AutocompleteContext
 from discord.ext.commands import Cog
 from tqdm import tqdm
 
 from data.config.settings import SETTINGS
 from lib.images.scraping import ImageScraping
+
+
+async def get_categories(ctx: AutocompleteContext) -> list:
+    rtrn = []
+
+    if ctx.bot.get_channel(ctx.interaction.channel_id).is_nsfw():
+        rtrn.extend(["Porn", "Porn-Gif", "Teen", "Ass", "Asian", "Masturbation", "Shaved", "Close-Up", "Pussy",
+                     "Boobs", "Milf"])
+    rtrn.extend(["Meme"])
+    return rtrn
 
 
 class Images(Cog):
@@ -33,7 +43,7 @@ class Images(Cog):
 
     async def send(self, ctx: ApplicationContext, category: str, message: str, nsfw: bool = True):
         if nsfw and not ctx.channel.is_nsfw():
-            await ctx.respond("🔞 This command **requires** an **NSFW** channel.")
+            await ctx.respond("🔞 This command **requires** an **NSFW** channel.", ephemeral=True)
             return
         await ctx.defer()
 
@@ -41,71 +51,31 @@ class Images(Cog):
         embed: Embed = Embed(title=message, colour=SETTINGS["Colours"]["Default"])
         embed.set_image(url=url)
         embed.set_footer(text=f"Provided by {urlparse(url).netloc}")
-        print(url)
         await ctx.respond(embed=embed)
 
     @slash_command()
-    async def porn(self, ctx: ApplicationContext, gif: bool = False):
-        """Sends a porn image. Requires NSFW channel."""
-        if not gif:
-            await self.send(ctx, "babe", "Here, take that porn!")
-            return
-        await self.send(ctx, "porn-gif", "More frames? You're welcome.")
+    async def image(self, ctx: ApplicationContext,
+                    category: Option(str, "Choose a category from which the bot selects an image.",
+                                     autocomplete=get_categories)):
+        """Select a category from wich the bot will send a random image."""
 
-    @slash_command()
-    async def teen(self, ctx: ApplicationContext):
-        """Sends a teen (>18) porn image. Requires NSFW channel."""
-        await self.send(ctx, "teen", "Why is the FBI here?")
+        categories = {"Porn": ("babe", "Here, take that porn!"), "Teen": ("teen", "Why is the FBI here?"),
+                      "Ass": ("ass", "Here, take some booty."), "Asian": ("asian", "Asian hate does not exist."),
+                      "Masturbation": ("masturbation", "Maybe the opposite of you?"),
+                      "Shaved": ("shaved", "That looks clean."), "Close-Up": ("close-up", "4K UHD Ultra High Quality"),
+                      "Pussy": ("pussy", "Take that pussy."), "cat": ("cat-pictures", "Take that pussy."),
+                      "Boobs": ("natural-tits", "Take that boobs."), "Milf": ("milf", "Hey mom!"),
+                      "Meme": ("meme", "Here we go.", False), "Porn-Gif": ("porn-gif", "More frames? You're welcome.")}
 
-    @slash_command()
-    async def ass(self, ctx: ApplicationContext):
-        """Sends an ass porn image. Requires NSFW channel."""
-        await self.send(ctx, "ass", "Here, take some booty.")
+        if category == "Pussy":
+            if not random() > 0.3:
+                category = "cat"
 
-    @slash_command()
-    async def asian(self, ctx: ApplicationContext):
-        """Sends an asian porn image. Requires NSFW channel."""
-        await self.send(ctx, "asian", "Asian hate does not exist.")
-
-    @slash_command()
-    async def masturbation(self, ctx: ApplicationContext):
-        """Sends a masturbation porn image. Requires NSFW channel."""
-        await self.send(ctx, "masturbation", "Maybe the opposite of you?")
-
-    @slash_command()
-    async def shaved(self, ctx: ApplicationContext):
-        """Sends a shaved pussy image. Requires NSFW channel."""
-        await self.send(ctx, "shaved", "That looks clean.")
-        
-    @slash_command()
-    async def closeup(self, ctx: ApplicationContext):
-        """Sends a closeup image of a pussy. Requires NSFW channel."""
-        await self.send(ctx, "close-up", "4K UHD Ultra High Quality")
-
-    @slash_command()
-    async def pussy(self, ctx: ApplicationContext):
-        """Sends a pussy image. Requires NSFW channel."""
-        if random() > 0.3:
-            await self.send(ctx, "pussy", "Take that pussy.")
-            return
-        await self.send(ctx, "cat-pictures", "Take that pussy.")
-
-    @slash_command()
-    async def boob(self, ctx: ApplicationContext):
-        """Sends a boob image. Requires NSFW channel."""
-        await self.send(ctx, "natural-tits", "Take that boobs.")
-
-    @slash_command()
-    async def milf(self, ctx: ApplicationContext):
-        """Sends a milf image. Requires NSFW channel."""
-        await self.send(ctx, "milf", "Hey mom!")
-
-    #####################################################################
-
-    @slash_command()
-    async def meme(self, ctx: ApplicationContext):
-        """Sends a (hopefully) funny meme."""
-        await self.send(ctx, "meme", "Here we go.", nsfw=False)
+        try:
+            nsfw = categories[category][2]
+        except IndexError:
+            nsfw = True
+        await self.send(ctx, categories[category][0], categories[category][1], nsfw=nsfw)
 
 
 def setup(bot: Bot):
