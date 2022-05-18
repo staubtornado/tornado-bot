@@ -11,23 +11,24 @@ MEE6, Dank Memer, or Dyno.
 ---
 
 ## How do I install TornadoBot?
- 1. [Download the latest release](https://github.com/staubtornado/tornado-bot/releases) or clone the repository if you want to use the development version.
- 2. Install Python 3.8
- 3. Install all the dependencies 
+ 1. [Download the latest release](https://github.com/staubtornado/tornado-bot/releases) or clone the repository if you 
+    want to use the development version.
+ 3. Install Python 3.8
+ 4. Install all the dependencies 
     - pip install -r requirements.txt
     - install selenium drivers for chrome, Firefox, or edge
     - install ffmpeg
- 4. Create a bot in the discord developer portal
- 5. Create an application in the Spotify developer portal
- 6. Create a `.env` file in `./data/config` and paste in the following information:
+ 5. Create a bot in the discord developer portal
+ 6. Create an application in the Spotify developer portal
+ 7. Create a `.env` file in `./data/config` and paste in the following information:
 
     #####
 
         DISCORD_BOT_TOKEN = your token from the discord developer portal
         SPOTIFY_CLIENT_ID = client id from the Spotify developer portal
         SPOTIFY_CLIENT_SECRET = client secret from the Spotify developer portal
- 7. Save your `.env` file
- 8. Run the bot with `main.py` file in the root directory  
+ 8. Save your `.env` file
+ 9. Run the bot with `main.py` file in the root directory  
 
 ---
 
@@ -35,7 +36,7 @@ MEE6, Dank Memer, or Dyno.
 The bot has the following features:
 - Music
     - The bot can play music in a voice channel from various sources like YouTube, SoundCloud, and Spotify. With the 
-  help of the Spotify API, the bot can also play music from Spotify playlists **|** artists **|** albums. 
+      help of the Spotify API, the bot can also play music from Spotify playlists **|** artists **|** albums. 
     - **[/]** `play [song name | link | Preset]`
     - **[/]** `pause` Pauses the music
     - **[/]** `resume` Resumes the music
@@ -83,6 +84,7 @@ The bot has the following features:
 - Utilities (Not finished)
   - **[/]** `ban [user] [reason]` Bans a user from the guild and tells them the reason.
   - **[/]** `unban [user]` Unbans a user from the guild.
+  - **[/]** `purge [amount] [Oldest | Newest] [ignore: user]`
 
 ---
 
