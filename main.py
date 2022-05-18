@@ -3,7 +3,7 @@ from os import getenv, listdir
 from sqlite3 import connect, Error
 from traceback import format_exc
 
-from discord import Bot
+from discord import Bot, ApplicationCommandInvokeError, ApplicationContext
 from discord.ext.tasks import loop
 from dotenv import load_dotenv
 
@@ -43,6 +43,17 @@ async def sync_database():
 @bot.event
 async def on_ready():
     print(f"{bot.user} is online...")
+
+
+@bot.event
+async def on_application_command_error(ctx: ApplicationContext, error):
+    if not SETTINGS["Production"]:
+        raise error
+
+    if isinstance(error, ApplicationCommandInvokeError):
+        await ctx.respond(f"An **error occurred**: `{error.original}`.")
+    else:
+        raise error
 
 
 def main():
