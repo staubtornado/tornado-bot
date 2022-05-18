@@ -1,4 +1,5 @@
-from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, Forbidden
+from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, Forbidden, \
+    Message
 from discord.ext.commands import Cog
 
 from data.config.settings import SETTINGS
@@ -26,12 +27,16 @@ class Utilities(Cog):
 
     @slash_command()
     async def purge(self, ctx: ApplicationContext, amount: int = 100, ignore: Member = None,
-                    oldest_first: bool = False):
+                    order: Option(str, "Select where the bot should start deleting.",
+                                  required=False, choices=["Oldest", "Newest"]) = "Newest"):
         """Deletes latest 100 messages in this channel by default. Can be increased up to 1000."""
+        await ctx.defer()
 
-        def is_ignored(m) -> bool:
+        def is_ignored(m: Message) -> bool:
             return m.author == ignore
-        await ctx.channel.purge(limit=amount, check=is_ignored, oldest_first=oldest_first)
+        await ctx.respond(
+            f"**Deleted {len(await ctx.channel.purge(limit=amount, check=is_ignored, oldest_first=order != 'Newest'))} "
+            f"messages**.", ephemeral=True)
 
     @slash_command()
     async def ban(self, ctx: ApplicationContext, user: Member,
@@ -64,7 +69,7 @@ class Utilities(Cog):
         member = self.bot.get_user(ints)
 
         await ctx.guild.unban(member, reason=reason)
-        await ctx.respond(f"**Unbanned {member}**.")
+        await ctx.respond(f"🤝 **Unbanned {member}**.")
 
 
 def setup(bot: Bot):
