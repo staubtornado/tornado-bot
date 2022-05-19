@@ -51,9 +51,9 @@ async def on_application_command_error(ctx: ApplicationContext, error):
         raise error
 
     if isinstance(error, ApplicationCommandInvokeError):
-        await ctx.respond(f"An **error occurred**: `{error.original}`.")
-    else:
-        raise error
+        await ctx.respond(f"❌ An **error occurred**: `{error.original}`.")
+        return
+    raise error
 
 
 def main():
