@@ -23,8 +23,9 @@ class Listeners(Cog):
     @Cog.listener()
     async def on_guild_remove(self, guild: Guild):
         cur: Cursor = database.cursor()
-        cur.execute("""DELETE from guilds where GuildID = ?""", [guild.id])
-        cur.execute("""DELETE from experience where GuildID = ?""", [guild.id])
+        cur.execute("""DELETE FROM experience WHERE GuildID = ?""", (guild.id, ))
+        cur.execute("""DELETE FROM settings WHERE GuildID = ?""", (guild.id, ))
+        cur.execute("""DELETE FROM subjects WHERE GuildID = ?""", (guild.id,))
         database.commit()
 
     @Cog.listener()
