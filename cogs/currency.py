@@ -210,7 +210,7 @@ class Currency(Cog):
                   subject: Option(str, "The subject you want to buy. If nothing appears, nothing is available.",
                                   autocomplete=get_server_subjects, required=True)):
         """Buy subjects on this server. Users need to /sell something before you can buy it."""
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         if subject not in get_server_subjects(ctx):
             await ctx.respond(f"❌ {subject} is **not for sale**.")
