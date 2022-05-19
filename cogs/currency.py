@@ -5,7 +5,7 @@ from re import findall
 from sqlite3 import IntegrityError
 from typing import Union
 
-from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, User
+from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, User, Colour
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 
@@ -255,6 +255,14 @@ class Currency(Cog):
 
             cur = database.cursor()
             cur.execute("""DELETE FROM subjects WHERE (GuildID, Subject) = (?, ?)""", (ctx.guild.id, subject.id))
+
+            for role in ctx.guild.roles:
+                if "DO NOT EDIT" in role.name and str(destination.user.id) in role.name \
+                        and str(subject.id) in role.name:
+                    await role.delete()
+                    break
+            await ctx.guild.create_role(name=f"DO NOT EDIT: {ctx.author.id} (property-owner) {subject.id} (property)",
+                                        colour=Colour.embed_background(), hoist=False, mentionable=False)
             await ctx.respond(f":white_check_mark: Successfully **bought** {subject.mention} **for {price}**.")
             return
         await ctx.respond("❌ **Successfully canceled**.", ephemeral=True)
