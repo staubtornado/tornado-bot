@@ -30,6 +30,7 @@ def get_claim_options(ctx: AutocompleteContext) -> list:
     return [choice(["Daily", "Monthly", "Special"])]
 
 
+# DO NOT EDIT: 272446903940153345 (property-owner) 272446903940153345 (property)
 def get_property(ctx: Union[AutocompleteContext, ApplicationContext]) -> list:
     rtrn = []
     for role in ctx.interaction.guild.roles:
@@ -170,7 +171,7 @@ class Currency(Cog):
         if offer == "Monthly":
             wallet.set_balance(wallet.get_balance() + 1000)
 
-            await ctx.respond("👉 Here is your monthly reward, one thousand coins, on this server.")
+            await ctx.respond("👉 Here is your **monthly** reward, **one thousand coins**, on this server.")
             return
         wallet.set_balance(wallet.get_balance() + 9999)
         await ctx.respond("Here is your Special!")
