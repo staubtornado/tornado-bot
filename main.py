@@ -1,6 +1,7 @@
 from asyncio import run
 from os import getenv, listdir
 from sqlite3 import connect, Error
+from time import time
 from traceback import format_exc
 
 from discord import Bot, ApplicationCommandInvokeError, ApplicationContext
@@ -42,6 +43,7 @@ async def sync_database():
 
 @bot.event
 async def on_ready():
+    bot.uptime = round(time())
     print(f"{bot.user} is online...")
 
 
