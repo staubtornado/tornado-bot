@@ -51,14 +51,15 @@ class Settings(Cog):
         await ctx.respond(f"✅ **{response}** the **experience system** on this server.", ephemeral=True)
 
     @experience_settings.command()
-    async def multiplier(self, ctx: ApplicationContext, multiplier: float):
+    async def multiplier(self, ctx: ApplicationContext, multiplier: str):
         """Change the multiplier of gained XP per message."""
         await ctx.defer(ephemeral=True)
-        print(str(multiplier)[len(str(multiplier)) - 1])  # TODO: FIX ENTERED FLOAT CHANGING AFTER COMMAND EXECUTION
-        if str(multiplier)[len(str(multiplier)) - 1] != "0":
-            multiplier = multiplier / 10
 
-        if multiplier > 5 or not multiplier > 1:
+        try:
+            multiplier = float(multiplier)
+            if multiplier > 5 or not multiplier > 1:
+                raise ValueError
+        except ValueError:
             await ctx.respond("❌ The **multiplier has to be between 0 and 5**.", ephemeral=True)
             return
 
