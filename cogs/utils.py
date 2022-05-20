@@ -1,3 +1,6 @@
+from datetime import timedelta
+from time import time, strftime, gmtime
+
 from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, Forbidden, \
     Message
 from discord.ext.commands import Cog
@@ -70,6 +73,24 @@ class Utilities(Cog):
 
         await ctx.guild.unban(member, reason=reason)
         await ctx.respond(f"🤝 **Unbanned {member}**.")
+
+    @slash_command()
+    async def ping(self, ctx: ApplicationContext):
+        """Check the bots ping to the Discord API."""
+        await ctx.respond(f"**Ping**: `{round(self.bot.latency * 1000)}ms`")
+
+    @slash_command()
+    async def uptime(self, ctx: ApplicationContext):
+        """Check the bots' uptime."""
+        duration = (time() - self.bot.uptime)
+
+        if duration < 3600:
+            output = strftime('%M:%S', gmtime(duration))
+        elif 86400 > duration >= 3600:
+            output = strftime('%H:%M:%S', gmtime(duration))
+        else:
+            output = timedelta(seconds=duration)
+        await ctx.respond(f"**Uptime**: {output}")
 
 
 def setup(bot: Bot):
