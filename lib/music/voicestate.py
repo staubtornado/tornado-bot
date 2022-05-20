@@ -1,8 +1,9 @@
 from asyncio import Event, wait_for, shield, TimeoutError
 
-from discord import Bot, FFmpegPCMAudio, Embed
+from discord import Bot, FFmpegPCMAudio, Embed, ApplicationContext
 
 from data.config.settings import SETTINGS
+from data.db.memory import database
 from lib.music.exceptions import VoiceError
 from lib.music.extraction import YTDLSource
 from lib.music.queue import SongQueue
@@ -10,7 +11,7 @@ from lib.music.song import Song, SongStr
 
 
 class VoiceState:
-    def __init__(self, bot: Bot, ctx):
+    def __init__(self, bot: Bot, ctx: ApplicationContext):
         self.bot = bot
         self._ctx = ctx
 
@@ -30,6 +31,10 @@ class VoiceState:
         self.skip_votes: set = set()
 
         self.audio_player = bot.loop.create_task(self.audio_player_task())
+
+        cur = database.cursor()
+        cur.execute("""SELECT MusicEmbedSize FROM settings WHERE GuildID = ?""", (self._ctx.guild_id, ))
+        self.embed_size = cur.fetchone()[0]
 
     def __del__(self):
         self.audio_player.cancel()
@@ -106,7 +111,7 @@ class VoiceState:
 
                 self.current.source.volume = self._volume
                 self.voice.play(self.current.source, after=self.play_next_song)
-                await self.current.source.channel.send(embed=self.current.create_embed(self.songs))
+                await self.current.source.channel.send(embed=self.current.create_embed(self.songs, self.embed_size))
 
             elif self.loop:
                 if self.loop_duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
