@@ -168,7 +168,8 @@ class Music(Cog):
         await ctx.defer()
 
         try:
-            await ctx.respond(embed=ctx.voice_state.current.create_embed(ctx.voice_state.songs))
+            await ctx.respond(embed=ctx.voice_state.current.create_embed(ctx.voice_state.songs,
+                                                                         ctx.voice_state.embed_size))
         except AttributeError:
             await ctx.respond("❌ **Nothing** is currently **playing**.")
 
