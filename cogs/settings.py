@@ -30,8 +30,9 @@ class Settings(Cog):
                         (ctx.guild.id, values[size]))
         else:
             cur.execute("""UPDATE settings SET MusicEmbedSize = ? WHERE GuildID = ?""", (values[size], ctx.guild.id))
+        self.bot.get_cog("Music").get_voice_state(ctx).embed_size = values[size]
 
-        await ctx.respond(f"✅ **Changed size** of song embeds **to {size}**.", ephemeral=True)
+        await ctx.respond(f"✅ **Changed size** of song embeds **to {str(size).lower()}**.", ephemeral=True)
 
     @experience_settings.command()
     async def enabled(self, ctx: ApplicationContext, state: bool):
