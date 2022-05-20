@@ -26,7 +26,7 @@ class CustomApplicationContext(ApplicationContext):
 
 
 async def auto_complete(ctx: AutocompleteContext) -> list:
-    return ["Charts", "New Releases", "Chill", "Party", "Classical", "K-Pop", "Gaming", "Rock"]
+    return ["Charts", "New Releases", "TDTT", "Chill", "Party", "Classical", "K-Pop", "Gaming", "Rock"]
 
 
 def ensure_voice_state(ctx: CustomApplicationContext, requires_song: bool = False, requires_queue: bool = False,
@@ -449,7 +449,8 @@ class Music(Cog):
                          "Classical": "https://open.spotify.com/playlist/37i9dQZF1DWWEJlAGA9gs0",
                          "K-Pop": "https://open.spotify.com/playlist/37i9dQZF1DX9tPFwDMOaN1",
                          "Gaming": "https://open.spotify.com/playlist/37i9dQZF1DWTyiBJ6yEqeu",
-                         "Rock": "https://open.spotify.com/playlist/37i9dQZF1DWZJhOVGWqUKF"}
+                         "Rock": "https://open.spotify.com/playlist/37i9dQZF1DWZJhOVGWqUKF",
+                         "TDTT": "https://open.spotify.com/playlist/669nUqEjX1ozcx2Uika2fR"}
 
         search: str = presets[search] if search in presets else search
 
