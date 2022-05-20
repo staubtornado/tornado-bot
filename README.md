@@ -84,7 +84,16 @@ The bot has the following features:
 - Utilities (Not finished)
   - **[/]** `ban [user] [reason]` Bans a user from the guild and tells them the reason.
   - **[/]** `unban [user]` Unbans a user from the guild.
-  - **[/]** `purge [amount] [Oldest | Newest] [ignore: user]`
+  - **[/]** `purge [amount] [Oldest | Newest] [ignore: user]` Deletes an amount of messages in a channel.
+
+####
+
+- Settings (Not finished)
+  - **[/]** `settings music embed [Large | Medium | Small]` Change the size of the embed of a song.
+  - **[/]** `settings experience enabled [True | False]` Enable or disable the leveling on a server.
+  - **[/]** `settings experience multiplier [multiplier: float]` Change the multipler for xp per message.
+  - **[/]** `settings tickets voice [True | False]` Enable or disable the creation of a voice channel for each ticket.
+  - **[/]** `settings tickets category [category: CategoryChannel]` Change where new tickets are created.
 
 ---
 
