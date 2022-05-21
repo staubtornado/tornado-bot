@@ -111,6 +111,43 @@ class YTDLSource(PCMVolumeTransformer):
             raise YTDLError("**Songs** can not be **longer than three hours**. Use **/**`loop` to repeat songs.")
         return cls(ctx, FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
+    @classmethod
+    async def check_type(cls, search: str, *, loop=None):
+        try:
+            loop = loop or get_event_loop()
+
+            partial = func_partial(cls.ytdl.extract_info, search, download=False, process=False)
+            data = await loop.run_in_executor(None, partial)
+
+            return data["_type"]
+        except KeyError:
+            pass
+
+    @classmethod
+    async def create_source_playlist(cls, typ, search: str, *, loop=None):
+        loop = loop or get_event_loop()
+
+        partial = func_partial(cls.ytdl.extract_info, search, download=False, process=False)
+        data = await loop.run_in_executor(None, partial)
+
+        if typ == 'playlist_alt':
+            try:
+                search = data["url"]
+            except KeyError:
+                pass
+
+            partial = func_partial(cls.ytdl.extract_info, search, download=False, process=False)
+            data = await loop.run_in_executor(None, partial)
+
+        if data is None:
+            raise YTDLError(f"**Could not retrieve any matches** for `{search}`")
+
+        numbers = []
+        for entry in data["entries"]:
+            if entry:
+                numbers.append(entry)
+        return numbers
+
     @staticmethod
     def parse_duration(duration: Union[str, int, None]):
         if duration is None:
