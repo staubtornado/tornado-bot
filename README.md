@@ -105,8 +105,8 @@ The bot has the following features:
 - [ ] Add a ticket system
 - [x] Only display NSFW commands in NSFW channels (While they do not work in non-NSFW channels, they should still not 
       be displayed there)
-- [ ] Add a command to get the bot's uptime
-- [ ] Add a command to get the bot's ping
+- [x] Add a command to get the bot's uptime
+- [x] Add a command to get the bot's ping
 - [x] Add a welcome message to the bot
 - [ ] Add server specific settings
 - [ ] Add a help command
