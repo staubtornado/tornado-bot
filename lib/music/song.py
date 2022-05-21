@@ -48,7 +48,12 @@ class Song:
                     queue += f"`{i + 1}.` [{song.source.title_limited_embed}]({song.source.url} '{song.source.title}" \
                              f"')\n"
                 else:
-                    queue += f"`{i + 1}.` {YTDLSource.parse_limited_title_embed(song.search)}\n"
+                    if "https://" in song.search:
+                        title_parts = str(song.search).split("](")
+                        title = YTDLSource.parse_limited_title_embed(title_parts[0])
+                        queue += f"`{i + 1}.` [{title}]({title_parts[1]}\n"
+                    else:
+                        queue += f"`{i + 1}.` {YTDLSource.parse_limited_title_embed(song.search)}\n"
 
         if len_songs > 6:
             queue += f"Use **/**`queue` to show **{len_songs - 5}** more..."
