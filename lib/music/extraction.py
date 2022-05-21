@@ -3,6 +3,7 @@ from datetime import timedelta
 from functools import partial as func_partial
 from json import loads
 from time import strftime, gmtime
+from typing import Union
 
 from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio
 from requests import get as req_get
@@ -111,7 +112,7 @@ class YTDLSource(PCMVolumeTransformer):
         return cls(ctx, FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
     @staticmethod
-    def parse_duration(duration: str or None):
+    def parse_duration(duration: Union[str, int, None]):
         if duration is None:
             return "LIVE"
         duration: int = int(duration)
