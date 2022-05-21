@@ -489,7 +489,16 @@ class Music(Cog):
 
                 info: str = song_names[0].replace(" by ", "** by **") if len(song_names) == 1 else \
                     f"{len(song_names) - errors} songs"
-                await ctx.respond(f":white_check_mark: Added **{info}** from **Spotify**.")
+                await ctx.respond(f"✅ Added **{info}** from **Spotify**.")
+                return
+
+            video_type = await YTDLSource.check_type(search, loop=self.bot.loop)
+            if video_type in ["playlist", "playlist_alt"]:
+                videos = await YTDLSource.create_source_playlist(video_type, search, loop=self.bot.loop)
+                for url in videos:
+                    if not len(ctx.voice_state.songs) >= 100:
+                        await add_song(f"[{url['title']}]({url['url']})")
+                await ctx.respond(f"✅ Added **{len(videos)}** from **YouTube**.")
                 return
 
             name = await add_song(search, fetch_source=True)
@@ -504,7 +513,7 @@ class Music(Cog):
                 print(traceback) if traceback is not None else None
                 await ctx.respond(f"❌ **Error**: `{name}`")
             else:
-                await ctx.respond(f':white_check_mark: Added {name}')
+                await ctx.respond(f'✅ Added {name}')
 
         ctx.voice_state.processing = True
         try:
