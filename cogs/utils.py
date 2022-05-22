@@ -95,6 +95,13 @@ class Utilities(Cog):
             output = timedelta(seconds=duration)
         await ctx.respond(f"**Uptime**: {output}")
 
+    @slash_command()
+    async def help(self, ctx: ApplicationContext):
+        """Get a list of features and information about the bot."""
+        embed = Embed(title="TornadoBot", colour=SETTINGS["Colours"]["Default"],
+                      description="Add to server | Support Server | GitHub")
+        await ctx.respond(embed=embed)
+
 
 def setup(bot: Bot):
     bot.add_cog(Utilities(bot))
