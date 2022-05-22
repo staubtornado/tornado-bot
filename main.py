@@ -50,11 +50,11 @@ async def on_ready():
 @bot.event
 async def on_application_command_error(ctx: ApplicationContext, error):
     if not SETTINGS["Production"]:
-        await ctx.respond(f"❌ An **error occurred**: `{error.original}`.")
+        await ctx.respond(f"❌ An **error occurred**: `{error}`.")
         raise error
 
     if isinstance(error, ApplicationCommandInvokeError):
-        await ctx.respond(f"❌ An **error occurred**: `{error.original}`.")
+        await ctx.respond(f"❌ An **error occurred**: `{error}`.")
         return
     raise error
 
