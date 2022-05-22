@@ -30,7 +30,7 @@ class SongStr:
     def __str__(self):
         if self.url is None:
             return f"{YTDLSource.parse_limited_title_embed(self.title + ' by ' + self.uploader)}"
-        return f"[{YTDLSource.parse_limited_title_embed(self.title + ' by ' + self.uploader)}]({self.url})"
+        return f"[{YTDLSource.parse_limited_title_embed(self.title + ' by ' + str(self.uploader))}]({self.url})"
 
     def get_search(self) -> str:
         search = self.url or f"{self.title} by {self.uploader}"
