@@ -35,6 +35,8 @@ class VoiceState:
         cur = database.cursor()
         cur.execute("""SELECT MusicEmbedSize FROM settings WHERE GuildID = ?""", (self._ctx.guild_id, ))
         self.embed_size = cur.fetchone()[0]
+        cur.execute("""SELECT MusicDeleteEmbedAfterSong FROM settings WHERE GuildID = ?""", (self._ctx.guild_id, ))
+        self.delete_embed_when_finished = cur.fetchone()[0]
 
     def __del__(self):
         self.audio_player.cancel()
@@ -111,7 +113,12 @@ class VoiceState:
 
                 self.current.source.volume = self._volume
                 self.voice.play(self.current.source, after=self.play_next_song)
-                await self.current.source.channel.send(embed=self.current.create_embed(self.songs, self.embed_size))
+
+                if self.delete_embed_when_finished:
+                    await self.current.source.channel.send(embed=self.current.create_embed(self.songs, self.embed_size),
+                                                           delete_after=float(self.current.source.data.get("duration")))
+                else:
+                    await self.current.source.channel.send(embed=self.current.create_embed(self.songs, self.embed_size))
 
             elif self.loop:
                 if self.loop_duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
