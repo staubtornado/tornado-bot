@@ -3,7 +3,7 @@ from time import time, strftime, gmtime
 
 from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, Forbidden, \
     Message
-from discord.ext.commands import Cog
+from discord.ext.commands import Cog, has_permissions
 
 from data.config.settings import SETTINGS
 from lib.utils.utils import extract_int
@@ -29,6 +29,7 @@ class Utilities(Cog):
         self.bot = bot
 
     @slash_command()
+    @has_permissions(manage_messages=True)
     async def purge(self, ctx: ApplicationContext, amount: int = 100, ignore: Member = None,
                     order: Option(str, "Select where the bot should start deleting.",
                                   required=False, choices=["Oldest", "Newest"]) = "Newest"):
@@ -42,6 +43,7 @@ class Utilities(Cog):
             f"messages**.", ephemeral=True)
 
     @slash_command()
+    @has_permissions(ban_members=True)
     async def ban(self, ctx: ApplicationContext, user: Member,
                   reason: Option(str, "Select a preset or enter a reason.", autocomplete=get_reasons,
                                  required=False) = "None"):
@@ -61,6 +63,7 @@ class Utilities(Cog):
         await ctx.respond(f"🔨 **Banned {user}**.{state}")
 
     @slash_command()
+    @has_permissions(ban_members=True)
     async def unban(self, ctx: ApplicationContext,
                     user: Option(str, "Select a banned user.", autocomplete=get_banned_members, required=True),
                     reason: str = None):
