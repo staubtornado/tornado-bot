@@ -305,7 +305,7 @@ class Music(Cog):
             if isinstance(song, Song):
                 queue += f"`{i + 1}`. [{song.source.title_limited_embed}]({song.source.url})\n"
             else:
-                queue += f"`{i + 1}`. {YTDLSource.parse_limited_title_embed(song.search)}\n"
+                queue += f"`{i + 1}`. {song}\n"
 
         embed: Embed = Embed(title="Queue",
                              description=f"**Songs:** {len(ctx.voice_state.songs)}\n**Duration:** "
@@ -497,7 +497,7 @@ class Music(Cog):
                 videos = await YTDLSource.create_source_playlist(video_type, search, loop=self.bot.loop)
                 for url in videos:
                     if not len(ctx.voice_state.songs) >= 100:
-                        await add_song(f"[{url['title']}]({url['url']})")
+                        await add_song(url)
                 await ctx.respond(f"✅ Added **{len(videos)}** from **YouTube**.")
                 return
 

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Union
 
 from discord import Embed
 
@@ -7,9 +8,33 @@ from lib.utils.utils import shortened
 
 
 class SongStr:
-    def __init__(self, search: str, ctx):
-        self.search = search
+    def __init__(self, data: Union[dict, str], ctx):
+        self.title = ""
+        self.url = None
+        self.uploader = None
         self.ctx = ctx
+
+        if isinstance(data, dict):
+            self.title = data["title"]
+            self.url = data["url"]
+            self.uploader = data["uploader"]
+            return
+
+        parts = data.split(" by ")
+        self.uploader = parts[len(parts) - 1]
+        if len(parts) > 2:
+            self.title = data.replace(f" by {self.uploader}", "")
+            return
+        self.title = parts[0]
+
+    def __str__(self):
+        if self.url is None:
+            return f"{YTDLSource.parse_limited_title_embed(self.title + ' by ' + self.uploader)}"
+        return f"[{YTDLSource.parse_limited_title_embed(self.title + ' by ' + self.uploader)}]({self.url})"
+
+    def get_search(self) -> str:
+        search = self.url or f"{self.title} by {self.uploader}"
+        return search
 
 
 class Song:
@@ -48,12 +73,7 @@ class Song:
                     queue += f"`{i + 1}.` [{song.source.title_limited_embed}]({song.source.url} '{song.source.title}" \
                              f"')\n"
                 else:
-                    if "https://" in song.search:
-                        title_parts = str(song.search).split("](")
-                        title = YTDLSource.parse_limited_title_embed(title_parts[0])
-                        queue += f"`{i + 1}.` [{title}]({title_parts[1]}\n"
-                    else:
-                        queue += f"`{i + 1}.` {YTDLSource.parse_limited_title_embed(song.search)}\n"
+                    queue += f"`{i + 1}.` {song}\n"
 
         if len_songs > 6:
             queue += f"Use **/**`queue` to show **{len_songs - 5}** more..."
