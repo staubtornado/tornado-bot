@@ -53,7 +53,7 @@ The bot has the following features:
     - **[/]** `reverse` Reverses the current queue.
     - **[/]** `join` Joins the bot to the voice channel.
     - **[/]** `leave` Leaves the bot from the voice channel.
-    - **[/]** `summon` Joins the bot to the voice channel.
+    - **[/]** `summon [voice channel]` Joins the bot to the voice channel.
 
 #####
 
@@ -77,7 +77,8 @@ The bot has the following features:
   - **[/]** `transfer [amount] [user]` Transfer coins to another users' wallet.
   - **[/]** `buy [subject]` Buy text or voice channel and roles, that are sold by other users.
   - **[/]** `sell [subject] [price]` Sell an object you own to someone.
-  - **[/]** `claim [Daily | Monthly | Special]` Claim available coins or prices.
+  - **[/]** `claim [daily | work | special]` Claim available coins or prices.
+  - **[/]** `work` Start working and claim your payment after oe hour.
 
 ####
 
@@ -89,9 +90,9 @@ The bot has the following features:
 ####
 
 - Settings (Not finished)
-  - **[/]** `settings music embed [Large | Medium | Small]` Change the size of the embed of a song.
-  - **[/]** `settings experience enabled [True | False]` Enable or disable the leveling on a server.
-  - **[/]** `settings experience multiplier [multiplier: float]` Change the multipler for xp per message.
+  - **[/]** `settings music [embed size: (Small | Medium | Large) | delete embed when finished: (True | False)]` 
+             Configure the music player.
+  - **[/]** `settings experience [enabled (true | false) | multiplier (1 - 5)]` Configure the leveling.
   - **[/]** `settings tickets voice [True | False]` Enable or disable the creation of a voice channel for each ticket.
   - **[/]** `settings tickets category [category: CategoryChannel]` Change where new tickets are created.
 
