@@ -1,4 +1,4 @@
-from discord import Bot, SlashCommandGroup, CommandPermission, ApplicationContext, Option, CategoryChannel
+from discord import Bot, SlashCommandGroup, ApplicationContext, Option, CategoryChannel, Permissions
 from discord.ext.commands import Cog
 
 from data.db.memory import database
@@ -28,8 +28,8 @@ class Settings(Cog):
     async def cog_before_invoke(self, ctx: ApplicationContext):
         database.cursor().execute("""INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""", (ctx.guild.id,))
 
-    settings = SlashCommandGroup("settings", "Change the bots settings on this server.",
-                                 permissions=[CommandPermission("manage_guild", 2, True)])
+    settings = SlashCommandGroup(name="settings", description="Change the bots settings on this server.",
+                                 default_member_permissions=Permissions(manage_guild=True))
 
     ticket_settings = settings.create_subgroup("tickets_setup", "Ticket settings.")
 
