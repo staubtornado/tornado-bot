@@ -13,6 +13,7 @@ class ConfirmTransaction(View):
         custom_id="845997145"
     )
     async def confirm(self, button: Button, interaction: Interaction):
+        await interaction.response.send_message("Confirming...", ephemeral=True)
         self.value = True
         self.stop()
 
@@ -22,5 +23,6 @@ class ConfirmTransaction(View):
         custom_id="851715352"
     )
     async def cancel(self, button: Button, interaction: Interaction):
+        await interaction.response.send_message("❌ **Successfully canceled**.", ephemeral=True)
         self.value = False
         self.stop()

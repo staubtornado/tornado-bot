@@ -18,14 +18,14 @@ from lib.currency.wallet import Wallet
 
 
 # Concept:
-# Every user has a global _balance and a tab that shows the revenue on the current server
-# They can buy roles, channels, messages, advertisement, users aso with their global _balance on every server
+# Every user has a global balance and a tab that shows the revenue
+# They can buy roles, channels, messages, advertisement, users aso with their global balance on every server
 # Every transaction gives a small percentage to the global bank and to the guild-bank for the specific server
-# User can claim their money by executing a command every day /claim [daily | monthly | special] for example
+# User can claim their money by executing a command /claim [daily | work | special] for example
 # Users are limited to a specific amount of transactions per server every day and have a daily global limit
 # Every stat is public, but only the user themselves can see their accurate stats. Others only see estimations
 # Every bot has it own economy, meaning that self-hosted versions cannot access the official economy
-# Users can invest their _balance: Daily revenue is linear and investments can be percentage increases
+# Users can invest their balance: Daily revenue is linear and investments can be percentage increases
 
 
 def get_claim_options(ctx: AutocompleteContext) -> list:
@@ -169,7 +169,6 @@ class Currency(Cog):
         if view.value:
             await ctx.respond(self._transfer(ctx, amount, source, destination, transaction=transaction))
             return
-        await ctx.respond("❌ **Transaction canceled**.", ephemeral=True)
 
     @slash_command()
     async def work(self, ctx: ApplicationContext):
@@ -234,7 +233,7 @@ class Currency(Cog):
                 return
             await ctx.respond("You are not done working.")
 
-        if offer == "special": 
+        if offer == "special":
             wallet.set_balance(wallet.get_balance() + 9999)
             await ctx.respond("Here is your Special!")
 
@@ -266,7 +265,6 @@ class Currency(Cog):
                 return
             await ctx.respond(f":white_check_mark: Successfully **sold** {subject.mention} **for {price}**.")
             return
-        await ctx.respond("❌ **Successfully canceled**.", ephemeral=True)
 
     @slash_command()
     async def buy(self, ctx: ApplicationContext,
@@ -328,7 +326,6 @@ class Currency(Cog):
                                         colour=Colour.embed_background(), hoist=False, mentionable=False)
             await ctx.respond(f":white_check_mark: Successfully **bought** {subject.mention} **for {price}**.")
             return
-        await ctx.respond("❌ **Successfully canceled**.", ephemeral=True)
 
 
 def setup(bot: Bot):
