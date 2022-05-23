@@ -27,6 +27,7 @@ class Settings(Cog):
 
     async def cog_before_invoke(self, ctx: ApplicationContext):
         database.cursor().execute("""INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""", (ctx.guild.id,))
+        self.bot.get_cog("Currency").save_get_wallet(ctx.guild.owner)
 
     settings = SlashCommandGroup(name="settings", description="Change the bots settings on this server.",
                                  default_member_permissions=Permissions(manage_guild=True))
@@ -86,6 +87,27 @@ class Settings(Cog):
         cur = database.cursor()
         cur.execute(options[option], (values[option][value], ctx.guild_id))
         await ctx.respond(f"✅ **{option}** has been **set to {value}**.", ephemeral=True)
+
+    @settings.command()
+    async def bank(self, ctx: ApplicationContext,
+                   option: Option(str, "Select an option.", choices=["transaction fee: [0 - 100]"], required=True),
+                   value: Option(str, "Set a value.", required=True)):
+        """Configure the bank."""
+        await ctx.defer(ephemeral=True)
+
+        if not values_valid(option, value.lower()):
+            await ctx.respond(f"❌ **{value} is not valid** for {option.split(': ')[0]}.\n"
+                              "👉 **Valid options are** shown **in the brackets** behind the option.", ephemeral=True)
+            return
+
+        options = {"transaction fee": """UPDATE wallets SET Fee = ? WHERE UserID = ?"""}
+        values = {"transaction fee": {value: float(value)}}
+        option = option.split(": ")[0]
+
+        cur = database.cursor()
+        cur.execute(options[option], (values[option][value] / 10, ctx.guild.owner_id))
+        self.bot.get_cog("Currency").wallets[ctx.guild.owner_id].fee = values[option][value] / 10
+        await ctx.respond(f"✅ **{option}** has been **set to {value}%**.", ephemeral=True)
 
     @settings.command()
     async def tickets(self, ctx: ApplicationContext,
