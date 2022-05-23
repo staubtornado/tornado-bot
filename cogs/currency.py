@@ -1,6 +1,7 @@
+from asyncio import sleep
 from datetime import date
 from math import ceil
-from random import choice
+from random import randint
 from re import findall
 from sqlite3 import IntegrityError
 from typing import Union
@@ -11,6 +12,7 @@ from discord.utils import basic_autocomplete
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
+from lib.currency.exceptions import EconomyError
 from lib.currency.views import ConfirmTransaction
 from lib.currency.wallet import Wallet
 
@@ -27,7 +29,20 @@ from lib.currency.wallet import Wallet
 
 
 def get_claim_options(ctx: AutocompleteContext) -> list:
-    return [choice(["Daily", "Monthly", "Special"])]
+    rtrn = []
+    wallet: Wallet = ctx.bot.get_cog("Currency").save_get_wallet(ctx.interaction.user)
+
+    try:
+        wallet.claims[ctx.interaction.guild_id]
+    except KeyError:
+        rtrn.append("Daily")
+
+    try:
+        if ctx.bot.get_cog("Currency").working[ctx.interaction.user.id] is True:
+            rtrn.append("Work")
+    except KeyError:
+        pass
+    return rtrn
 
 
 # DO NOT EDIT: 272446903940153345 (property-owner) 272446903940153345 (property)
@@ -59,6 +74,7 @@ class Currency(Cog):
         self.bot = bot
 
         self.wallets = {}
+        self.working = {}
 
     def _transfer(self, ctx: ApplicationContext, amount: int, source: Wallet, destination: Wallet,
                   transaction: tuple = None):
@@ -143,7 +159,7 @@ class Currency(Cog):
         embed = Embed(title="Confirm", description=f"You are about to send {amount} coins to another user.",
                       colour=SETTINGS["Colours"]["Default"])
         embed.add_field(name="Fee", value=f"{(local_fee + global_fee) * 100}%")
-        embed.add_field(name="Costs for you", value=costs)
+        embed.add_field(name="Costs for you", value=str(costs))
         embed.set_footer(text="You agree and understand, that this transaction is not reversible.")
 
         view = ConfirmTransaction()
@@ -156,25 +172,71 @@ class Currency(Cog):
         await ctx.respond("❌ **Transaction canceled**.", ephemeral=True)
 
     @slash_command()
+    async def work(self, ctx: ApplicationContext):
+        """Earn coins by working."""
+        await ctx.defer()
+
+        try:
+            self.working[ctx.author.id]
+        except KeyError:
+            self.working[ctx.author.id] = ctx.guild_id
+            await ctx.respond("⚒ You are **now working**. Use **/**`claim [work]` **in one hour** to **claim your "
+                              "payment**.")
+            await sleep(3600)
+            self.working[ctx.author.id] = True
+        else:
+            if self.working[ctx.author.id] is True:
+                await ctx.respond("❌ Claim payment of previous work first. (**/**`claim [work]`)")
+                return
+
+            response = f"⌛ You are **already working** on **{self.bot.get_guild(self.working[ctx.author.id])}**."
+            if ctx.guild_id == self.working[ctx.author.id]:
+                response = "⌛ You are **already working**. Use **/**`claim` [work] **in one hour** to **claim your " \
+                           "payment**."
+            await ctx.respond(response)
+
+    @slash_command()
     async def claim(self, ctx: ApplicationContext,
                     offer: Option(str, "Choose what you want to claim. Options might vary.",
                                   autocomplete=basic_autocomplete(get_claim_options), required=True)):
         """Claim your current offers."""
         await ctx.defer()
+        offer = offer.lower()
+        available_offers = ("work", "daily", "special")
+
+        if offer not in available_offers:
+            await ctx.respond(f"❌ **{offer}** is **not available**.")
+            return
+
         wallet = self.wallets[ctx.author.id]
 
-        if offer == "Daily":
-            wallet.set_balance(wallet.get_balance() + 100)
+        if offer == "daily":
+            try:
+                wallet.add_claim(ctx.guild_id, 100)
+                wallet.set_balance(wallet.get_balance() + 100)
+            except EconomyError:
+                await ctx.respond("❌ You **already claimed** your **daily coins**. Come back **tomorrow**.")
+                return
+            await ctx.respond("💵 Here are your daily **one hundred Coins on this server**.")
 
-            await ctx.respond("👉 Here are your daily **one hundred Coins on this server**.")
-            return
-        if offer == "Monthly":
-            wallet.set_balance(wallet.get_balance() + 1000)
+        if offer == "work":
+            try:
+                self.working[ctx.author.id]
+            except KeyError:
+                await ctx.respond("You are not working. Execute **/**`work` to start working.")
+                return
+            if self.working[ctx.author.id] is True:
+                payment = randint(50, 230)
 
-            await ctx.respond("👉 Here is your **monthly** reward, **one thousand coins**, on this server.")
-            return
-        wallet.set_balance(wallet.get_balance() + 9999)
-        await ctx.respond("Here is your Special!")
+                wallet.set_balance(wallet.get_balance() + payment)
+                del self.working[ctx.author.id]
+                await ctx.respond(f"💵 Here is your payment: {payment}.")
+                return
+            await ctx.respond("You are not done working.")
+
+        if offer == "special": 
+            wallet.set_balance(wallet.get_balance() + 9999)
+            await ctx.respond("Here is your Special!")
 
     @slash_command()
     async def sell(self, ctx: ApplicationContext,
