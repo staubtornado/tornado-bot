@@ -1,3 +1,4 @@
+from asyncio import sleep, ensure_future
 from datetime import date
 from typing import Union
 
@@ -5,6 +6,7 @@ from discord import Member, Embed, User
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
+from lib.currency.exceptions import EconomyError
 from lib.utils.utils import shortened
 
 
@@ -12,6 +14,7 @@ class Wallet:
     def __init__(self, member: Union[Member, User]):
         self.user = member
 
+        self.claims = {}
         self._cur = database.cursor()
         self._revenue = None
 
@@ -44,6 +47,20 @@ class Wallet:
             self._cur.execute("""Update wallets SET LastModified = ? where UserID = ?""", (today, self.user.id))
             self._cur.execute("""Update wallets SET Revenue = 0 where UserID = ?""", (self.user.id, ))
             self._revenue = 0
+
+    def add_claim(self, guild_id: int, amount: int):
+        try:
+            self.claims[guild_id]
+        except KeyError:
+            pass
+        else:
+            raise EconomyError("User has already claimed this reward.")
+
+        async def wait():
+            self.claims[guild_id] = amount
+            await sleep(86400)
+            del self.claims[guild_id]
+        ensure_future(wait())
 
     def get_balance(self) -> int:
         return self._balance

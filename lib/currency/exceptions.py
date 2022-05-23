@@ -1,0 +1,2 @@
+class EconomyError(Exception):
+    pass
