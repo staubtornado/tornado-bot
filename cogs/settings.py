@@ -105,8 +105,8 @@ class Settings(Cog):
         option = option.split(": ")[0]
 
         cur = database.cursor()
-        cur.execute(options[option], (values[option][value] / 10, ctx.guild.owner_id))
-        self.bot.get_cog("Currency").wallets[ctx.guild.owner_id].fee = values[option][value] / 10
+        cur.execute(options[option], (values[option][value] / 100, ctx.guild.owner_id))
+        self.bot.get_cog("Currency").wallets[ctx.guild.owner_id].fee = values[option][value] / 100
         await ctx.respond(f"✅ **{option}** has been **set to {value}%**.", ephemeral=True)
 
     @settings.command()
