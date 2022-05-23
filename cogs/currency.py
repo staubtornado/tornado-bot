@@ -102,7 +102,7 @@ class Currency(Cog):
         self.wallets[SETTINGS["OwnerIDs"][0]].set_balance(self.wallets[ctx.guild.owner_id].get_balance() +
                                                           ceil(amount *
                                                                SETTINGS["Cogs"]["Economy"]["WallstreetFee"]))
-        return f":white_check_mark: **Transaction confirmed**: Transferred {amount} to {destination.user.mention}."
+        return f"✅ **Transaction confirmed**: Transferred {amount} to {destination.user.mention}."
 
     def save_get_wallet(self, member: Union[Member, User]) -> Wallet:
         try:
@@ -222,7 +222,7 @@ class Currency(Cog):
             try:
                 self.working[ctx.author.id]
             except KeyError:
-                await ctx.respond("You are not working. Execute **/**`work` to start working.")
+                await ctx.respond("You are **not working**. Execute **/**`work` to start working.")
                 return
             if self.working[ctx.author.id] is True:
                 payment = randint(50, 230)
@@ -231,7 +231,7 @@ class Currency(Cog):
                 del self.working[ctx.author.id]
                 await ctx.respond(f"💵 Here is your payment: {payment}.")
                 return
-            await ctx.respond("You are not done working.")
+            await ctx.respond("You are **not done working**.")
 
         if offer == "special":
             wallet.set_balance(wallet.get_balance() + 9999)
@@ -263,7 +263,7 @@ class Currency(Cog):
             except IntegrityError:
                 await ctx.respond("❌ You **cannot sell this property** anymore.", ephemeral=True)
                 return
-            await ctx.respond(f":white_check_mark: Successfully **sold** {subject.mention} **for {price}**.")
+            await ctx.respond(f"✅ Successfully **sold** {subject.mention} **for {price}**.")
             return
 
     @slash_command()
@@ -324,7 +324,7 @@ class Currency(Cog):
                     break
             await ctx.guild.create_role(name=f"DO NOT EDIT: {ctx.author.id} (property-owner) {subject.id} (property)",
                                         colour=Colour.embed_background(), hoist=False, mentionable=False)
-            await ctx.respond(f":white_check_mark: Successfully **bought** {subject.mention} **for {price}**.")
+            await ctx.respond(f"✅ Successfully **bought** {subject.mention} **for {price}**.")
             return
 
 
