@@ -11,6 +11,7 @@ from spotipy import SpotifyException
 from yt_dlp import utils
 
 from data.config.settings import SETTINGS
+from data.db.memory import database
 from lib.music.exceptions import YTDLError
 from lib.music.extraction import YTDLSource
 from lib.music.song import Song, SongStr
@@ -68,6 +69,7 @@ class Music(Cog):
             self.bot.loop.create_task(state.stop())
 
     async def cog_before_invoke(self, ctx: ApplicationContext):
+        database.cursor().execute("""INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""", (ctx.guild.id,))
         ctx.voice_state = self.get_voice_state(ctx)
 
     @slash_command()
@@ -423,7 +425,7 @@ class Music(Cog):
             return
 
         if not ctx.voice_state.voice:
-            await self.join(self, ctx)
+            await self.join(ctx)
 
         async def add_song(track_name: str, fetch_source: bool = False):
             if not fetch_source:
