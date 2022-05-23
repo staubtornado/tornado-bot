@@ -242,7 +242,7 @@ class Currency(Cog):
         embed = Embed(title="Confirm", description=f"You are about to buy **{subject.mention}** for **{price}**.",
                       colour=SETTINGS["Colours"]["Default"])
         embed.add_field(name="Fee", value=f"{(local_fee + global_fee) * 100}%")
-        embed.add_field(name="Total costs", value=costs)
+        embed.add_field(name="Total costs", value=str(costs))
         embed.set_footer(text="I understand that I only receive the permission to use the subject and that I do not "
                               "own it. I may loose it due to server or bot admins.")
 
