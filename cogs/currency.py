@@ -85,7 +85,7 @@ class Currency(Cog):
                 self.wallets[ctx.guild.owner_id] = Wallet(ctx.guild.owner)
             local_fee: float = self.wallets[ctx.guild.owner_id].fee
             global_fee: float = SETTINGS["Cogs"]["Economy"]["WallstreetFee"]
-            costs = amount + ceil(amount * (local_fee + global_fee))
+            costs = amount + ceil(amount * local_fee) + ceil(amount * global_fee)
 
             if source.get_balance() - costs < 0 or amount < 0:
                 return "❌ You do **not** have **enough coins**."
