@@ -2,8 +2,8 @@ from datetime import timedelta
 from time import time, strftime, gmtime
 
 from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, Forbidden, \
-    Message
-from discord.ext.commands import Cog, has_permissions
+    Message, default_permissions
+from discord.ext.commands import Cog
 
 from data.config.settings import SETTINGS
 from lib.utils.utils import extract_int
@@ -16,7 +16,7 @@ async def get_reasons(ctx: AutocompleteContext) -> list:
 
 async def get_banned_members(ctx: AutocompleteContext) -> list:
     rtrn = []
-    for entry in await ctx.interaction.guild.bans():
+    async for entry in ctx.interaction.guild.bans():
         option = f"{str(entry.user).replace('|', '')} ( {entry.user.id} ) | Reason: {entry.reason}"
         if len(option) > 100:
             option = f"{option[:97]}..."
@@ -29,7 +29,7 @@ class Utilities(Cog):
         self.bot = bot
 
     @slash_command()
-    @has_permissions(manage_messages=True)
+    @default_permissions(manage_messages=True)
     async def purge(self, ctx: ApplicationContext, amount: int = 100, ignore: Member = None,
                     order: Option(str, "Select where the bot should start deleting.",
                                   required=False, choices=["Oldest", "Newest"]) = "Newest"):
@@ -43,7 +43,7 @@ class Utilities(Cog):
             f"messages**.", ephemeral=True)
 
     @slash_command()
-    @has_permissions(ban_members=True)
+    @default_permissions(ban_members=True)
     async def ban(self, ctx: ApplicationContext, user: Member,
                   reason: Option(str, "Select a preset or enter a reason.", autocomplete=get_reasons,
                                  required=False) = "None"):
@@ -63,7 +63,7 @@ class Utilities(Cog):
         await ctx.respond(f"🔨 **Banned {user}**.{state}")
 
     @slash_command()
-    @has_permissions(ban_members=True)
+    @default_permissions(ban_members=True)
     async def unban(self, ctx: ApplicationContext,
                     user: Option(str, "Select a banned user.", autocomplete=get_banned_members, required=True),
                     reason: str = None):
