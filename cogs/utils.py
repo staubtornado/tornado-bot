@@ -6,7 +6,7 @@ from discord import Bot, slash_command, ApplicationContext, Member, Autocomplete
 from discord.ext.commands import Cog
 
 from data.config.settings import SETTINGS
-from lib.utils.utils import extract_int
+from lib.utils.utils import extract_int, time_to_string
 
 
 async def get_reasons(ctx: AutocompleteContext) -> list:
@@ -85,15 +85,7 @@ class Utilities(Cog):
     @slash_command()
     async def uptime(self, ctx: ApplicationContext):
         """Check the bots' uptime."""
-        duration = (time() - self.bot.uptime)
-
-        if duration < 3600:
-            output = strftime('%M:%S', gmtime(duration))
-        elif 86400 > duration >= 3600:
-            output = strftime('%H:%M:%S', gmtime(duration))
-        else:
-            output = timedelta(seconds=duration)
-        await ctx.respond(f"**Uptime**: {output}")
+        await ctx.respond(f"**Uptime**: {time_to_string(time() - self.bot.uptime)}")
 
     @slash_command()
     async def help(self, ctx: ApplicationContext):

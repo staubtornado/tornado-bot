@@ -1,8 +1,6 @@
 from asyncio import get_event_loop
-from datetime import timedelta
 from functools import partial as func_partial
 from json import loads
-from time import strftime, gmtime
 from typing import Union
 
 from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio
@@ -11,6 +9,7 @@ from yt_dlp import YoutubeDL
 
 from data.config.settings import SETTINGS
 from lib.music.exceptions import YTDLError
+from lib.utils.utils import time_to_string
 
 
 class YTDLSource(PCMVolumeTransformer):
@@ -154,11 +153,7 @@ class YTDLSource(PCMVolumeTransformer):
             return "LIVE"
         duration: int = int(duration)
         if duration > 0:
-            if duration < 3600:
-                return strftime('%M:%S', gmtime(duration))
-            elif 86400 > duration >= 3600:
-                return strftime('%H:%M:%S', gmtime(duration))
-            return timedelta(seconds=duration)
+            return time_to_string(duration)
         return "Error"
 
     @staticmethod
