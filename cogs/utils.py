@@ -1,5 +1,5 @@
-from datetime import timedelta
-from time import time, strftime, gmtime
+from difflib import get_close_matches
+from time import time
 
 from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, Forbidden, \
     Message, default_permissions
@@ -9,9 +9,13 @@ from data.config.settings import SETTINGS
 from lib.utils.utils import extract_int, time_to_string
 
 
-async def get_reasons(ctx: AutocompleteContext) -> list:
+async def get_reasons(ctx: AutocompleteContext) -> list[str]:
     return ["Violation of Rules", "Spam", "Harassment", "Advertisement", "NSFW outside of the NSFW channels",
             "Violation of Discord Community Guidelines or Terms of Service.", "Inappropriate name or profile picture"]
+
+
+async def get_cogs(ctx: AutocompleteContext) -> list[str]:
+    return [cog.lower() for cog in ctx.bot.cogs]
 
 
 async def get_banned_members(ctx: AutocompleteContext) -> list:
@@ -107,10 +111,30 @@ class Utilities(Cog):
         await ctx.respond(f"**Uptime**: {time_to_string(time() - self.bot.uptime)}")
 
     @slash_command()
-    async def help(self, ctx: ApplicationContext):
+    async def help(self, ctx: ApplicationContext,
+                   extension: Option(str, description="Select an extension for which you want to receive precise "
+                                                      "information.", autocomplete=get_cogs, required=False) = None):
         """Get a list of features and information about the bot."""
-        embed = Embed(title="TornadoBot", colour=SETTINGS["Colours"]["Default"],
-                      description="Add to server | Support Server | GitHub")
+        embed = Embed(title="Help", colour=SETTINGS["Colours"]["Default"],
+                      description="Add the bot⠀|⠀Support Server⠀|⠀Vote on Top.gg⠀|⠀Donate\n\n"
+                                  f"**Ping**: `{round(self.bot.latency * 1000)}ms` | "
+                                  f"**Uptime**: {time_to_string(time() - self.bot.uptime)}")
+
+        if extension is None:
+            for cog in self.bot.cogs:
+                cog = self.bot.get_cog(cog)
+                embed.add_field(name=cog.qualified_name, value=f"**/**`help {cog.qualified_name.lower()}`")
+        else:
+            if self.bot.get_cog(extension) is None:
+                matches = get_close_matches(extension, self.bot.cogs)
+                if len(matches) == 0:
+                    await ctx.respond(f"❌ `{extension}` is **not valid**.")
+                    return
+                extension = str(matches[0])
+            extension = self.bot.get_cog(extension)
+
+            for command in extension.walk_commands():
+                embed.add_field(name=command.qualified_name, value="None", inline=False)
         await ctx.respond(embed=embed)
 
 
