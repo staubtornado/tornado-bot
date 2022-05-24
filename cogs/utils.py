@@ -43,6 +43,25 @@ class Utilities(Cog):
             f"messages**.", ephemeral=True)
 
     @slash_command()
+    @default_permissions(kick_members=True)
+    async def kick(self, ctx: ApplicationContext, user: Member,
+                   reason: Option(str, "Select a preset or enter a reason.", autocomplete=get_reasons,
+                                  required=False) = "None"):
+        """Removes a user from the guild."""
+
+        embed = Embed(title="You got kicked.", description=f"You got kicked on `{ctx.guild.name}`.",
+                      colour=SETTINGS["Colours"]["Error"])
+        embed.add_field(name="Reason", value=reason)
+
+        state = ""
+        try:
+            await user.send(embed=embed)
+        except Forbidden:
+            state = "\n❌  Failed to notify him."
+        await ctx.guild.kick(user=user, reason=reason)
+        await ctx.respond(f"👟 **Kicked {user}**.{state}")
+
+    @slash_command()
     @default_permissions(ban_members=True)
     async def ban(self, ctx: ApplicationContext, user: Member,
                   reason: Option(str, "Select a preset or enter a reason.", autocomplete=get_reasons,
