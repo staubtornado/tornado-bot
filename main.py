@@ -4,7 +4,7 @@ from sqlite3 import connect, Error
 from time import time
 from traceback import format_exc
 
-from discord import Bot, ApplicationCommandInvokeError, ApplicationContext
+from discord import Bot, ApplicationCommandInvokeError, ApplicationContext, CheckFailure
 from discord.ext.tasks import loop
 from dotenv import load_dotenv
 
@@ -52,6 +52,10 @@ async def on_application_command_error(ctx: ApplicationContext, error):
     if not SETTINGS["Production"]:
         await ctx.respond(f"❌ An **error occurred**: `{error}`.")
         raise error
+
+    if isinstance(error, CheckFailure):
+        await ctx.respond("❌ This guild is **not permitted to use** that **command**.")
+        return
 
     if isinstance(error, ApplicationCommandInvokeError):
         await ctx.respond(f"❌ An **error occurred**: `{error}`.")
