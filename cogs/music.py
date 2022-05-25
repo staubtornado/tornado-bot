@@ -5,12 +5,13 @@ from traceback import format_exc
 
 from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option, \
     AutocompleteContext
-from discord.ext.commands import Cog
+from discord.ext.commands import Cog, check
 from discord.utils import get, basic_autocomplete
 from psutil import virtual_memory
 from spotipy import SpotifyException
 from yt_dlp import utils
 
+from cogs.premium import Premium
 from data.config.settings import SETTINGS
 from data.db.memory import database
 from lib.music.exceptions import YTDLError
@@ -70,7 +71,10 @@ class Music(Cog):
             self.bot.loop.create_task(state.stop())
 
     async def cog_before_invoke(self, ctx: ApplicationContext):
-        database.cursor().execute("""INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""", (ctx.guild.id,))
+        cur = database.cursor()
+
+        cur.execute("""INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""", (ctx.guild.id,))
+        cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id, ))
         ctx.voice_state = self.get_voice_state(ctx)
 
     @slash_command()
@@ -422,6 +426,7 @@ class Music(Cog):
         await ctx.respond(f"🔁 **Unlooped queue /**`iterate`e to **enable** loop.")
 
     @slash_command()
+    @check(Premium.has_beta)
     async def play(self, ctx: CustomApplicationContext,
                    search: Option(str, "Enter the name of the song, a URL or a preset.",
                                   autocomplete=basic_autocomplete(auto_complete), required=True)):
