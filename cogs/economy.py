@@ -6,15 +6,16 @@ from re import findall
 from sqlite3 import IntegrityError
 from typing import Union
 
-from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, User, Colour
+from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, User, Colour, \
+    PermissionOverwrite
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
-from lib.currency.exceptions import EconomyError
-from lib.currency.views import ConfirmTransaction
-from lib.currency.wallet import Wallet
+from lib.economy.exceptions import EconomyError
+from lib.economy.views import ConfirmTransaction
+from lib.economy.wallet import Wallet
 
 
 # Concept:
@@ -30,7 +31,7 @@ from lib.currency.wallet import Wallet
 
 def get_claim_options(ctx: AutocompleteContext) -> list:
     rtrn = []
-    wallet: Wallet = ctx.bot.get_cog("Currency").save_get_wallet(ctx.interaction.user)
+    wallet: Wallet = ctx.bot.get_cog("Economy").save_get_wallet(ctx.interaction.user)
 
     try:
         wallet.claims[ctx.interaction.guild_id]
@@ -38,7 +39,7 @@ def get_claim_options(ctx: AutocompleteContext) -> list:
         rtrn.append("Daily")
 
     try:
-        if ctx.bot.get_cog("Currency").working[ctx.interaction.user.id] is True:
+        if ctx.bot.get_cog("Economy").working[ctx.interaction.user.id] is True:
             rtrn.append("Work")
     except KeyError:
         pass
@@ -69,7 +70,7 @@ def get_server_subjects(ctx: Union[AutocompleteContext, ApplicationContext]) -> 
     return rtrn
 
 
-class Currency(Cog):
+class Economy(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
@@ -90,7 +91,7 @@ class Currency(Cog):
             if source.get_balance() - costs < 0 or amount < 0:
                 return "❌ You do **not** have **enough coins**."
             if destination.fee != 0 and not transaction:
-                return f"❌ {destination.user} makes **money through fees** on this server: You **cannot pay him**."
+                return f"❌ {destination.user} makes **coins through fees** on this server: You **cannot pay him**."
             return costs, local_fee, global_fee
 
         costs, local_fee, global_fee = transaction
@@ -198,7 +199,7 @@ class Currency(Cog):
     async def claim(self, ctx: ApplicationContext,
                     offer: Option(str, "Choose what you want to claim. Options might vary.",
                                   autocomplete=basic_autocomplete(get_claim_options), required=True)):
-        """Claim your current offers."""
+        """Claim coins."""
         await ctx.defer()
         offer = offer.lower()
         available_offers = ("work", "daily", "special")
@@ -232,10 +233,6 @@ class Currency(Cog):
                 await ctx.respond(f"💵 Here is your payment: {payment}.")
                 return
             await ctx.respond("You are **not done working**.")
-
-        if offer == "special":
-            wallet.set_balance(wallet.get_balance() + 9999)
-            await ctx.respond("Here is your Special!")
 
     @slash_command()
     async def sell(self, ctx: ApplicationContext,
@@ -322,11 +319,17 @@ class Currency(Cog):
                         and str(subject.id) in role.name:
                     await role.delete()
                     break
-            await ctx.guild.create_role(name=f"DO NOT EDIT: {ctx.author.id} (property-owner) {subject.id} (property)",
-                                        colour=Colour.embed_background(), hoist=False, mentionable=False)
+            await ctx.guild.create_role(name=f"DO NOT EDIT: {ctx.author.id} (property-owner) {subject.id} "
+                                             f"(property)", colour=Colour.embed_background(),
+                                        hoist=False, mentionable=False)
+
+            await subject.set_permissions(ctx.author,
+                                          overwrite=PermissionOverwrite(manage_channels=True, view_channel=True),
+                                          reason="User bought subject.")
+
             await ctx.respond(f"✅ Successfully **bought** {subject.mention} **for {price}**.")
             return
 
 
 def setup(bot: Bot):
-    bot.add_cog(Currency(bot))
+    bot.add_cog(Economy(bot))

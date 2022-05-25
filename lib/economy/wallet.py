@@ -6,7 +6,7 @@ from discord import Member, Embed, User
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
-from lib.currency.exceptions import EconomyError
+from lib.economy.exceptions import EconomyError
 from lib.utils.utils import shortened
 
 
@@ -32,7 +32,6 @@ class Wallet:
         except TypeError:
             self._cur.execute("""INSERT INTO wallets (UserID) VALUES (?)""", (self.user.id, ))
             self._balance = 0
-        print(member)
 
         self._check_revenue()
         if self._revenue != 0:

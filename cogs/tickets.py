@@ -16,11 +16,11 @@ class Tickets(Cog):
             self.bot.add_view(Support())
             self.bot.persistent_views_added = True
 
-    @slash_command()
-    async def send_support_message(self, ctx: ApplicationContext):
-        await ctx.send(embed=Embed(title="Create Ticket", description="Create a ticket by clicking the button below."),
-                       view=Support())
-        await ctx.respond("Done!", ephemeral=False)
+    # @slash_command()
+    # async def send_support_message(self, ctx: ApplicationContext):
+    #     await ctx.send(embed=Embed(title="Create Ticket", description="Create a ticket by clicking the button below."),
+    #                    view=Support())
+    #     await ctx.respond("Done!", ephemeral=False)
 
 
 def setup(bot: Bot):

@@ -5,7 +5,7 @@ from discord.ext.commands import Cog
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
-from lib.currency.views import ConfirmTransaction
+from lib.economy.views import ConfirmTransaction
 
 
 class Premium(Cog):

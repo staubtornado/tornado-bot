@@ -2,7 +2,7 @@ from discord import Bot, SlashCommandGroup, ApplicationContext, Option, Category
 from discord.ext.commands import Cog
 
 from data.db.memory import database
-from lib.currency.views import ConfirmTransaction
+from lib.economy.views import ConfirmTransaction
 
 
 def values_valid(option: str, value: str) -> bool:
@@ -107,7 +107,7 @@ class Settings(Cog):
 
         cur = database.cursor()
         cur.execute(options[option], (values[option][value] / 100, ctx.guild.owner_id))
-        self.bot.get_cog("Currency").wallets[ctx.guild.owner_id].fee = values[option][value] / 100
+        self.bot.get_cog("Economy").wallets[ctx.guild.owner_id].fee = values[option][value] / 100
         await ctx.respond(f"✅ **{option}** has been **set to {value}%**.", ephemeral=True)
 
     @settings.command()
