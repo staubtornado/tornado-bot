@@ -189,13 +189,22 @@ class Music(Cog):
         if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
             ctx.voice_state.voice.pause()
             await ctx.respond("⏯ **Paused** song, use **/**`resume` to **continue**.")
-            await sleep(10800)
-            if ctx.voice_state.voice.is_paused():
-                ctx.voice_state.loop = False
-                ctx.voice_state.songs.clear()
-                ctx.voice_state.voice.stop()
-                ctx.voice_state.current = None
-                await ctx.send("💤 **Stopped** the player **due to inactivity**.")
+
+            for i in range(10):
+                await sleep(SETTINGS["Cogs"]["Music"]["MaxDuration"] / 10)
+                try:
+                    if ctx.voice_state.voice.is_paused():
+                        if i >= 9:
+                            ctx.voice_state.loop = False
+                            ctx.voice_state.songs.clear()
+                            ctx.voice_state.voice.stop()
+                            ctx.voice_state.current = None
+                            await ctx.send("💤 **Stopped** the player **due to inactivity**.")
+                            break
+                    else:
+                        break
+                except AttributeError:
+                    break
             return
         await ctx.respond("❌ The **song** is **already paused**.")
 
