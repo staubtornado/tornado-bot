@@ -1,3 +1,4 @@
+from asyncio import sleep
 from copy import copy
 from math import ceil
 from traceback import format_exc
@@ -188,6 +189,13 @@ class Music(Cog):
         if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
             ctx.voice_state.voice.pause()
             await ctx.respond("⏯ **Paused** song, use **/**`resume` to **continue**.")
+            await sleep(10800)
+            if ctx.voice_state.voice.is_paused():
+                ctx.voice_state.loop = False
+                ctx.voice_state.songs.clear()
+                ctx.voice_state.voice.stop()
+                ctx.voice_state.current = None
+                await ctx.send("💤 **Stopped** the player **due to inactivity**.")
             return
         await ctx.respond("❌ The **song** is **already paused**.")
 
