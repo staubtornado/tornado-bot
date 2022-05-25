@@ -1,5 +1,4 @@
 from sqlite3 import Cursor
-from time import sleep
 
 from discord import slash_command, ApplicationContext, Bot, Embed
 from discord.ext.commands import Cog
@@ -7,19 +6,6 @@ from discord.ext.commands import Cog
 from data.config.settings import SETTINGS
 from data.db.memory import database
 from lib.currency.views import ConfirmTransaction
-
-premium_guilds: list = []
-beta_guilds: list = []
-
-
-def update_guilds():
-    premium_guilds.clear()
-    beta_guilds.clear()
-    sleep(5)
-    query: str = """SELECT * from guilds where HasPremium = 1 OR HasBeta = 1"""
-    sleep(5)
-    for row in database.cursor().execute(query).fetchall():
-        print(row)
 
 
 class Premium(Cog):
