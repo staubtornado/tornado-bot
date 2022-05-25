@@ -2,11 +2,11 @@ from difflib import get_close_matches
 from time import time
 
 from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, Forbidden, \
-    Message, default_permissions
+    Message, default_permissions, SlashCommandGroup
 from discord.ext.commands import Cog
 
 from data.config.settings import SETTINGS
-from lib.utils.utils import extract_int, time_to_string
+from lib.utils.utils import extract_int, time_to_string, get_permissions
 
 
 async def get_reasons(ctx: AutocompleteContext) -> list[str]:
@@ -42,6 +42,7 @@ class Utilities(Cog):
 
         def is_ignored(m: Message) -> bool:
             return m.author == ignore
+
         await ctx.respond(
             f"**Deleted {len(await ctx.channel.purge(limit=amount, check=is_ignored, oldest_first=order != 'Newest'))} "
             f"messages**.", ephemeral=True)
@@ -133,8 +134,18 @@ class Utilities(Cog):
                 extension = str(matches[0])
             extension = self.bot.get_cog(extension)
 
-            for command in extension.walk_commands():
-                embed.add_field(name=command.qualified_name, value="None", inline=False)
+            client_permissions = get_permissions(ctx.author.guild_permissions)
+
+            for command in extension.walk_commands():  # Iterate through all commands in cog
+                if isinstance(command.parent, SlashCommandGroup):
+                    required_permissions = get_permissions(command.parent.default_member_permissions)
+                    if all(elem in client_permissions for elem in required_permissions):  # Check if user has all perm
+                        embed.add_field(name=command.qualified_name, value="None", inline=False)
+                    continue
+
+                required_permissions = get_permissions(command.default_member_permissions)
+                if all(elem in client_permissions for elem in required_permissions):  # Check if user has all perm
+                    embed.add_field(name=command.qualified_name, value="None", inline=False)
         await ctx.respond(embed=embed)
 
 

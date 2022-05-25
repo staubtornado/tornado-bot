@@ -2,6 +2,7 @@ from datetime import timedelta
 from time import strftime, gmtime
 from typing import Union
 
+from discord import Permissions
 from millify import millify
 
 
@@ -27,3 +28,13 @@ def time_to_string(seconds: int) -> str:
     else:
         output = timedelta(seconds=seconds)
     return output
+
+
+def get_permissions(permissions: Permissions) -> list[str]:
+    rtrn = []
+
+    for method_name in dir(permissions):  # Iterate through all attributes of the permission object
+        if not method_name.startswith("is") and not method_name.startswith("_"):  # If the attribute is a permission...
+            if getattr(permissions, method_name) is True:  # ... and that attribute is true...
+                rtrn.append(method_name)  # ... append it to the list that is returned
+    return rtrn
