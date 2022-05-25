@@ -1,10 +1,12 @@
 from sqlite3 import Cursor
 from time import sleep
 
-from discord import slash_command, ApplicationContext, Bot
+from discord import slash_command, ApplicationContext, Bot, Embed
 from discord.ext.commands import Cog
 
+from data.config.settings import SETTINGS
 from data.db.memory import database
+from lib.currency.views import ConfirmTransaction
 
 premium_guilds: list = []
 beta_guilds: list = []
@@ -24,72 +26,71 @@ class Premium(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @staticmethod
-    async def has_premium(guild_id: int) -> bool:
-        return bool(database.cursor().execute("""SELECT HasPremium from guilds where GuildID = ?""", [guild_id]))
+    async def cog_before_invoke(self, ctx: ApplicationContext):
+        database.cursor().execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id, ))
 
     @staticmethod
-    async def has_beta(guild_id: int) -> bool:
-        return bool(database.cursor().execute("""SELECT HasBeta from guilds where GuildID = ?""", [guild_id]))
+    async def has_premium(ctx: ApplicationContext) -> bool:
+        cur = database.cursor()
+        cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id, ))
+        return bool(cur.execute("""SELECT HasPremium from guilds where GuildID = ?""", [ctx.guild_id]).fetchone()[0])
+
+    @staticmethod
+    async def has_beta(ctx: ApplicationContext) -> bool:
+        cur = database.cursor()
+        cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id, ))
+        return bool(cur.execute("""SELECT HasBeta from guilds where GuildID = ?""", [ctx.guild_id]).fetchone()[0])
 
     @slash_command()
     async def activate(self, ctx: ApplicationContext, key: str) -> None:
+        """Activate premium with a premium key."""
         await ctx.defer()
 
         cur: Cursor = database.cursor()
         cur.execute("SELECT HasPremium from guilds where GuildID = ?", [ctx.guild.id])
+        row = cur.fetchone()
 
-        def update_db():
-            if cur.fetchone() is None:
-
-                cur.execute("""SELECT KeyString from keys where KeyString = ?""", [key])
-                if cur.fetchone() is None:
-                    return "❌ **Invalid key**."
-
-                cur.execute("""INSERT INTO guilds (GuildID, HasPremium) VALUES (?, ?)""", [ctx.guild.id, 1])
-                cur.execute("""DELETE from keys where KeyString = ?""", [key])
-                database.commit()
-                return
-            return "❌ You **already activated premium** on this server."
-
-        result = update_db()
-        if isinstance(result, str):
-            await ctx.respond(result)
+        if row[0] == 1:
+            await ctx.respond("❌ **You** already **have premium**.")
             return
+
+        if cur.execute("""SELECT KeyString from keys where KeyString = ?""", [key]).fetchone() is None:
+            await ctx.respond("❌ **Invalid key**.")
+            return
+
+        cur.execute("""UPDATE guilds SET HasPremium = 1 WHERE GuildID = ?""", (ctx.guild_id, ))
+        cur.execute("""DELETE from keys where KeyString = ?""", [key])
+
         await ctx.respond(f"🌟 **Thanks for buying** TornadoBot **Premium**! **{ctx.guild.name} has** now all "
                           f"**premium benefits**!")
 
     @slash_command()
-    async def beta(self, ctx: ApplicationContext, state: bool, *, key: str = None) -> None:
-        await ctx.defer()
+    async def beta(self, ctx: ApplicationContext, key: str) -> None:
+        """Deactivate or activate beta features on this server."""
+        await ctx.defer(ephemeral=True)
 
         cur: Cursor = database.cursor()
-        cur.execute("""SELECT HasBeta from guilds where GuildID = ?""", [ctx.guild.id])
+        cur.execute("SELECT HasBeta from guilds where GuildID = ?", [ctx.guild.id])
+        row = cur.fetchone()
 
-        def update_db():
-            if cur.fetchone() is None:
-                if key is None:
-                    return "❌ It is your **first time switching to** our **beta**. Please **enter** your **beta key**."
-                if cur.execute("SELECT KeyString from keys where KeyString = ?", [key]).fetchone() is None:
-                    return "❌ **Invalid key**."
-
-                cur.execute("""INSERT INTO guilds (GuildID, HasBeta) VALUES (?, ?)""", [ctx.guild.id, int(state)])
-                cur.execute("""DELETE from keys where KeyString = ?""", [key])
-                return
-            cur.execute("""Update guilds set HasBeta = ? where GuildID = ?""", (int(state), ctx.guild.id))
-
-        result = update_db()
-        database.commit()
-
-        if isinstance(result, str):
-            await ctx.respond(result)
+        if row[0] == 1:
+            await ctx.respond("❌ **You** already **have beta features enabled**.")
             return
 
-        if state:
-            state: str = "available on this server**, some of them **might cause bugs**. Thanks for your patience."
-        else:
-            state: str = "disabled** on this server."
-        await ctx.respond(f"✅ **Beta features are now {state}")
+        if cur.execute("""SELECT KeyString from keys where KeyString = ?""", [key]).fetchone() is None:
+            await ctx.respond("❌ **Invalid key**.")
+            return
+
+        view = ConfirmTransaction()
+        await ctx.respond(embed=Embed(title="Are you sure?",
+                                      description="Beta features might not work as expected or lack with content. This "
+                                                  "process cannot currently be reverted.",
+                                      colour=SETTINGS["Colours"]["Error"]), view=view, ephemeral=True)
+        await view.wait()
+        if view.value:
+            cur.execute("""UPDATE guilds SET HasBeta = 1 WHERE GuildID = ?""", (ctx.guild_id, ))
+            cur.execute("""DELETE from keys where KeyString = ?""", [key])
+            await ctx.respond(f"🐞 **Beta features** are now **enabled on** this **server**.")
 
 
 def setup(bot: Bot):
