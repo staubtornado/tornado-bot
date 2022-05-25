@@ -28,7 +28,7 @@ class Settings(Cog):
 
     async def cog_before_invoke(self, ctx: ApplicationContext):
         database.cursor().execute("""INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""", (ctx.guild.id,))
-        self.bot.get_cog("Currency").save_get_wallet(ctx.guild.owner)
+        self.bot.get_cog("Economy").save_get_wallet(ctx.guild.owner)
 
     settings = SlashCommandGroup(name="settings", description="Change the bots settings on this server.",
                                  default_member_permissions=Permissions(manage_guild=True))
