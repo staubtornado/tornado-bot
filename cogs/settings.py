@@ -2,6 +2,7 @@ from discord import Bot, SlashCommandGroup, ApplicationContext, Option, Category
 from discord.ext.commands import Cog
 
 from data.db.memory import database
+from lib.currency.views import ConfirmTransaction
 
 
 def values_valid(option: str, value: str) -> bool:
@@ -115,6 +116,21 @@ class Settings(Cog):
                                      required=True), value: Option(str, "Set a value.", required=True)):
         """Configure the ticket system."""
         await ctx.defer(ephemeral=True)
+        cur = database.cursor()
+
+        for db_value in cur.execute("""SELECT TicketsCreateVoiceChannel, TicketsSupportRoleID, TicketsCategoryID 
+                                       FROM settings WHERE GuildID = ?""", (ctx.guild_id,)).fetchone():
+            if db_value is None:
+                view = ConfirmTransaction()
+
+                await ctx.respond("The **tickets are not ready** yet. Would you like to **set them up?**",
+                                  view=view, ephemeral=True)
+
+                await view.wait()
+                if view.value:
+                    # SETUP
+                    pass
+                return
 
         if not values_valid(option, value.lower()):
             await ctx.respond(f"❌ **{value} is not valid** for {option.split(': ')[0]}.\n"
@@ -125,7 +141,6 @@ class Settings(Cog):
         values = {"voice channel": {"true": 1, "false": 0}}
         option = option.split(": ")[0]
 
-        cur = database.cursor()
         cur.execute(options[option], (values[option][value], ctx.guild_id))
         await ctx.respond(f"✅ **{option}** has been **set to {value}**.", ephemeral=True)
 
