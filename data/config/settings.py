@@ -33,7 +33,7 @@ SETTINGS: dict = {
             "WallstreetFee": 0.003
         }
     },
-    "Version": "0.0.2a",  # Bot version
+    "Version": "0.0.3a",  # Bot version
     "Production": False,  # If the bot is running in production or not
     "ServiceSyncInSeconds": 500  # How often the bot should sync with the service
 }
