@@ -5,7 +5,7 @@ from millify import millify
 from data.config.settings import SETTINGS
 
 
-@loop(minutes=SETTINGS["ServiceSyncInSeconds"])
+@loop(seconds=SETTINGS["ServiceSyncInSeconds"])
 async def update_rich_presence(bot: Bot):
     await bot.wait_until_ready()
     stats: str = f"{millify(len(bot.guilds), drop_nulls=True, precision=1)} servers | " \
