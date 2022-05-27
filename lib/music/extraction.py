@@ -25,7 +25,7 @@ class YTDLSource(PCMVolumeTransformer):
         'logtostderr': False,
         'quiet': True,
         'no_warnings': False,
-        'default_search': 'auto',
+        'default_search': 'ytsearch',
         'source_address': '0.0.0.0',
     }
 
