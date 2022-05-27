@@ -1,8 +1,9 @@
 from asyncio import run
+from datetime import datetime
 from os import getenv, listdir
 from sqlite3 import connect, Error
 from time import time
-from traceback import format_exc
+from traceback import format_exc, format_tb
 
 from discord import Bot, ApplicationCommandInvokeError, ApplicationContext, CheckFailure
 from discord.ext.tasks import loop
@@ -52,6 +53,11 @@ async def on_application_command_error(ctx: ApplicationContext, error):
     if not SETTINGS["Production"]:
         await ctx.respond(f"❌ An **error occurred**: `{error}`.")
         raise error
+
+    file = open(f"./data/tracebacks/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.txt", "w")
+    file.write("".join(format_tb(error.original.__traceback__)))
+
+    file.close()
 
     if isinstance(error, CheckFailure):
         await ctx.respond("❌ This guild is **not permitted to use** that **command**.")
