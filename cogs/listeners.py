@@ -14,7 +14,7 @@ class Listeners(Cog):
 
     @Cog.listener()
     async def on_guild_join(self, guild: Guild):
-        database.cursor().execute("""INSERT INTO guilds (GuildID) VALUES (?)""", [guild.id])
+        database.cursor().execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", [guild.id])
         database.commit()
         await guild.owner.send(embed=Embed(title="Welcome!", description=f"Thanks for adding TornadoBot to "
                                                                          f"`{guild.name}`.",
