@@ -120,6 +120,9 @@ class ExperienceSystem:
 
 
 class Experience(Cog):
+    """
+    Gain experience with every message you type and compete with other users.
+    """
     def __init__(self, bot: Bot):
         self.bot = bot
 

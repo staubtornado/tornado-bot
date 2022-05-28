@@ -29,6 +29,9 @@ async def get_banned_members(ctx: AutocompleteContext) -> list:
 
 
 class Utilities(Cog):
+    """
+    Useful commands for moderators, server owners and information about the bot.
+    """
     def __init__(self, bot: Bot):
         self.bot = bot
 

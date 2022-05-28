@@ -23,6 +23,9 @@ def values_valid(option: str, value: str) -> bool:
 
 
 class Settings(Cog):
+    """
+    Configure the bot. Every option has its valid values in the brackets. Require manage guild permission.
+    """
     def __init__(self, bot: Bot):
         self.bot = bot
 

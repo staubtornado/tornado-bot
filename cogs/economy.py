@@ -71,6 +71,10 @@ def get_server_subjects(ctx: Union[AutocompleteContext, ApplicationContext]) -> 
 
 
 class Economy(Cog):
+    """
+    Buy text and voice channels, roles, and pay users for services.
+    Earn coins with the claim command or invest (soon) in something.
+    """
     def __init__(self, bot: Bot):
         self.bot = bot
 

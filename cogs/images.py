@@ -20,6 +20,9 @@ async def get_categories(ctx: AutocompleteContext = None) -> list:
 
 
 class Images(Cog):
+    """
+    View images from the most popular subreddits on Reddit. Image editing following soon.
+    """
     def __init__(self, bot: Bot):
         self.bot = bot
 

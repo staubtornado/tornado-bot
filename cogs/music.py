@@ -54,6 +54,10 @@ def ensure_voice_state(ctx: CustomApplicationContext, requires_song: bool = Fals
 
 
 class Music(Cog):
+    """
+    Play music from various sources like Spotify, YouTube or SoundCloud.
+    YouTube and Spotify playlists are supported, too.
+    """
     def __init__(self, bot: Bot):
         self.bot = bot
         self.voice_states = {}
