@@ -35,5 +35,5 @@ SETTINGS: dict = {
     },
     "Version": "0.0.3a",  # Bot version
     "Production": False,  # If the bot is running in production or not
-    "ServiceSyncInSeconds": 500  # How often the bot should sync with the service
+    "ServiceSyncInSeconds": 1800  # How often the bot should sync with the service
 }
