@@ -109,13 +109,14 @@ The bot has the following features:
 - [x] Add a command to get the bot's uptime
 - [x] Add a command to get the bot's ping
 - [x] Add a welcome message to the bot
-- [ ] Add server specific settings
-- [ ] Add a help command
+- [x] Add server specific settings
+- [x] Add a help command
 - [ ] Add games to the bot
 - [ ] Add multiple languages to the bot
 - [ ] Create a requirements.txt file
 - [ ] Improve SQL so it can add missing columns
 - [ ] Add economy system
+- [ ] Add more server specific settings
 
 ---
 
