@@ -7,6 +7,7 @@ from lib.tickets.views import Support
 class Tickets(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.public = False
 
     @Cog.listener()
     async def on_ready(self):
