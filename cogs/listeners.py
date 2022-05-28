@@ -11,6 +11,7 @@ from data.db.memory import database
 class Listeners(Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.public = False
 
     @Cog.listener()
     async def on_guild_join(self, guild: Guild):
