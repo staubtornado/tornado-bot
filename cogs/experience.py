@@ -154,7 +154,7 @@ class Experience(Cog):
 
     @slash_command()
     async def leaderboard(self, ctx: ApplicationContext, *, page: int = 1):
-        """Displays the most active users on this server."""
+        """Most active users on this server."""
         await ctx.defer()
 
         cur: Cursor = database.cursor()
