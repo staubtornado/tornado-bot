@@ -175,7 +175,8 @@ class Settings(Cog):
             await ctx.respond("❌ **You** already **have premium**.")
             return
 
-        if cur.execute("""SELECT KeyString from keys where KeyString = ?""", [key]).fetchone() is None:
+        key = cur.execute("""SELECT KeyString, EnablesPremium FROM keys WHERE KeyString = ?""", [key]).fetchone()
+        if key is None or key[1] == 0:
             await ctx.respond("❌ **Invalid key**.")
             return
 
@@ -198,7 +199,8 @@ class Settings(Cog):
             await ctx.respond("❌ **You** already **have beta features enabled**.")
             return
 
-        if cur.execute("""SELECT KeyString from keys where KeyString = ?""", [key]).fetchone() is None:
+        key = cur.execute("""SELECT KeyString, EnablesBeta FROM keys WHERE KeyString = ?""", [key]).fetchone()
+        if key is None or key[1] == 0:
             await ctx.respond("❌ **Invalid key**.")
             return
 
