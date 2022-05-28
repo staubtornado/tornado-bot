@@ -1,4 +1,4 @@
-from datetime import timedelta, datetime
+from datetime import datetime
 from time import strftime, gmtime
 from traceback import format_tb
 from typing import Union
@@ -27,7 +27,7 @@ def time_to_string(seconds: int) -> str:
     elif 86400 > seconds >= 3600:
         output = strftime('%H:%M:%S', gmtime(seconds))
     else:
-        output = timedelta(seconds=seconds)
+        output = strftime("%d:%H:%M:%S", gmtime(seconds))
     return output
 
 
