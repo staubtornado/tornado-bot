@@ -11,7 +11,7 @@ from psutil import virtual_memory
 from spotipy import SpotifyException
 from yt_dlp import utils
 
-from cogs.premium import Premium
+from cogs.settings import Settings
 from data.config.settings import SETTINGS
 from data.db.memory import database
 from lib.music.exceptions import YTDLError
@@ -434,7 +434,7 @@ class Music(Cog):
         await ctx.respond(f"🔁 **Unlooped queue /**`iterate`e to **enable** loop.")
 
     @slash_command()
-    @check(Premium.has_beta)
+    @check(Settings.has_beta)
     async def play(self, ctx: CustomApplicationContext,
                    search: Option(str, "Enter the name of the song, a URL or a preset.",
                                   autocomplete=basic_autocomplete(auto_complete), required=True)):
