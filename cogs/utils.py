@@ -120,13 +120,25 @@ class Utilities(Cog):
                                                       "information.", autocomplete=get_cogs, required=False) = None):
         """Get a list of features and information about the bot."""
         embed = Embed(title="Help", colour=SETTINGS["Colours"]["Default"],
-                      description="Add the bot⠀|⠀Support Server⠀|⠀Vote on Top.gg⠀|⠀Donate\n\n"
+                      description=f"[<:member_join:980085600227065906> Add Me!]"
+                                  f"(https://discord.com/api/oauth2/authorize?client_id={self.bot.user.id}"
+                                  "&permissions=1394047577334&scope=bot%20applications.commands)⠀|⠀"
+                                  f"<:rooBless:980086267360468992> Support Server⠀|⠀"
+                                  f"<a:rooLove:980087863477669918> Vote on Top.gg⠀|⠀"
+                                  f"<:rooSellout:980086802834681906> Donate\n{'-'*60}\n"
                                   f"**Ping**: `{round(self.bot.latency * 1000)}ms` | "
-                                  f"**Uptime**: {time_to_string(time() - self.bot.uptime)}")
+                                  f"**Uptime**: `{time_to_string(time() - self.bot.uptime)}` | "
+                                  f"**Version**: `{SETTINGS['Version']}`\n{'-'*60}")
 
         if extension is None:
             for cog in self.bot.cogs:
                 cog = self.bot.get_cog(cog)
+
+                try:
+                    if not cog.public:
+                        continue
+                except AttributeError:
+                    pass
                 embed.add_field(name=cog.qualified_name, value=f"**/**`help {cog.qualified_name.lower()}`")
         else:
             if self.bot.get_cog(extension) is None:
@@ -137,18 +149,21 @@ class Utilities(Cog):
                 extension = str(matches[0])
             extension = self.bot.get_cog(extension)
 
+            embed.title = f"{extension.qualified_name} Help"
+            embed.description += f"\n{extension.description}"
             client_permissions = get_permissions(ctx.author.guild_permissions)
 
             for command in extension.walk_commands():  # Iterate through all commands in cog
-                if isinstance(command.parent, SlashCommandGroup):
+                if isinstance(command.parent, SlashCommandGroup):  # TODO: WORK WITH SYNCED COMMANDS
                     required_permissions = get_permissions(command.parent.default_member_permissions)
                     if all(elem in client_permissions for elem in required_permissions):  # Check if user has all perm
-                        embed.add_field(name=command.qualified_name, value="None", inline=False)
+                        embed.add_field(name=f"/{command.qualified_name}", value=f"`{command.description}`",
+                                        inline=False)
                     continue
 
                 required_permissions = get_permissions(command.default_member_permissions)
                 if all(elem in client_permissions for elem in required_permissions):  # Check if user has all perm
-                    embed.add_field(name=command.qualified_name, value="None", inline=False)
+                    embed.add_field(name=f"/{command.qualified_name}", value=f"`{command.description}`", inline=False)
         await ctx.respond(embed=embed)
 
 
