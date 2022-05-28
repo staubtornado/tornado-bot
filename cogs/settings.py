@@ -34,13 +34,13 @@ class Settings(Cog):
     async def has_premium(ctx: ApplicationContext) -> bool:
         cur = database.cursor()
         cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id, ))
-        return bool(cur.execute("""SELECT HasPremium from guilds where GuildID = ?""", [ctx.guild_id]).fetchone()[0])
+        return bool(cur.execute("""SELECT HasPremium FROM guilds where GuildID = ?""", [ctx.guild_id]).fetchone()[0])
 
     @staticmethod
     async def has_beta(ctx: ApplicationContext) -> bool:
         cur = database.cursor()
         cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id, ))
-        return bool(cur.execute("""SELECT HasBeta from guilds where GuildID = ?""", [ctx.guild_id]).fetchone()[0])
+        return bool(cur.execute("""SELECT HasBeta FROM guilds WHERE GuildID = ?""", [ctx.guild_id]).fetchone()[0])
 
     async def cog_before_invoke(self, ctx: ApplicationContext):
         cur = database.cursor()
@@ -168,7 +168,7 @@ class Settings(Cog):
         await ctx.defer()
 
         cur = database.cursor()
-        cur.execute("SELECT HasPremium from guilds where GuildID = ?", [ctx.guild.id])
+        cur.execute("SELECT HasPremium FROM guilds WHERE GuildID = ?", [ctx.guild.id])
         row = cur.fetchone()
 
         if row[0] == 1:
@@ -181,7 +181,7 @@ class Settings(Cog):
             return
 
         cur.execute("""UPDATE guilds SET HasPremium = 1 WHERE GuildID = ?""", (ctx.guild_id, ))
-        cur.execute("""DELETE from keys where KeyString = ?""", [key])
+        cur.execute("""DELETE FROM keys WHERE KeyString = ?""", [key])
 
         await ctx.respond(f"🌟 **Thanks for buying** TornadoBot **Premium**! **{ctx.guild.name} has** now all "
                           f"**premium benefits**!")
@@ -192,7 +192,7 @@ class Settings(Cog):
         await ctx.defer(ephemeral=True)
 
         cur = database.cursor()
-        cur.execute("SELECT HasBeta from guilds where GuildID = ?", [ctx.guild.id])
+        cur.execute("SELECT HasBeta FROM guilds WHERE GuildID = ?", [ctx.guild.id])
         row = cur.fetchone()
 
         if row[0] == 1:
@@ -212,7 +212,7 @@ class Settings(Cog):
         await view.wait()
         if view.value:
             cur.execute("""UPDATE guilds SET HasBeta = 1 WHERE GuildID = ?""", (ctx.guild_id, ))
-            cur.execute("""DELETE from keys where KeyString = ?""", [key])
+            cur.execute("""DELETE FROM keys WHERE KeyString = ?""", [key])
             await ctx.respond(f"🐞 **Beta features** are now **enabled on** this **server**.")
 
     @ticket_settings.command()
