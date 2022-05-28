@@ -147,7 +147,7 @@ class Music(Cog):
         del self.voice_states[ctx.guild.id]
 
     @slash_command()
-    async def volume(self, ctx: CustomApplicationContext, *, volume: int):
+    async def volume(self, ctx: CustomApplicationContext, volume: int):
         """Sets the volume of the current song."""
         await ctx.defer()
 
@@ -157,7 +157,11 @@ class Music(Cog):
             return
 
         if not (0 < volume <= 100):
-            return await ctx.respond("❌ The **volume** has to be **between 0 and 100**.")
+            if volume > 100:
+                await ctx.respond("The **volume** cannot be **larger than 100%**.")
+            elif volume <= 0:
+                await ctx.respond("The **volume cannot be turned off**. Use **/**`pause` pause.")
+            return
 
         if volume < 50:
             emoji: str = "🔈"
