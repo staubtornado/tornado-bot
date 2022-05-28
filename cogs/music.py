@@ -455,7 +455,7 @@ class Music(Cog):
                 return
 
             try:
-                source = await YTDLSource.create_source(ctx, track_name, loop=self.bot.loop)
+                source = await YTDLSource.create_source(ctx, track_name.replace(":", ""), loop=self.bot.loop)
             except Exception as error:
                 return error
 

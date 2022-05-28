@@ -91,7 +91,8 @@ class VoiceState:
 
                 if isinstance(self.current, SongStr):
                     try:
-                        source = await YTDLSource.create_source(self.current.ctx, self.current.get_search(),
+                        source = await YTDLSource.create_source(ctx=self.current.ctx,
+                                                                search=self.current.get_search().replace(":", ""),
                                                                 loop=self.bot.loop)
                     except Exception as error:
                         await self.current.ctx.send(embed=Embed(description=f"💥 **Error**: {error}"))
