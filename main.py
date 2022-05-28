@@ -1,9 +1,8 @@
 from asyncio import run
-from datetime import datetime
 from os import getenv, listdir
 from sqlite3 import connect, Error
 from time import time
-from traceback import format_exc, format_tb
+from traceback import format_exc
 
 from discord import Bot, ApplicationCommandInvokeError, ApplicationContext, CheckFailure
 from discord.ext.tasks import loop
