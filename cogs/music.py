@@ -485,7 +485,6 @@ class Music(Cog):
                                          "https://open.spotify.com/track/", "spotify:track:",
                                          "https://open.spotify.com/artist/", "spotify:artist:"]):
                 song_names: list = []
-                errors: int = 0
 
                 try:
                     if "playlist" in search:
@@ -505,24 +504,27 @@ class Music(Cog):
 
                 for i, song_name in enumerate(song_names):
                     if not len(ctx.voice_state.songs) >= 100:
-                        song_process = await add_song(song_name)
-                        if isinstance(song_process, Exception):
-                            errors += 1
+                        await add_song(song_name)
                         continue
-                    errors += len(song_names) - i
-                    break
+                    await ctx.respond(f"❌ **Queue reached its limit in size**, therefore **only {i + 1} songs added** "
+                                      f"from **Spotify**.")
+                    return
 
                 info: str = song_names[0].replace(" by ", "** by **") if len(song_names) == 1 else \
-                    f"{len(song_names) - errors} songs"
+                    f"{len(song_names)} songs"
                 await ctx.respond(f"✅ Added **{info}** from **Spotify**.")
                 return
 
             video_type = await YTDLSource.check_type(search, loop=self.bot.loop)
             if video_type in ["playlist", "playlist_alt"]:
                 videos = await YTDLSource.create_source_playlist(video_type, search, loop=self.bot.loop)
-                for url in videos:
+                for i, url in enumerate(videos):
                     if not len(ctx.voice_state.songs) >= 100:
                         await add_song(url)
+                        continue
+                    await ctx.respond(f"❌ **Queue reached its limit in size**, therefore **only {i + 1} songs added** "
+                                      f"from **Youtube**.")
+                    return
                 await ctx.respond(f"✅ Added **{len(videos)}** from **YouTube**.")
                 return
 
