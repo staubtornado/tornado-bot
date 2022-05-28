@@ -19,7 +19,7 @@ from lib.music.extraction import YTDLSource
 from lib.music.song import Song, SongStr
 from lib.music.spotify import SpotifyScraping
 from lib.music.voicestate import VoiceState
-from lib.utils.utils import ordinal
+from lib.utils.utils import ordinal, save_traceback
 
 utils.bug_reports_message = lambda: ''
 
@@ -544,6 +544,7 @@ class Music(Cog):
         try:
             await process()
         except Exception as e:
+            save_traceback(e)
             await ctx.respond(f"❌ **A fatal error has occurred**: `{e}`. **You might** execute **/**`leave` to **reset "
                               f"the voice state on** this **server**.")
         ctx.voice_state.processing = False

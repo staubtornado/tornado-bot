@@ -1,5 +1,6 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from time import strftime, gmtime
+from traceback import format_tb
 from typing import Union
 
 from discord import Permissions
@@ -38,3 +39,12 @@ def get_permissions(permissions: Permissions) -> list[str]:
             if getattr(permissions, method_name) is True:  # ... and that attribute is true...
                 rtrn.append(method_name)  # ... append it to the list that is returned
     return rtrn
+
+
+def save_traceback(exception):
+    with open(f"./data/tracebacks/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.txt", "w") as file:
+        try:
+            tb = exception.original.__traceback__
+        except AttributeError:
+            tb = exception.__traceback__
+        file.write("".join(format_tb(tb)))

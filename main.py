@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from data.config.settings import SETTINGS
 from data.db.memory import database
 from lib.presence.presence import update_rich_presence
+from lib.utils.utils import save_traceback
 
 bot: Bot = Bot(owner_ids=SETTINGS["OwnerIDs"], description=SETTINGS["Description"], intents=SETTINGS["Intents"])
 
@@ -53,11 +54,7 @@ async def on_application_command_error(ctx: ApplicationContext, error):
     if not SETTINGS["Production"]:
         await ctx.respond(f"❌ An **error occurred**: `{error}`.")
         raise error
-
-    file = open(f"./data/tracebacks/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.txt", "w")
-    file.write("".join(format_tb(error.original.__traceback__)))
-
-    file.close()
+    save_traceback(error)
 
     if isinstance(error, CheckFailure):
         await ctx.respond("❌ This guild is **not permitted to use** that **command**.")
