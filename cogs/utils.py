@@ -15,7 +15,15 @@ async def get_reasons(ctx: AutocompleteContext) -> list[str]:
 
 
 async def get_cogs(ctx: AutocompleteContext) -> list[str]:
-    return [cog.lower() for cog in ctx.bot.cogs]
+    rtrn = []
+
+    for cog in ctx.bot.cogs:
+        cog = ctx.bot.get_cog(cog)
+        try:
+            rtrn.append(cog.qualified_name.lower()) if cog.public else None
+        except AttributeError:
+            pass
+    return rtrn
 
 
 async def get_banned_members(ctx: AutocompleteContext) -> list:
