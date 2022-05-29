@@ -20,10 +20,14 @@ async def get_cogs(ctx: AutocompleteContext) -> list[str]:
     for cog in ctx.bot.cogs:
         cog = ctx.bot.get_cog(cog)
         try:
-            rtrn.append(cog.qualified_name.lower()) if cog.public else None
+            if not cog.public:
+                continue
         except AttributeError:
             pass
-    return rtrn
+        rtrn.append(cog.qualified_name.lower())
+    if ctx.value == "":
+        return rtrn
+    return [x for x in rtrn if x.startswith(ctx.value)]
 
 
 async def get_banned_members(ctx: AutocompleteContext) -> list:
@@ -150,7 +154,7 @@ class Utilities(Cog):
                 embed.add_field(name=cog.qualified_name, value=f"**/**`help {cog.qualified_name.lower()}`")
         else:
             if self.bot.get_cog(extension) is None:
-                matches = get_close_matches(extension, self.bot.cogs)
+                matches = get_close_matches(extension, self.bot.cogs, n=1)
                 if len(matches) == 0:
                     await ctx.respond(f"❌ `{extension}` is **not valid**.")
                     return
