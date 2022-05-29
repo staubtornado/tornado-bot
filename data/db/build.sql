@@ -37,6 +37,11 @@ CREATE TABLE IF NOT EXISTS subjects (
     PRIMARY KEY (GuildID, Subject)
 );
 
+CREATE TABLE IF NOT EXISTS companies (
+    IndexInList INTEGER PRIMARY KEY,
+    SharePrice INTEGER
+);
+
 CREATE TABLE IF NOT EXISTS settings (
     GuildID INTEGER PRIMARY KEY,
 --  Experience

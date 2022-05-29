@@ -28,6 +28,9 @@ from lib.economy.wallet import Wallet
 # Every bot has it own economy, meaning that self-hosted versions cannot access the official economy
 # Users can invest their balance: Daily revenue is linear and investments can be percentage increases
 
+# 5 companies, each has a stock price, that updates every x seconds. When being updated there is 60 percent change of
+# the last update happening again. User can sell their stocks after 3 hours
+
 
 def get_claim_options(ctx: AutocompleteContext) -> list:
     rtrn = []
@@ -80,6 +83,7 @@ class Economy(Cog):
 
         self.wallets = {}
         self.working = {}
+        self.shares = {}
 
     def _transfer(self, ctx: ApplicationContext, amount: int, source: Wallet, destination: Wallet,
                   transaction: tuple = None):
@@ -126,6 +130,14 @@ class Economy(Cog):
             self.wallets[ctx.author.id]
         except KeyError:
             self.wallets[ctx.author.id] = Wallet(ctx.author)
+
+        if len(self.shares) == 0:
+            cur = database.cursor()
+
+            for i, company in enumerate(SETTINGS["Cogs"]["Economy"]["Companies"]):
+                cur.execute("""INSERT OR IGNORE INTO companies (IndexInList) VALUES (?)""", (i,))
+                self.shares[company] = cur.execute("""SELECT SharePrice FROM companies WHERE IndexInList = ?""",
+                                                   (i,)).fetchone()[0]
 
     @slash_command()
     async def wallet(self, ctx: ApplicationContext, *, user: Member = None):
@@ -204,7 +216,7 @@ class Economy(Cog):
                     offer: Option(str, "Choose what you want to claim. Options might vary.",
                                   autocomplete=basic_autocomplete(get_claim_options), required=True)):
         """Claim coins."""
-        await ctx.defer()
+        await ctx.defer()  # TODO: PREVENT SERVER OWNERS FROM CLAIMING
         offer = offer.lower()
         available_offers = ("work", "daily", "special")
 
@@ -237,6 +249,13 @@ class Economy(Cog):
                 await ctx.respond(f"💵 Here is your payment: {payment}.")
                 return
             await ctx.respond("You are **not done working**.")
+
+    @slash_command()
+    async def wallstreet(self, ctx: ApplicationContext):
+        """Information about the latest share prices."""
+
+
+
 
     @slash_command()
     async def sell(self, ctx: ApplicationContext,

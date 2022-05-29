@@ -30,7 +30,8 @@ SETTINGS: dict = {
             "MaxDuration": 10800  # seconds
         },
         "Economy": {
-            "WallstreetFee": 0.003
+            "WallstreetFee": 0.003,
+            "Companies": ["Puffus", "Foodiest", "QuickPacked", "MobileCRATE", "Cygner"]
         }
     },
     "Version": "0.0.3.1a",  # Bot version
