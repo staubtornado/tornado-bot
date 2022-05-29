@@ -154,16 +154,16 @@ class Utilities(Cog):
             client_permissions = get_permissions(ctx.author.guild_permissions)
 
             for command in extension.walk_commands():  # Iterate through all commands in cog
-                if isinstance(command.parent, SlashCommandGroup):  # TODO: WORK WITH SYNCED COMMANDS
+                if isinstance(command.parent, SlashCommandGroup) and ctx.guild is not None:
+                    # TODO: WORK WITH SYNCED COMMANDS
                     required_permissions = get_permissions(command.parent.default_member_permissions)
-                    if all(elem in client_permissions for elem in required_permissions):  # Check if user has all perm
-                        embed.add_field(name=f"/{command.qualified_name}", value=f"`{command.description}`",
-                                        inline=False)
-                    continue
-
-                required_permissions = get_permissions(command.default_member_permissions)
-                if all(elem in client_permissions for elem in required_permissions):  # Check if user has all perm
-                    embed.add_field(name=f"/{command.qualified_name}", value=f"`{command.description}`", inline=False)
+                    if not all(elem in client_permissions for elem in required_permissions):  # False -> perm granted
+                        continue
+                elif ctx.guild is not None:
+                    required_permissions = get_permissions(command.default_member_permissions)
+                    if not all(elem in client_permissions for elem in required_permissions):  # False -> perm granted
+                        continue
+                embed.add_field(name=f"/{command.qualified_name}", value=f"`{command.description}`", inline=False)
         await ctx.respond(embed=embed)
 
 
