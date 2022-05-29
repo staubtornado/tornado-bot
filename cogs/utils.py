@@ -10,8 +10,11 @@ from lib.utils.utils import extract_int, time_to_string, get_permissions
 
 
 async def get_reasons(ctx: AutocompleteContext) -> list[str]:
-    return ["Violation of Rules", "Spam", "Harassment", "Advertisement", "NSFW outside of the NSFW channels",
+    rtrn = ["Violation of Rules", "Spam", "Harassment", "Advertisement", "NSFW outside of the NSFW channels",
             "Violation of Discord Community Guidelines or Terms of Service.", "Inappropriate name or profile picture"]
+    if ctx.value == "":
+        return rtrn
+    return [x for x in rtrn if x.lower().startswith(ctx.value.lower())]
 
 
 async def get_cogs(ctx: AutocompleteContext) -> list[str]:
@@ -27,10 +30,10 @@ async def get_cogs(ctx: AutocompleteContext) -> list[str]:
         rtrn.append(cog.qualified_name.lower())
     if ctx.value == "":
         return rtrn
-    return [x for x in rtrn if x.startswith(ctx.value)]
+    return [x for x in rtrn if x.lower().startswith(ctx.value.lower())]
 
 
-async def get_banned_members(ctx: AutocompleteContext) -> list:
+async def get_banned_members(ctx: AutocompleteContext) -> list[str]:
     rtrn = []
     async for entry in ctx.interaction.guild.bans():
         option = f"{str(entry.user).replace('|', '')} ( {entry.user.id} ) | Reason: {entry.reason}"
