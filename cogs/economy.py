@@ -9,6 +9,7 @@ from typing import Union
 from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, User, Colour, \
     PermissionOverwrite
 from discord.ext.commands import Cog
+from discord.ext.tasks import loop
 from discord.utils import basic_autocomplete
 
 from data.config.settings import SETTINGS
@@ -16,7 +17,8 @@ from data.db.memory import database
 from lib.economy.exceptions import EconomyError
 from lib.economy.views import ConfirmTransaction
 from lib.economy.wallet import Wallet
-from lib.presence.presence import update_rich_presence
+from lib.utils.utils import time_to_string
+
 
 # Concept:
 # Every user has a global balance and a tab that shows the revenue
@@ -27,11 +29,8 @@ from lib.presence.presence import update_rich_presence
 # Every stat is public, but only the user themselves can see their accurate stats. Others only see estimations
 # Every bot has it own economy, meaning that self-hosted versions cannot access the official economy
 # Users can invest their balance: Daily revenue is linear and investments can be percentage increases
-
 # 5 companies, each has a stock price, that updates every x seconds. When being updated there is 60 percent change of
 # the last update happening again. User can sell their stocks after 3 hours
-from lib.utils.utils import time_to_string
-
 
 def get_claim_options(ctx: AutocompleteContext) -> list:
     rtrn = []
@@ -89,6 +88,11 @@ class Economy(Cog):
         self.working = {}
         self.shares = {}
 
+        self.update_wallstreet.start()
+
+    def cog_unload(self):
+        self.update_wallstreet.cancel()
+
     def _transfer(self, ctx: ApplicationContext, amount: int, source: Wallet, destination: Wallet,
                   transaction: tuple = None):
         if not bool(transaction):
@@ -142,6 +146,11 @@ class Economy(Cog):
                 cur.execute("""INSERT OR IGNORE INTO companies (IndexInList) VALUES (?)""", (i,))
                 self.shares[company] = cur.execute("""SELECT SharePrice FROM companies WHERE IndexInList = ?""",
                                                    (i,)).fetchone()[0]
+
+    @loop(seconds=SETTINGS["ServiceSyncInSeconds"])
+    async def update_wallstreet(self):
+        for company in self.shares:
+            self.shares[company] = randint(1, 10)
 
     @slash_command()
     async def wallet(self, ctx: ApplicationContext, *, user: Member = None):
@@ -257,7 +266,7 @@ class Economy(Cog):
     @slash_command()
     async def wallstreet(self, ctx: ApplicationContext):
         """Information about the latest share prices."""
-        last_updated = datetime.now() - (update_rich_presence.next_iteration +
+        last_updated = datetime.now() - (self.update_wallstreet.next_iteration +
                                          timedelta(minutes=90)).replace(tzinfo=None)
 
         embed = Embed(title="Wallstreet",
