@@ -34,7 +34,9 @@ from lib.economy.wallet import Wallet
 
 def get_claim_options(ctx: AutocompleteContext) -> list:
     rtrn = []
-    wallet: Wallet = ctx.bot.get_cog("Economy").save_get_wallet(ctx.interaction.user)
+
+    cog: Economy = ctx.command.cog
+    wallet: Wallet = cog.save_get_wallet(ctx.interaction.user)
 
     try:
         wallet.claims[ctx.interaction.guild_id]
@@ -42,7 +44,7 @@ def get_claim_options(ctx: AutocompleteContext) -> list:
         rtrn.append("Daily")
 
     try:
-        if ctx.bot.get_cog("Economy").working[ctx.interaction.user.id] is True:
+        if cog.working[ctx.interaction.user.id] is True:
             rtrn.append("Work")
     except KeyError:
         pass
