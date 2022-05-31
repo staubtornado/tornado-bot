@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS subjects (
 
 CREATE TABLE IF NOT EXISTS companies (
     IndexInList INTEGER PRIMARY KEY,
-    SharePrice INTEGER
+    SharePrice INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS settings (

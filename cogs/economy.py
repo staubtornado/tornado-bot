@@ -1,5 +1,5 @@
 from asyncio import sleep
-from datetime import date
+from datetime import date, timedelta, datetime
 from math import ceil
 from random import randint
 from re import findall
@@ -16,7 +16,7 @@ from data.db.memory import database
 from lib.economy.exceptions import EconomyError
 from lib.economy.views import ConfirmTransaction
 from lib.economy.wallet import Wallet
-
+from lib.presence.presence import update_rich_presence
 
 # Concept:
 # Every user has a global balance and a tab that shows the revenue
@@ -30,6 +30,7 @@ from lib.economy.wallet import Wallet
 
 # 5 companies, each has a stock price, that updates every x seconds. When being updated there is 60 percent change of
 # the last update happening again. User can sell their stocks after 3 hours
+from lib.utils.utils import time_to_string
 
 
 def get_claim_options(ctx: AutocompleteContext) -> list:
@@ -80,6 +81,7 @@ class Economy(Cog):
     Buy text and voice channels, roles, and pay users for services.
     Earn coins with the claim command or invest (soon) in something.
     """
+
     def __init__(self, bot: Bot):
         self.bot = bot
 
@@ -255,9 +257,16 @@ class Economy(Cog):
     @slash_command()
     async def wallstreet(self, ctx: ApplicationContext):
         """Information about the latest share prices."""
+        last_updated = datetime.now() - (update_rich_presence.next_iteration +
+                                         timedelta(minutes=90)).replace(tzinfo=None)
 
+        embed = Embed(title="Wallstreet",
+                      description=f"Last Updated: `{time_to_string(round(last_updated.total_seconds()))}` ago",
+                      colour=SETTINGS["Colours"]["Default"])
 
-
+        for company in self.shares:
+            embed.add_field(name=company, value=str(self.shares[company]), inline=False)
+        await ctx.respond(embed=embed)
 
     @slash_command()
     async def sell(self, ctx: ApplicationContext,
