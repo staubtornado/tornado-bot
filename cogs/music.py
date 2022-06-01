@@ -407,7 +407,8 @@ class Music(Cog):
         ctx.voice_state.loop = not ctx.voice_state.loop
 
         if ctx.voice_state.loop:
-            await ctx.respond("🔁 **Looped song /**`loop` to **disable** loop.")
+            await ctx.respond("🔁 **Looped song /**`loop` to **disable** loop.\n"
+                              "❔ Looking for **queue loop?** **/**`iterate`")
             return
         await ctx.respond("🔁 **Unlooped song /**`loop` to **enable** loop.")
 
