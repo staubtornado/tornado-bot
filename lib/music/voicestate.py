@@ -127,7 +127,7 @@ class VoiceState:
                     await self.current.source.channel.send("🔂 **The loop** has been **disabled** due to "
                                                            "**inactivity**.")
                 else:
-                    self.loop_duration += self.current.source.duration
+                    self.loop_duration += int(self.current.source.data.get("duration"))
 
                 self.now = FFmpegPCMAudio(self.current.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
                 self.voice.play(self.now, after=self.play_next_song)
