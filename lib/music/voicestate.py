@@ -143,6 +143,7 @@ class VoiceState:
 
     def skip(self):
         self.skip_votes.clear()
+        self.loop = False
 
         if self.is_playing:
             self.voice.stop()
