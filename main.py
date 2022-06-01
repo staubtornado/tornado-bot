@@ -56,6 +56,10 @@ async def on_application_command_error(ctx: ApplicationContext, error):
     save_traceback(error)
 
     if isinstance(error, CheckFailure):
+        if ctx.command.name == "play":
+            await ctx.respond("❌ This **command** is **restricted to beta** guilds.\n"
+                              "👉 Use **/**`settings beta` to **enter the closed beta**.")
+            return
         await ctx.respond("❌ This guild is **not permitted to use** that **command**.")
         return
 
