@@ -138,7 +138,7 @@ class Utilities(Cog):
                       description=f"[<:member_join:980085600227065906> Add Me!]"
                                   f"(https://discord.com/api/oauth2/authorize?client_id={self.bot.user.id}"
                                   "&permissions=1394047577334&scope=bot%20applications.commands)⠀|⠀"
-                                  f"<:rooBless:980086267360468992> Support Server⠀|⠀"
+                                  f"[<:rooBless:980086267360468992> Support Server](https://discord.gg/C3Wz6fRZbV)⠀|⠀"
                                   f"<a:rooLove:980087863477669918> Vote on Top.gg⠀|⠀"
                                   f"<:rooSellout:980086802834681906> Donate\n{'-'*60}\n"
                                   f"**Ping**: `{round(self.bot.latency * 1000)}ms` | "
