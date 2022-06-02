@@ -1,9 +1,10 @@
 from datetime import datetime
 from time import strftime, gmtime
 from traceback import format_tb
-from typing import Union
+from typing import Union, Any
 
-from discord import Permissions
+import matplotlib.pyplot as plt
+from discord import Permissions, File
 from millify import millify
 
 
@@ -48,3 +49,18 @@ def save_traceback(exception):
         except AttributeError:
             tb = exception.__traceback__
         file.write("".join(format_tb(tb)))
+
+
+def create_graph(y: list[int]) -> tuple[str, File]:
+    plt.plot([i for i in range(len(y))], y)
+
+    path = f"./data/cache/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.png"
+    plt.savefig(path, format='png')
+    plt.close()
+
+    with open(path, 'rb') as f:
+        path = path.replace("./data/cache/", "")
+
+        f: Any = f
+        picture = File(f, filename=path)
+    return f"attachment://{path}", picture
