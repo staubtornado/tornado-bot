@@ -199,8 +199,13 @@ class Settings(Cog):
             await ctx.respond("❌ **You** already **have beta features enabled**.")
             return
 
+        key_old = f"{key}"
         key = cur.execute("""SELECT KeyString, EnablesBeta FROM keys WHERE KeyString = ?""", [key]).fetchone()
         if key is None or key[1] == 0:
+            if ctx.author.id == self.bot.owner_ids[0]:
+                cur.execute("""INSERT OR IGNORE INTO keys (KeyString, EnablesPremium ,EnablesBeta) VALUES (?, ?, ?)""",
+                            (key_old, 0, 1))
+
             await ctx.respond("❌ **Invalid key**.")
             return
 
@@ -212,7 +217,7 @@ class Settings(Cog):
         await view.wait()
         if view.value:
             cur.execute("""UPDATE guilds SET HasBeta = 1 WHERE GuildID = ?""", (ctx.guild_id, ))
-            cur.execute("""DELETE FROM keys WHERE KeyString = ?""", [key])
+            cur.execute("""DELETE FROM keys WHERE KeyString = ?""", (key_old, ))
             await ctx.respond(f"🐞 **Beta features** are now **enabled on** this **server**.")
 
     @ticket_settings.command()
