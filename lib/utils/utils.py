@@ -24,12 +24,10 @@ def extract_int(string: str) -> list[int]:
 
 def time_to_string(seconds: int) -> str:
     if seconds < 3600:
-        output = strftime('%M:%S', gmtime(seconds))
+        return strftime('%M:%S', gmtime(seconds))
     elif 86400 > seconds >= 3600:
-        output = strftime('%H:%M:%S', gmtime(seconds))
-    else:
-        output = strftime("%d:%H:%M:%S", gmtime(seconds))
-    return output
+        return strftime('%H:%M:%S', gmtime(seconds))
+    return strftime("%d:%H:%M:%S", gmtime(seconds))
 
 
 def get_permissions(permissions: Permissions) -> list[str]:
