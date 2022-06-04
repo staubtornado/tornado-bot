@@ -1,24 +1,24 @@
 from asyncio import sleep
 from datetime import date, timedelta, datetime
 from math import ceil
-from random import randint
+from random import randint, random
 from re import findall
 from sqlite3 import IntegrityError
-from typing import Union
+from typing import Union, Any
 
 from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, User, Colour, \
-    PermissionOverwrite
+    PermissionOverwrite, File
 from discord.ext.commands import Cog
 from discord.ext.tasks import loop
 from discord.utils import basic_autocomplete
+from PIL import Image
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
 from lib.economy.exceptions import EconomyError
 from lib.economy.views import ConfirmTransaction
 from lib.economy.wallet import Wallet
-from lib.utils.utils import time_to_string
-
+from lib.utils.utils import time_to_string, create_graph
 
 # Concept:
 # Every user has a global balance and a tab that shows the revenue
@@ -32,7 +32,8 @@ from lib.utils.utils import time_to_string
 # 5 companies, each has a stock price, that updates every x seconds. When being updated there is 60 percent change of
 # the last update happening again. User can sell their stocks after 3 hours
 
-def get_claim_options(ctx: AutocompleteContext) -> list:
+
+def get_claim_options(ctx: AutocompleteContext) -> list[str]:
     rtrn = []
 
     cog: Economy = ctx.command.cog
@@ -139,18 +140,33 @@ class Economy(Cog):
         except KeyError:
             self.wallets[ctx.author.id] = Wallet(ctx.author)
 
+    @loop(seconds=3)
+    async def update_wallstreet(self):
         if len(self.shares) == 0:
             cur = database.cursor()
 
             for i, company in enumerate(SETTINGS["Cogs"]["Economy"]["Companies"]):
-                cur.execute("""INSERT OR IGNORE INTO companies (IndexInList) VALUES (?)""", (i,))
-                self.shares[company] = cur.execute("""SELECT SharePrice FROM companies WHERE IndexInList = ?""",
-                                                   (i,)).fetchone()[0]
+                self.shares[company] = []
 
-    @loop(seconds=SETTINGS["ServiceSyncInSeconds"])
-    async def update_wallstreet(self):
+                cur.execute("""INSERT OR IGNORE INTO companies (IndexInList) VALUES (?)""", (i,))
+                self.shares[company].append(cur.execute("""SELECT SharePrice FROM companies WHERE IndexInList = ?""",
+                                                        (i,)).fetchone()[0])
+
         for company in self.shares:
-            self.shares[company] = randint(1, 10)
+            chance_to_rise = 0.5
+
+            latest_price = self.shares[company][len(self.shares[company]) - 1]
+            if len(self.shares[company]) > 1:
+
+                if latest_price > self.shares[company][len(self.shares[company]) - 2]:
+                    chance_to_rise = 0.6
+                elif latest_price < self.shares[company][len(self.shares[company]) - 2]:
+                    chance_to_rise = 0.4
+
+            price = latest_price - randint(1, 5)
+            if random() < chance_to_rise:
+                price = latest_price + randint(1, 5)
+            self.shares[company].append(price if not price < 1 else 1)
 
     @slash_command()
     async def wallet(self, ctx: ApplicationContext, *, user: Member = None):
@@ -266,6 +282,8 @@ class Economy(Cog):
     @slash_command()
     async def wallstreet(self, ctx: ApplicationContext):
         """Information about the latest share prices."""
+        await ctx.defer()
+
         last_updated = datetime.now() - (self.update_wallstreet.next_iteration +
                                          timedelta(minutes=90)).replace(tzinfo=None)
 
@@ -273,9 +291,23 @@ class Economy(Cog):
                       description=f"Last Updated: `{time_to_string(round(last_updated.total_seconds()))}` ago",
                       colour=SETTINGS["Colours"]["Default"])
 
-        for company in self.shares:
+        new_image = Image.new("RGB", (640, len(self.shares) * 480), (250, 250, 250))
+
+        for i, company in enumerate(self.shares):
             embed.add_field(name=company, value=str(self.shares[company]), inline=False)
-        await ctx.respond(embed=embed)
+            image, file = create_graph(y=self.shares[company], title=company)
+            image1 = Image.open(f"./data/cache/{file.filename}")
+            new_image.paste(image1, (0, 480*i))
+        path = f"./data/cache/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.png"
+        new_image.save(path, "PNG")
+
+        with open(path, 'rb') as f:
+            path = path.replace("./data/cache/", "")
+
+            f: Any = f
+            picture = File(f, filename=path)
+        embed.set_image(url=f"attachment://{path}")
+        await ctx.respond(embed=embed, file=picture)
 
     @slash_command()
     async def sell(self, ctx: ApplicationContext,
