@@ -51,8 +51,11 @@ def save_traceback(exception):
         file.write("".join(format_tb(tb)))
 
 
-def create_graph(y: list[int]) -> tuple[str, File]:
+def create_graph(y: list[int], title: str = None) -> tuple[str, File]:
     plt.plot([i for i in range(len(y))], y)
+
+    if title is not None:
+        plt.title(title)
 
     path = f"./data/cache/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.png"
     plt.savefig(path, format='png')
