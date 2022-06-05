@@ -43,7 +43,8 @@ async def auto_complete(ctx: AutocompleteContext) -> list[str]:
                 rtrn.append(f"{item['name']} by {item['artists'][0]['name']}")
     except SpotifyException:
         pass
-    return rtrn
+    return rtrn if len(rtrn) > 0 else ["Charts", "New Releases", "TDTT", "ESC22", "Chill", "Party", "Classical",
+                                       "K-Pop", "Gaming", "Rock"]
 
 
 def ensure_voice_state(ctx: CustomApplicationContext, requires_song: bool = False, requires_queue: bool = False,
