@@ -2,6 +2,7 @@ from asyncio import sleep
 from copy import copy
 from math import ceil
 from traceback import format_exc
+from typing import Union
 
 from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option, \
     AutocompleteContext
@@ -28,12 +29,25 @@ class CustomApplicationContext(ApplicationContext):
     voice_state: VoiceState
 
 
-async def auto_complete(ctx: AutocompleteContext) -> list:
-    return ["Charts", "New Releases", "TDTT", "ESC22", "Chill", "Party", "Classical", "K-Pop", "Gaming", "Rock"]
+async def auto_complete(ctx: AutocompleteContext) -> list[str]:
+    rtrn = ["Charts", "New Releases", "TDTT", "ESC22", "Chill", "Party", "Classical", "K-Pop", "Gaming", "Rock"]
+
+    if len([x for x in rtrn if x.lower().startswith(ctx.value.lower())]) > 0:
+        return [x for x in rtrn if x.lower().startswith(ctx.value.lower())]
+
+    rtrn.clear()
+
+    try:
+        for item in SpotifyScraping.search(search=ctx.value)["tracks"]["items"]:
+            if f"{item['name']} by {item['artists'][0]['name']}" not in rtrn:
+                rtrn.append(f"{item['name']} by {item['artists'][0]['name']}")
+    except SpotifyException:
+        pass
+    return rtrn
 
 
 def ensure_voice_state(ctx: CustomApplicationContext, requires_song: bool = False, requires_queue: bool = False,
-                       no_processing: bool = False):
+                       no_processing: bool = False) -> Union[str, None]:
     if ctx.author.voice is None:
         return "❌ **You are not** connected to a **voice** channel."
 
@@ -58,6 +72,7 @@ class Music(Cog):
     Play music from various sources like Spotify, YouTube or SoundCloud.
     YouTube and Spotify playlists are supported, too.
     """
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self.voice_states = {}
@@ -78,7 +93,7 @@ class Music(Cog):
         cur = database.cursor()
 
         cur.execute("""INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""", (ctx.guild.id,))
-        cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id, ))
+        cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id,))
         ctx.voice_state = self.get_voice_state(ctx)
 
     @slash_command()
@@ -343,9 +358,9 @@ class Music(Cog):
                                          f"{YTDLSource.parse_duration(ctx.voice_state.songs.get_duration())}\n⠀",
                              colour=0xFF0000)
         embed.add_field(name="🎶 Now Playing", value=f"[{ctx.voice_state.current.source.title_limited_embed}]"
-                                                    f"({ctx.voice_state.current.source.url})\n"
-                                                    f"[{ctx.voice_state.current.source.uploader}]"
-                                                    f"({ctx.voice_state.current.source.uploader_url})", inline=False)
+                                                     f"({ctx.voice_state.current.source.url})\n"
+                                                     f"[{ctx.voice_state.current.source.uploader}]"
+                                                     f"({ctx.voice_state.current.source.uploader_url})", inline=False)
         embed.add_field(name="⠀", value=queue, inline=False)
         embed.set_footer(text=f"Page {page}/{pages}")
         await ctx.respond(embed=embed)
