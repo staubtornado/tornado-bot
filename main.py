@@ -75,9 +75,10 @@ def main():
     print(f"VERSION: {SETTINGS['Version']}\nCopyright (c) 2021 - present Staubtornado\n{'-' * 30}")
     load_dotenv("./data/config/.env")
 
-    cache = './data/cache'
-    for f in tqdm(listdir(cache), "Cleaning cache"):
-        remove(join(cache, f))
+    cache = "./data/cache"
+    if len(listdir(cache)) > 0:
+        for f in tqdm(listdir(cache), "Cleaning cache"):
+            remove(join(cache, f))
 
     sync_database.start()
     update_rich_presence.start(bot)
