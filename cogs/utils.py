@@ -2,11 +2,11 @@ from difflib import get_close_matches
 from time import time
 
 from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, Forbidden, \
-    Message, default_permissions, SlashCommandGroup
+    default_permissions, SlashCommandGroup
 from discord.ext.commands import Cog
 
 from data.config.settings import SETTINGS
-from lib.utils.utils import extract_int, time_to_string, get_permissions
+from lib.utils.utils import extract_int, time_to_string, get_permissions, create_graph
 
 
 async def get_reasons(ctx: AutocompleteContext) -> list[str]:
@@ -52,17 +52,14 @@ class Utilities(Cog):
 
     @slash_command()
     @default_permissions(manage_messages=True)
-    async def purge(self, ctx: ApplicationContext, amount: int = 100, ignore: Member = None,
+    async def purge(self, ctx: ApplicationContext, amount: int = 100,
                     order: Option(str, "Select where the bot should start deleting.",
                                   required=False, choices=["Oldest", "Newest"]) = "Newest"):
         """Deletes latest 100 messages in this channel by default. Can be increased up to 1000."""
         await ctx.defer()
 
-        def is_ignored(m: Message) -> bool:
-            return m.author == ignore
-
         await ctx.respond(
-            f"**Deleted {len(await ctx.channel.purge(limit=amount, check=is_ignored, oldest_first=order != 'Newest'))} "
+            f"**Deleted {len(await ctx.channel.purge(limit=amount, oldest_first=order != 'Newest'))} "
             f"messages**.", ephemeral=True)
 
     @slash_command()
@@ -122,7 +119,10 @@ class Utilities(Cog):
     @slash_command()
     async def ping(self, ctx: ApplicationContext):
         """Check the bots ping to the Discord API."""
-        await ctx.respond(f"**Ping**: `{round(self.bot.latency * 1000)}ms`")
+        self.bot.latencies.append(round(self.bot.latency * 1000))
+
+        image, file = create_graph(self.bot.latencies)
+        await ctx.respond(f"**Ping**: `{round(self.bot.latency * 1000)}ms`", file=file)
 
     @slash_command()
     async def uptime(self, ctx: ApplicationContext):

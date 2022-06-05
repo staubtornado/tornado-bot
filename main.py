@@ -47,6 +47,7 @@ async def sync_database():
 @bot.event
 async def on_ready():
     bot.uptime = round(time())
+    bot.latencies = []
     print(f"{bot.user} is online...")
 
 
