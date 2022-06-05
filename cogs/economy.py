@@ -4,14 +4,13 @@ from math import ceil
 from random import randint, random
 from re import findall
 from sqlite3 import IntegrityError
-from typing import Union, Any
+from typing import Union
 
 from discord import Bot, slash_command, ApplicationContext, Member, AutocompleteContext, Option, Embed, User, Colour, \
-    PermissionOverwrite, File
+    PermissionOverwrite
 from discord.ext.commands import Cog
 from discord.ext.tasks import loop
 from discord.utils import basic_autocomplete
-from PIL import Image
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
@@ -19,6 +18,7 @@ from lib.economy.exceptions import EconomyError
 from lib.economy.views import ConfirmTransaction
 from lib.economy.wallet import Wallet
 from lib.utils.utils import time_to_string, create_graph
+
 
 # Concept:
 # Every user has a global balance and a tab that shows the revenue
@@ -140,7 +140,7 @@ class Economy(Cog):
         except KeyError:
             self.wallets[ctx.author.id] = Wallet(ctx.author)
 
-    @loop(seconds=3)
+    @loop(seconds=SETTINGS["ServiceSyncInSeconds"])
     async def update_wallstreet(self):
         if len(self.shares) == 0:
             cur = database.cursor()
@@ -280,7 +280,9 @@ class Economy(Cog):
             await ctx.respond("You are **not done working**.")
 
     @slash_command()
-    async def wallstreet(self, ctx: ApplicationContext):
+    async def wallstreet(self, ctx: ApplicationContext,
+                         company: Option(str, "The company you want the stock price from.", required=False,
+                                         choices=SETTINGS["Cogs"]["Economy"]["Companies"]) = None):
         """Information about the latest share prices."""
         await ctx.defer()
 
@@ -291,23 +293,19 @@ class Economy(Cog):
                       description=f"Last Updated: `{time_to_string(round(last_updated.total_seconds()))}` ago",
                       colour=SETTINGS["Colours"]["Default"])
 
-        new_image = Image.new("RGB", (640, len(self.shares) * 480), (250, 250, 250))
+        if company is None:
+            for share in self.shares:
+                embed.add_field(name=share, value=str(self.shares[share][len(self.shares[share]) - 1]), inline=False)
+            embed.description += "\nUse **/**`wallstreet [company name]` for more details."
+            await ctx.respond(embed=embed)
+            return
 
-        for i, company in enumerate(self.shares):
-            embed.add_field(name=company, value=str(self.shares[company]), inline=False)
-            image, file = create_graph(y=self.shares[company], title=company)
-            image1 = Image.open(f"./data/cache/{file.filename}")
-            new_image.paste(image1, (0, 480*i))
-        path = f"./data/cache/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.png"
-        new_image.save(path, "PNG")
+        embed.title = f"{company} Share Price"
+        embed.add_field(name="Latest Price", value=self.shares[company][len(self.shares[company]) - 1])
 
-        with open(path, 'rb') as f:
-            path = path.replace("./data/cache/", "")
-
-            f: Any = f
-            picture = File(f, filename=path)
-        embed.set_image(url=f"attachment://{path}")
-        await ctx.respond(embed=embed, file=picture)
+        image, file = create_graph(self.shares[company])
+        embed.set_image(url=image)
+        await ctx.respond(embed=embed, file=file)
 
     @slash_command()
     async def sell(self, ctx: ApplicationContext,
