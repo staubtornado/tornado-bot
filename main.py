@@ -1,5 +1,6 @@
 from asyncio import run
-from os import getenv, listdir
+from os import getenv, listdir, remove
+from os.path import join
 from sqlite3 import connect, Error
 from time import time
 from traceback import format_exc
@@ -7,6 +8,7 @@ from traceback import format_exc
 from discord import Bot, ApplicationCommandInvokeError, ApplicationContext, CheckFailure
 from discord.ext.tasks import loop
 from dotenv import load_dotenv
+from tqdm import tqdm
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
@@ -72,6 +74,10 @@ async def on_application_command_error(ctx: ApplicationContext, error):
 def main():
     print(f"VERSION: {SETTINGS['Version']}\nCopyright (c) 2021 - present Staubtornado\n{'-' * 30}")
     load_dotenv("./data/config/.env")
+
+    cache = './data/cache'
+    for f in tqdm(listdir(cache), "Cleaning cache"):
+        remove(join(cache, f))
 
     sync_database.start()
     update_rich_presence.start(bot)
