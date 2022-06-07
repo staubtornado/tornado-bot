@@ -18,7 +18,8 @@ from data.db.memory import database
 from lib.music.exceptions import YTDLError
 from lib.music.extraction import YTDLSource
 from lib.music.song import Song, SongStr
-from lib.music.spotify import SpotifyScraping
+from lib.music.spotify import get_artist_top_songs, get_track_name, get_playlist_track_names, search_on_spotify, \
+    get_album_track_names
 from lib.music.voicestate import VoiceState
 from lib.utils.utils import ordinal, save_traceback
 
