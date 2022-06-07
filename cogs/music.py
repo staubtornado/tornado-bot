@@ -1,7 +1,6 @@
 from asyncio import sleep
 from copy import copy
 from math import ceil
-from traceback import format_exc
 from typing import Union
 
 from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option, \
@@ -15,13 +14,12 @@ from yt_dlp import utils
 from cogs.settings import Settings
 from data.config.settings import SETTINGS
 from data.db.memory import database
-from lib.music.exceptions import YTDLError
 from lib.music.extraction import YTDLSource
 from lib.music.song import Song, SongStr
 from lib.music.spotify import get_artist_top_songs, get_track_name, get_playlist_track_names, search_on_spotify, \
     get_album_track_names
 from lib.music.voicestate import VoiceState
-from lib.utils.utils import ordinal, save_traceback
+from lib.utils.utils import ordinal, url_is_valid
 
 utils.bug_reports_message = lambda: ''
 
@@ -37,11 +35,10 @@ async def auto_complete(ctx: AutocompleteContext) -> list[str]:
         return [x for x in rtrn if x.lower().startswith(ctx.value.lower())]
 
     rtrn.clear()
-
     try:
-        for item in SpotifyScraping.search(search=ctx.value)["tracks"]["items"]:
-            if f"{item['name']} by {item['artists'][0]['name']}" not in rtrn:
-                rtrn.append(f"{item['name']} by {item['artists'][0]['name']}")
+        response = search_on_spotify(search=ctx.value)
+        for item in response[0] + response[1]:
+            rtrn.append(item) if item not in rtrn else None
     except SpotifyException:
         pass
     return rtrn if len(rtrn) > 0 else ["Charts", "New Releases", "TDTT", "ESC22", "Chill", "Party", "Classical",
@@ -360,9 +357,9 @@ class Music(Cog):
                                          f"{YTDLSource.parse_duration(ctx.voice_state.songs.get_duration())}\n⠀",
                              colour=0xFF0000)
         embed.add_field(name="🎶 Now Playing", value=f"[{ctx.voice_state.current.source.title_limited_embed}]"
-                                                     f"({ctx.voice_state.current.source.url})\n"
-                                                     f"[{ctx.voice_state.current.source.uploader}]"
-                                                     f"({ctx.voice_state.current.source.uploader_url})", inline=False)
+                                                    f"({ctx.voice_state.current.source.url})\n"
+                                                    f"[{ctx.voice_state.current.source.uploader}]"
+                                                    f"({ctx.voice_state.current.source.uploader_url})", inline=False)
         embed.add_field(name="⠀", value=queue, inline=False)
         embed.set_footer(text=f"Page {page}/{pages}")
         await ctx.respond(embed=embed)
@@ -465,7 +462,7 @@ class Music(Cog):
             return
 
         if len(ctx.voice_state.songs) >= SETTINGS["Cogs"]["Music"]["MaxQueueLength"]:
-            await ctx.respond("🥵 **Too many** songs in queue.")
+            await ctx.respond("🥵 **Too many songs** in queue.")
             return
 
         if virtual_memory().percent > 75 and SETTINGS["Production"]:
@@ -475,121 +472,54 @@ class Music(Cog):
         if not ctx.voice_state.voice:
             await self.join(ctx)
 
-        async def add_song(track_name: str, fetch_source: bool = False):
-            if not fetch_source:
-                await ctx.voice_state.songs.put(SongStr(track_name, ctx))
-                return
-
-            try:
-                source = await YTDLSource.create_source(ctx, track_name.replace(":", ""), loop=self.bot.loop)
-            except Exception as error:
-                return error
-
-            if not ctx.voice_state.voice:
-                await self.join(ctx)
-
-            song = Song(source)
-            await ctx.voice_state.songs.put(song)
-            return source
-
-        presets: dict = {"Charts": "https://open.spotify.com/playlist/37i9dQZEVXbNG2KDcFcKOF",
-                         "New Releases": "https://open.spotify.com/playlist/37i9dQZF1DWUW2bvSkjcJ6",
-                         "Chill": "https://open.spotify.com/playlist/37i9dQZF1DWTvNyxOwkztu",
-                         "Party": "https://open.spotify.com/playlist/37i9dQZF1DXbX3zSzB4MO0",
-                         "Classical": "https://open.spotify.com/playlist/37i9dQZF1DWWEJlAGA9gs0",
-                         "K-Pop": "https://open.spotify.com/playlist/37i9dQZF1DX9tPFwDMOaN1",
-                         "Gaming": "https://open.spotify.com/playlist/37i9dQZF1DWTyiBJ6yEqeu",
-                         "Rock": "https://open.spotify.com/playlist/37i9dQZF1DWZJhOVGWqUKF",
-                         "TDTT": "https://open.spotify.com/playlist/669nUqEjX1ozcx2Uika2fR",
-                         "ESC22": "https://open.spotify.com/playlist/37i9dQZF1DWVCKO3xAlT1Q"}
-
-        search: str = presets[search] if search in presets else search
-
         async def process():
-            if any(x in search for x in ["https://open.spotify.com/playlist/", "spotify:playlist:",
-                                         "https://open.spotify.com/album/", "spotify:album:",
-                                         "https://open.spotify.com/track/", "spotify:track:",
-                                         "https://open.spotify.com/artist/", "spotify:artist:"]):
-                song_names: list = []
+            search_tracks = []
+            output = ""
+            url = url_is_valid(search)
+            if url[0]:
+                if url[1].netloc == "open.spotify.com":
+                    algorithms = {"playlist": get_playlist_track_names, "artist": get_artist_top_songs,
+                                  "track": get_track_name, "album": get_album_track_names}
+                    output = "Spotify"
 
-                try:
-                    if "playlist" in search:
-                        song_names.extend(SpotifyScraping.get_playlist_track_names(search))
-                    elif "album" in search:
-                        song_names.extend(SpotifyScraping.get_album_track_names(search))
-                    elif "track" in search:
-                        song_names.append(SpotifyScraping.get_track_name(search))
-                    elif "artist" in search:
-                        song_names.extend(SpotifyScraping.get_artist_top_songs(search))
-                    else:
-                        raise SpotifyException
+                    try:
+                        search_tracks.extend(algorithms[url[1].path.split("/")[1]](url[1].path.split("/")[2]))
+                    except KeyError or SpotifyException:
+                        await ctx.respond("❌ **Invalid** Spotify **link**.")
+                        return
 
-                except SpotifyException:
-                    await ctx.respond("❌ **Invalid** or **unsupported** Spotify **link**.")
-                    return
+                elif "youtube.com" in url[1].netloc:
+                    output = "Youtube"
+                    url_type = await YTDLSource.check_type(search, loop=self.bot.loop)
+                    if url_type in ["playlist", "playlist_alt"]:
+                        search_tracks.extend(await YTDLSource.create_source_playlist(url_type, search,
+                                                                                     loop=self.bot.loop))
 
-                for i, song_name in enumerate(song_names):
-                    if not len(ctx.voice_state.songs) >= 100:
-                        await add_song(song_name)
-                        continue
-                    await ctx.respond(f"❌ **Queue reached its limit in size**, therefore **only {i + 1} songs added** "
-                                      f"from **Spotify**.")
-                    return
-
-                info: str = song_names[0].replace(" by ", "** by **") if len(song_names) == 1 else \
-                    f"{len(song_names)} songs"
-                await ctx.respond(f"✅ Added **{info}** from **Spotify**.")
-                return
-
-            video_type = await YTDLSource.check_type(search, loop=self.bot.loop)
-            if video_type in ["playlist", "playlist_alt"]:
-                videos = await YTDLSource.create_source_playlist(video_type, search, loop=self.bot.loop)
-                for i, url in enumerate(videos):
-                    if not len(ctx.voice_state.songs) >= 100:
-                        await add_song(url)
-                        continue
-                    await ctx.respond(f"❌ **Queue reached its limit in size**, therefore **only {i + 1} songs added** "
-                                      f"from **Youtube**.")
-                    return
-                await ctx.respond(f"✅ Added **{len(videos)}** from **YouTube**.")
-                return
-
-            name = await add_song(search, fetch_source=True)
-            if isinstance(name, YTDLError):
-                await ctx.respond(f"❌ {name}")
-            elif isinstance(name, utils.GeoRestrictedError):
-                await ctx.respond("🌍 This **video** is **not available in** my **country**.")
-            elif isinstance(name, utils.UnavailableVideoError):
-                await ctx.respond("🚫 This **video is **not available**.")
-            elif isinstance(name, Exception):
-                traceback = format_exc()
-                print(traceback) if traceback is not None else None
-                await ctx.respond(f"❌ **Error**: `{name}`")
+            for i, track in enumerate(search_tracks):
+                if len(ctx.voice_state.songs) < 100:
+                    await ctx.voice_state.songs.put(SongStr(track, ctx))
+                    continue
+                await ctx.respond(f"❌ **Queue reached its limit in size**, therefore **only {i + 1} songs added** "
+                                  f"from **{output}**.")
+                break
             else:
-                await ctx.respond(f'✅ Added {name}')
+                if len(search_tracks):
+                    await ctx.respond(f"✅ Added **{len(search_tracks)} songs** "
+                                      f"{f'from **{output}**' if output != '' else ''}")
+                    return
+
+            search.replace(":", "") if url[1].scheme not in ["http", "https"] else None
+            source = await YTDLSource.create_source(ctx, search, loop=self.bot.loop)
+            await ctx.voice_state.songs.put(Song(source))
+            await ctx.respond(f"✅ Added {source}")
 
         ctx.voice_state.processing = True
         try:
             await process()
         except Exception as e:
-            save_traceback(e)
-            await ctx.respond(f"❌ **A fatal error has occurred**: `{e}`. **You might** execute **/**`leave` to **reset "
-                              f"the voice state on** this **server**.")
+            ctx.voice_state.processing = False
+            raise e
         ctx.voice_state.processing = False
-
-    @slash_command()
-    async def supported_links(self, ctx: CustomApplicationContext):
-        """Lists all supported music streaming services."""
-        await ctx.respond(embed=Embed(title="Supported Links", description="All supported streaming services.",
-                                      colour=0xFF0000)
-                          .add_field(name="YouTube", value="✅ Tracks\n❌ Playlists\n❌ Albums\n❌ Artists\n⚠ Livestreams")
-                          .add_field(name="YouTube Music", value="✅ Tracks\n❌ Playlists\n❌ Albums\n❌ Artists")
-                          .add_field(name="Spotify", value="✅ Tracks\n✅ Playlists\n✅ Albums\n✅ Artists")
-                          .add_field(name="Soundcloud", value="✅ Tracks\n❌ Playlists\n❌ Albums\n❌ Artists")
-                          .add_field(name="Twitch", value="⚠ Livestreams")
-                          .add_field(name="🐞 Troubleshooting", value="If you are experiencing issues, please execute"
-                                                                     " **/**`leave`. This should fix most errors.",
-                                     inline=False))
 
 
 def setup(bot):
