@@ -1,6 +1,7 @@
 from asyncio import Event, wait_for, shield, TimeoutError
 
 from discord import Bot, FFmpegPCMAudio, Embed, ApplicationContext
+from ytmusicapi import YTMusic
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
@@ -8,6 +9,7 @@ from lib.music.exceptions import VoiceError
 from lib.music.extraction import YTDLSource
 from lib.music.queue import SongQueue
 from lib.music.song import Song, SongStr
+from lib.utils.utils import url_is_valid
 
 
 class VoiceState:
@@ -91,8 +93,15 @@ class VoiceState:
 
                 if isinstance(self.current, SongStr):
                     try:
+                        response = None
+                        search = self.current.get_search()
+
+                        if not url_is_valid(search)[0]:
+                            search.replace(":", "")
+                            response = f"https://music.youtube.com/watch" \
+                                       f"?v={YTMusic().search(search, filter='songs')[0]['videoId']}"
                         source = await YTDLSource.create_source(ctx=self.current.ctx,
-                                                                search=self.current.get_search().replace(":", ""),
+                                                                search=response or search,
                                                                 loop=self.bot.loop)
                     except Exception as error:
                         await self.current.ctx.send(embed=Embed(description=f"💥 **Error**: {error}"))

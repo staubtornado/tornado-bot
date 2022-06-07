@@ -10,6 +10,7 @@ from discord.utils import get, basic_autocomplete
 from psutil import virtual_memory
 from spotipy import SpotifyException
 from yt_dlp import utils
+from ytmusicapi import YTMusic
 
 from cogs.settings import Settings
 from data.config.settings import SETTINGS
@@ -483,8 +484,8 @@ class Music(Cog):
                     output = "Spotify"
 
                     try:
-                        search_tracks.extend(algorithms[url[1].path.split("/")[1]](url[1].path.split("/")[2]))
-                    except KeyError or SpotifyException:
+                        search_tracks.extend(algorithms[url[1].path.split("/")[1]](search))
+                    except (KeyError, SpotifyException):
                         await ctx.respond("❌ **Invalid** Spotify **link**.")
                         return
 
@@ -504,12 +505,15 @@ class Music(Cog):
                 break
             else:
                 if len(search_tracks):
-                    await ctx.respond(f"✅ Added **{len(search_tracks)} songs** "
-                                      f"{f'from **{output}**' if output != '' else ''}")
+                    await ctx.respond(f"✅ Added **{len(search_tracks)} songs** from **{output}**")
                     return
 
-            search.replace(":", "") if url[1].scheme not in ["http", "https"] else None
-            source = await YTDLSource.create_source(ctx, search, loop=self.bot.loop)
+            response = None
+            if not url[0]:
+                search.replace(":", "")
+                response = f"https://music.youtube.com/watch?v={YTMusic().search(search, filter='songs')[0]['videoId']}"
+
+            source = await YTDLSource.create_source(ctx, search=response or search, loop=self.bot.loop)
             await ctx.voice_state.songs.put(Song(source))
             await ctx.respond(f"✅ Added {source}")
 
