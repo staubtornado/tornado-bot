@@ -1,21 +1,20 @@
 from time import sleep
 from typing import AnyStr
-from urllib.parse import urlparse, urljoin, ParseResult
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
 
+from lib.utils.utils import url_is_valid
+
+# DEPRECATED
+
 
 class ImageScraping:
     def __init__(self, url: str):
         self.url = url
-
-    @classmethod
-    def is_valid(cls, url: str) -> bool:
-        parsed: ParseResult = urlparse(url)
-        return bool(parsed.netloc) and bool(parsed.scheme)
 
     def get_all_images(self) -> list:
         options: Options = Options()
@@ -48,7 +47,7 @@ class ImageScraping:
             except ValueError:
                 pass
 
-            if self.is_valid(img_url):
+            if url_is_valid(img_url):
                 if not any(x in img_url for x in ["static.pornpics.de"]):
                     if "https://gifsex.blog/gif2png.php" in img_url:
                         img_url = urljoin(self.url, img.attrs.get("data-srcgif"))

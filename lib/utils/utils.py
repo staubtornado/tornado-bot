@@ -2,6 +2,7 @@ from datetime import datetime
 from time import strftime, gmtime
 from traceback import format_tb
 from typing import Union, Any
+from urllib.parse import ParseResult, urlparse
 
 import matplotlib.pyplot as plt
 from discord import Permissions, File
@@ -56,7 +57,7 @@ def create_graph(y: list[int], title: str = None) -> tuple[str, File]:
         plt.title(title)
 
     path = f"./data/cache/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.png"
-    plt.savefig(path, format='png')
+    plt.savefig(path, format='png', transparent=True)
     plt.close()
 
     with open(path, 'rb') as f:
@@ -65,3 +66,8 @@ def create_graph(y: list[int], title: str = None) -> tuple[str, File]:
         f: Any = f
         picture = File(f, filename=path)
     return f"attachment://{path}", picture
+
+
+def url_is_valid(url: str) -> tuple[bool, ParseResult]:
+    parsed = urlparse(url)
+    return bool(parsed.netloc) and bool(parsed.scheme), parsed
