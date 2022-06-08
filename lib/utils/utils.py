@@ -51,16 +51,17 @@ def save_traceback(exception):
 
 
 def create_graph(y: list[int], title: str = None) -> tuple[str, File]:
-    plt.plot([i for i in range(len(y))], y)
+    with plt.rc_context({"axes.edgecolor": "#838383", "xtick.color": "#838383", "ytick.color": "#838383"}):
+        plt.plot([i for i in range(len(y))], y)
 
     if title is not None:
         plt.title(title)
 
     path = f"./data/cache/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.png"
-    plt.savefig(path, format='png', transparent=True)
+    plt.savefig(path, format="png", transparent=True)
     plt.close()
 
-    with open(path, 'rb') as f:
+    with open(path, "rb") as f:
         path = path.replace("./data/cache/", "")
 
         f: Any = f
