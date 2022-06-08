@@ -56,7 +56,7 @@ class Settings(Cog):
     @settings.command()
     async def music(self, ctx: ApplicationContext,
                     option: Option(str, "Select an option.", choices=["embed size: [Small | Medium | Large]",
-                                                                      "delete embed when finished: [True | False]"],
+                                                                      "update embed: [True | False]"],
                                    required=True), value: Option(str, "Set a value.", required=True)):
         """Configure the music player."""
         await ctx.defer(ephemeral=True)
@@ -67,10 +67,10 @@ class Settings(Cog):
             return
 
         options = {"embed size": """UPDATE settings SET MusicEmbedSize = (?) WHERE GuildID = ?""",
-                   "delete embed when finished": """UPDATE settings SET MusicDeleteEmbedAfterSong = (?) 
+                   "update embed": """UPDATE settings SET MusicDeleteEmbedAfterSong = (?) 
                                                     WHERE GuildID = ?"""}
         values = {"embed size": {"large": 2, "medium": 1, "small": 0},
-                  "delete embed when finished": {"true": 1, "false": 0}}
+                  "update embed": {"true": 1, "false": 0}}
         value = value.lower()
         option = option.split(": ")[0]
 

@@ -38,7 +38,7 @@ class VoiceState:
         cur.execute("""SELECT MusicEmbedSize FROM settings WHERE GuildID = ?""", (self._ctx.guild_id, ))
         self.embed_size = cur.fetchone()[0]
         cur.execute("""SELECT MusicDeleteEmbedAfterSong FROM settings WHERE GuildID = ?""", (self._ctx.guild_id, ))
-        self.delete_embed_when_finished = cur.fetchone()[0]
+        self.update_embed = cur.fetchone()[0]
 
     def __del__(self):
         self.audio_player.cancel()
@@ -124,7 +124,7 @@ class VoiceState:
                 self.current.source.volume = self._volume
                 self.voice.play(self.current.source, after=self.play_next_song)
 
-                if self.delete_embed_when_finished:
+                if self.update_embed:
                     await self.current.source.channel.send(embed=self.current.create_embed(self.songs, self.embed_size),
                                                            delete_after=float(self.current.source.data.get("duration")))
                 else:
@@ -141,6 +141,9 @@ class VoiceState:
                 self.now = FFmpegPCMAudio(self.current.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
                 self.voice.play(self.now, after=self.play_next_song)
 
+                if self.update_embed:
+                    await self.current.source.channel.send(embed=self.current.create_embed(self.songs, self.embed_size),
+                                                           delete_after=float(self.current.source.data.get("duration")))
             await self.next.wait()
 
     def play_next_song(self, error=None):
