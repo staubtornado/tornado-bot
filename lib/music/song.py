@@ -8,6 +8,8 @@ from lib.utils.utils import shortened
 
 
 class SongStr:
+    __slots__ = ("title", "url", "uploader", "ctx")
+
     def __init__(self, data: Union[dict, str], ctx):
         self.title = ""
         self.url = None
