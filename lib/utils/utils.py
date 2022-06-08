@@ -16,7 +16,7 @@ def ordinal(n: Union[int, float]) -> str:
 
 
 def shortened(n: Union[int, float], precision: int = 2) -> str:
-    return millify(n, precision=precision)
+    return millify(n, precision=precision, drop_nulls=True)
 
 
 def extract_int(string: str) -> list[int]:
