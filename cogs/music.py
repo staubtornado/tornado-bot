@@ -470,7 +470,7 @@ class Music(Cog):
             await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please **try again later**.")
             return
 
-        if not ctx.voice_state.voice:
+        if not ctx.voice_state.voice or not ctx.guild.voice_client:
             await self.join(ctx)
 
         async def process():
