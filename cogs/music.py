@@ -1,5 +1,4 @@
 from asyncio import sleep
-from copy import copy
 from math import ceil
 from typing import Union
 
@@ -443,7 +442,7 @@ class Music(Cog):
 
         ctx.voice_state.iterate = not ctx.voice_state.iterate
         if ctx.voice_state.iterate:
-            await ctx.voice_state.songs.put(copy(ctx.voice_state.current))
+            await ctx.voice_state.songs.put(SongStr(ctx.voice_state.current, ctx))
 
             await ctx.respond(f"🔁 **Looped queue /**`iterate` to **disable** loop.")
             return

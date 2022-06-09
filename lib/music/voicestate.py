@@ -93,16 +93,21 @@ class VoiceState:
 
                 if isinstance(self.current, SongStr):
                     try:
-                        response = None
-                        search = self.current.get_search()
+                        try:
+                            self.current.source.original = FFmpegPCMAudio(self.current.source.stream_url,
+                                                                          **YTDLSource.FFMPEG_OPTIONS)
+                            source = self.current.source
+                        except AttributeError:
+                            response = None
+                            search = self.current.get_search()
 
-                        if not url_is_valid(search)[0]:
-                            search.replace(":", "")
-                            response = f"https://music.youtube.com/watch" \
-                                       f"?v={YTMusic().search(search, filter='songs')[0]['videoId']}"
-                        source = await YTDLSource.create_source(ctx=self.current.ctx,
-                                                                search=response or search,
-                                                                loop=self.bot.loop)
+                            if not url_is_valid(search)[0]:
+                                search.replace(":", "")
+                                response = f"https://music.youtube.com/watch" \
+                                           f"?v={YTMusic().search(search, filter='songs')[0]['videoId']}"
+                            source = await YTDLSource.create_source(ctx=self.current.ctx,
+                                                                    search=response or search,
+                                                                    loop=self.bot.loop)
                     except Exception as error:
                         await self.current.ctx.send(embed=Embed(description=f"💥 **Error**: {error}"))
                         continue
@@ -110,9 +115,7 @@ class VoiceState:
                         self.current = Song(source)
 
                 if self.iterate:
-                    new: Song = self.current
-                    new.source.original = FFmpegPCMAudio(new.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
-                    await self.songs.put(new)
+                    await self.songs.put(SongStr(self.current, self._ctx))
 
                     self.loop_duration += int(self.current.source.data.get("duration"))
                     if self.loop_duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
