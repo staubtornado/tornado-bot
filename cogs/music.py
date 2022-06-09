@@ -470,7 +470,10 @@ class Music(Cog):
             await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please **try again later**.")
             return
 
-        if not ctx.voice_state.voice or not ctx.guild.voice_client:
+        try:
+            if not ctx.guild.voice_client:
+                raise ClientException
+        except ClientException:
             await self.join(ctx)
 
         async def process():
