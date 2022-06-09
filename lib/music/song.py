@@ -7,38 +7,6 @@ from lib.music.extraction import YTDLSource
 from lib.utils.utils import shortened
 
 
-class SongStr:
-    __slots__ = ("title", "url", "uploader", "ctx")
-
-    def __init__(self, data: Union[dict, str], ctx):
-        self.title = ""
-        self.url = None
-        self.uploader = None
-        self.ctx = ctx
-
-        if isinstance(data, dict):
-            self.title = data["title"]
-            self.url = data["url"]
-            self.uploader = data["uploader"]
-            return
-
-        parts = data.split(" by ")
-        self.uploader = parts[len(parts) - 1]
-        if len(parts) > 2:
-            self.title = data.replace(f" by {self.uploader}", "")
-            return
-        self.title = parts[0]
-
-    def __str__(self):
-        if self.url is None:
-            return f"{YTDLSource.parse_limited_title_embed(self.title + ' by ' + self.uploader)}"
-        return f"[{YTDLSource.parse_limited_title_embed(self.title + ' by ' + str(self.uploader))}]({self.url})"
-
-    def get_search(self) -> str:
-        search = self.url or f"{self.title} by {self.uploader}"
-        return search
-
-
 class Song:
     __slots__ = ("source", "requester")
 
@@ -82,3 +50,43 @@ class Song:
 
         embed.add_field(name="Queue", value=queue, inline=False) if queue != "" else None
         return embed
+
+
+class SongStr:
+    __slots__ = ("title", "url", "uploader", "ctx", "source")
+
+    def __init__(self, data: Union[dict, str, Song], ctx):
+        self.title = ""
+        self.url = None
+        self.uploader = None
+        self.ctx = ctx
+
+        self.source = None
+        if isinstance(data, Song):
+            self.source = data.source
+            self.title = data.source.title
+            self.url = data.source.url
+            self.uploader = data.source.uploader
+            return
+
+        elif isinstance(data, dict):
+            self.title = data["title"]
+            self.url = data["url"]
+            self.uploader = data["uploader"]
+            return
+
+        parts = data.split(" by ")
+        self.uploader = parts[len(parts) - 1]
+        if len(parts) > 2:
+            self.title = data.replace(f" by {self.uploader}", "")
+            return
+        self.title = parts[0]
+
+    def __str__(self):
+        if self.url is None:
+            return f"{YTDLSource.parse_limited_title_embed(self.title + ' by ' + self.uploader)}"
+        return f"[{YTDLSource.parse_limited_title_embed(self.title + ' by ' + str(self.uploader))}]({self.url})"
+
+    def get_search(self) -> str:
+        search = self.url or f"{self.title} by {self.uploader}"
+        return search
