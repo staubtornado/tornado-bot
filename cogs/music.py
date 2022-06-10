@@ -509,7 +509,8 @@ class Music(Cog):
                 break
             else:
                 if len(search_tracks):
-                    await ctx.respond(f"✅ Added **{len(search_tracks)} songs** from **{output}**")
+                    response = f"**{len(search_tracks)}songs**" if len(search_tracks) > 1 else f"**{search_tracks[0]}**"
+                    await ctx.respond(f"✅ Added {response} from **{output}**")
                     return
 
             response = None
