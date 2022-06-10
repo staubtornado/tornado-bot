@@ -245,7 +245,7 @@ class Economy(Cog):
                     offer: Option(str, "Choose what you want to claim. Options might vary.",
                                   autocomplete=basic_autocomplete(get_claim_options), required=True)):
         """Claim coins."""
-        await ctx.defer()  # TODO: PREVENT SERVER OWNERS FROM CLAIMING
+        await ctx.defer()
         offer = offer.lower()
         available_offers = ("work", "daily", "special")
 
@@ -257,6 +257,9 @@ class Economy(Cog):
 
         if offer == "daily":
             try:
+                if wallet.fee != 0:
+                    await ctx.respond("❌ You make **coins through fees** on this server: You **cannot claim rewards**.")
+                    return
                 wallet.add_claim(ctx.guild_id, 100)
                 wallet.set_balance(wallet.get_balance() + 100)
             except EconomyError:
