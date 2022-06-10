@@ -448,11 +448,13 @@ class Music(Cog):
             return
         await ctx.respond(f"🔁 **Unlooped queue /**`iterate`e to **enable** loop.")
 
-    @slash_command()
+    @slash_command(guild_ids=[795588352387579914])
     @check(Settings.has_beta)
     async def play(self, ctx: CustomApplicationContext,
                    search: Option(str, "Enter the name of the song, a URL or a preset.",
-                                  autocomplete=basic_autocomplete(auto_complete), required=True)):
+                                  autocomplete=basic_autocomplete(auto_complete), required=True),
+                   origin: Option(str, "Choose a search source. YouTube should be used on non-music videos.",
+                                  choices=["YouTube Music (default)", "YouTube"]) = "YouTube Music (default)"):
         """Play a song through the bot, by searching a song with the name or by URL."""
         await ctx.defer()
 
@@ -511,13 +513,15 @@ class Music(Cog):
                     return
 
             response = None
-            if not url[0]:
+            if not url[0] and origin == "YouTube Music (default)":
                 search.replace(":", "")
                 response = f"https://music.youtube.com/watch?v={YTMusic().search(search, filter='songs')[0]['videoId']}"
 
             source = await YTDLSource.create_source(ctx, search=response or search, loop=self.bot.loop)
             await ctx.voice_state.songs.put(Song(source))
-            await ctx.respond(f"✅ Added {source}")
+            await ctx.respond(f"✅ Added {source}" + (
+                              f"\n❔ We **changed** our search **source**. Use **/**`play search source=YouTube` "
+                              f"**for non-music videos**." if origin == "YouTube Music (default)" else ""))
 
         ctx.voice_state.processing = True
         try:
