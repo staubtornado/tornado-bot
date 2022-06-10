@@ -104,6 +104,10 @@ class Music(Cog):
             return await ctx.respond(instance)
 
         destination: VoiceChannel = ctx.author.voice.channel
+        if ctx.guild.voice_client:
+            await ctx.respond(f"🎶 I am **currently playing** in {ctx.voice_client.channel.mention}.")
+            return
+
         try:
             ctx.voice_state.voice = await destination.connect()
         except ClientException:
