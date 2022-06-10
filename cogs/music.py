@@ -520,7 +520,7 @@ class Music(Cog):
             source = await YTDLSource.create_source(ctx, search=response or search, loop=self.bot.loop)
             await ctx.voice_state.songs.put(Song(source))
             await ctx.respond(f"✅ Added {source}" + (
-                              f"\n❔ We **changed** our search **source**. Use **/**`play search source=YouTube` "
+                              f"\n❔ We **changed** our search **source**. Use **/**`play search origin=YouTube` "
                               f"**for non-music videos**." if origin == "YouTube Music (default)" else ""))
 
         ctx.voice_state.processing = True
