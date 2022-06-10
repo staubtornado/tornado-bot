@@ -121,8 +121,13 @@ class Utilities(Cog):
         """Check the bots ping to the Discord API."""
         self.bot.latencies.append(round(self.bot.latency * 1000))
 
+        embed = Embed(title="Ping", description="The bots ping to the Discord API.",
+                      colour=SETTINGS["Colours"]["Default"])
+        embed.add_field(name="Ping", value=f"`{round(self.bot.latency * 1000)}`**ms**")
+
         image, file = create_graph(self.bot.latencies)
-        await ctx.respond(f"**Ping**: `{round(self.bot.latency * 1000)}ms`", file=file)
+        embed.set_image(url=image)
+        await ctx.respond(embed=embed, file=file)
 
     @slash_command()
     async def uptime(self, ctx: ApplicationContext):
