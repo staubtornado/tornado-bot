@@ -448,7 +448,7 @@ class Music(Cog):
             return
         await ctx.respond(f"🔁 **Unlooped queue /**`iterate`e to **enable** loop.")
 
-    @slash_command(guild_ids=[795588352387579914])
+    @slash_command()
     @check(Settings.has_beta)
     async def play(self, ctx: CustomApplicationContext,
                    search: Option(str, "Enter the name of the song, a URL or a preset.",
