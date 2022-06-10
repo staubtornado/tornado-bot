@@ -481,6 +481,19 @@ class Music(Cog):
         except ClientException:
             await self.join(ctx)
 
+        presets: dict = {"Charts": "https://open.spotify.com/playlist/37i9dQZEVXbNG2KDcFcKOF",
+                         "New Releases": "https://open.spotify.com/playlist/37i9dQZF1DWUW2bvSkjcJ6",
+                         "Chill": "https://open.spotify.com/playlist/37i9dQZF1DWTvNyxOwkztu",
+                         "Party": "https://open.spotify.com/playlist/37i9dQZF1DXbX3zSzB4MO0",
+                         "Classical": "https://open.spotify.com/playlist/37i9dQZF1DWWEJlAGA9gs0",
+                         "K-Pop": "https://open.spotify.com/playlist/37i9dQZF1DX9tPFwDMOaN1",
+                         "Gaming": "https://open.spotify.com/playlist/37i9dQZF1DWTyiBJ6yEqeu",
+                         "Rock": "https://open.spotify.com/playlist/37i9dQZF1DWZJhOVGWqUKF",
+                         "TDTT": "https://open.spotify.com/playlist/669nUqEjX1ozcx2Uika2fR",
+                         "ESC22": "https://open.spotify.com/playlist/37i9dQZF1DWVCKO3xAlT1Q"}
+
+        search = presets[search] if search in presets else search
+
         async def process():
             search_tracks = []
             output = ""
@@ -513,7 +526,8 @@ class Music(Cog):
                 break
             else:
                 if len(search_tracks):
-                    response = f"**{len(search_tracks)}songs**" if len(search_tracks) > 1 else f"**{search_tracks[0]}**"
+                    response = f"**{len(search_tracks)} songs**" if len(search_tracks) > 1 \
+                                                                 else f"**{search_tracks[0]}**"
                     await ctx.respond(f"✅ Added {response} from **{output}**")
                     return
 
