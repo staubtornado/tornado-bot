@@ -9,7 +9,6 @@ from discord.utils import get, basic_autocomplete
 from psutil import virtual_memory
 from spotipy import SpotifyException
 from yt_dlp import utils
-from ytmusicapi import YTMusic
 
 from cogs.settings import Settings
 from data.config.settings import SETTINGS
@@ -456,9 +455,7 @@ class Music(Cog):
     @check(Settings.has_beta)
     async def play(self, ctx: CustomApplicationContext,
                    search: Option(str, "Enter the name of the song, a URL or a preset.",
-                                  autocomplete=basic_autocomplete(auto_complete), required=True),
-                   origin: Option(str, "Choose a search source. YouTube should be used on non-music videos.",
-                                  choices=["YouTube Music (default)", "YouTube"]) = "YouTube Music (default)"):
+                                  autocomplete=basic_autocomplete(auto_complete), required=True)):
         """Play a song through the bot, by searching a song with the name or by URL."""
         await ctx.defer()
 
@@ -492,7 +489,7 @@ class Music(Cog):
                          "TDTT": "https://open.spotify.com/playlist/669nUqEjX1ozcx2Uika2fR",
                          "ESC22": "https://open.spotify.com/playlist/37i9dQZF1DWVCKO3xAlT1Q"}
 
-        search = presets[search] if search in presets else search
+        search: str = presets[search] if search in presets else search
 
         async def process():
             search_tracks = []
@@ -531,16 +528,12 @@ class Music(Cog):
                     await ctx.respond(f"✅ Added {response} from **{output}**")
                     return
 
-            response = None
-            if not url[0] and origin == "YouTube Music (default)":
-                search.replace(":", "")
-                response = f"https://music.youtube.com/watch?v={YTMusic().search(search, filter='songs')[0]['videoId']}"
+            if not url[0]:
+                search.replace(":", "") + ", topic"
 
-            source = await YTDLSource.create_source(ctx, search=response or search, loop=self.bot.loop)
+            source = await YTDLSource.create_source(ctx, search=search, loop=self.bot.loop)
             await ctx.voice_state.songs.put(Song(source))
-            await ctx.respond(f"✅ Added {source}" + (
-                              f"\n❔ We **changed** our search **source**. Use **/**`play search origin=YouTube` "
-                              f"**for non-music videos**." if origin == "YouTube Music (default)" else ""))
+            await ctx.respond(f"✅ Added {source}")
 
         ctx.voice_state.processing = True
         try:
