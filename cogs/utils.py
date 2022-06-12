@@ -171,15 +171,19 @@ class Utilities(Cog):
 
             embed.title = f"{extension.qualified_name} Help"
             embed.description += f"\n{extension.description}"
-            client_permissions = get_permissions(ctx.author.guild_permissions)
+
+            try:
+                client_permissions = get_permissions(ctx.author.guild_permissions)
+            except AttributeError:
+                client_permissions = []
 
             for command in extension.walk_commands():  # Iterate through all commands in cog
-                if isinstance(command.parent, SlashCommandGroup) and ctx.guild is not None:
+                if isinstance(command.parent, SlashCommandGroup) and client_permissions:
                     # TODO: WORK WITH SYNCED COMMANDS
                     required_permissions = get_permissions(command.parent.default_member_permissions)
                     if not all(elem in client_permissions for elem in required_permissions):  # False -> perm granted
                         continue
-                elif ctx.guild is not None:
+                elif client_permissions:
                     required_permissions = get_permissions(command.default_member_permissions)
                     if not all(elem in client_permissions for elem in required_permissions):  # False -> perm granted
                         continue
