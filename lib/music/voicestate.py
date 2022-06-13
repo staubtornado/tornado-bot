@@ -7,6 +7,7 @@ from data.db.memory import database
 from lib.music.exceptions import VoiceError
 from lib.music.extraction import YTDLSource
 from lib.music.queue import SongQueue
+from lib.music.search import guess_type
 from lib.music.song import Song, SongStr
 from lib.utils.utils import url_is_valid
 
@@ -100,8 +101,9 @@ class VoiceState:
                             search = self.current.get_search()
 
                             if not url_is_valid(search)[0]:
-                                search.replace(":", "") + ", topic"
-                            source = await YTDLSource.create_source(self.current.ctx, search=search, loop=self.bot.loop)
+                                source = await guess_type(search, self._ctx, loop=self.bot.loop)
+                            else:
+                                source = await YTDLSource.create_source(self.current.ctx, search, loop=self.bot.loop)
                     except Exception as error:
                         await self.current.ctx.send(embed=Embed(description=f"💥 **Error**: {error}"))
                         continue
