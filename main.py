@@ -2,10 +2,10 @@ from asyncio import run
 from os import getenv, listdir, remove
 from os.path import join
 from sqlite3 import connect, Error
-from time import time
+from time import time, localtime, strftime
 from traceback import format_exc
 
-from discord import Bot, ApplicationCommandInvokeError, ApplicationContext, CheckFailure
+from discord import Bot, ApplicationCommandInvokeError, ApplicationContext, CheckFailure, Interaction
 from discord.ext.tasks import loop
 from dotenv import load_dotenv
 from tqdm import tqdm
@@ -52,11 +52,19 @@ async def on_ready():
 
 
 @bot.event
+async def on_interaction(interaction: Interaction):
+    if interaction.is_command():
+        print(f"[DEFAULT] [{strftime('%d.%m.%y %H:%M', localtime())}] "
+              f"{interaction.user} executed {interaction.type.name} in {interaction.guild}")
+
+
+@bot.event
 async def on_application_command_error(ctx: ApplicationContext, error):
     if not SETTINGS["Production"]:
         await ctx.respond(f"❌ An **error occurred**: `{error}`.")
         raise error
     save_traceback(error)
+    print(f"[ERROR] [{strftime('%d.%m.%y %H:%M', localtime())}] {ctx.user} executed {ctx.command.name} in {ctx.guild}")
 
     if isinstance(error, CheckFailure):
         if ctx.command.name == "play":
