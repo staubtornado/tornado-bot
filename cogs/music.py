@@ -510,8 +510,8 @@ class Music(Cog):
         ctx.voice_state.processing = True
         try:
             source = await process(search, ctx, self.bot.loop)
-        except YTDLError:
-            pass
+        except YTDLError as e:
+            source = e
         except Exception as e:
             ctx.voice_state.processing = False
             raise e
