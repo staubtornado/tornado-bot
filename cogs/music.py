@@ -451,7 +451,7 @@ class Music(Cog):
 
             await ctx.respond(f"🔁 **Looped queue /**`iterate` to **disable** loop.")
             return
-        await ctx.respond(f"🔁 **Unlooped queue /**`iterate`e to **enable** loop.")
+        await ctx.respond(f"🔁 **Unlooped queue /**`iterate` to **enable** loop.")
 
     @slash_command()
     async def lyrics(self, ctx: CustomApplicationContext):
