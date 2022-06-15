@@ -53,6 +53,8 @@ async def on_ready():
 
 @bot.event
 async def on_interaction(interaction: Interaction):
+    await bot.process_application_commands(interaction, auto_sync=None)
+
     if interaction.is_command():
         print(f"[DEFAULT] [{strftime('%d.%m.%y %H:%M', localtime())}] "
               f"{interaction.user} executed {interaction.type.name} in {interaction.guild}")
