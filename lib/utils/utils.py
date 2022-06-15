@@ -4,6 +4,7 @@ from traceback import format_tb
 from typing import Union, Any
 from urllib.parse import ParseResult, urlparse
 
+from matplotlib import use
 import matplotlib.pyplot as plt
 from discord import Permissions, File
 from millify import millify
@@ -51,6 +52,8 @@ def save_traceback(exception):
 
 
 def create_graph(y: list[int], title: str = None) -> tuple[str, File]:
+    use("Agg")
+
     with plt.rc_context({"axes.edgecolor": "#838383", "xtick.color": "#838383", "ytick.color": "#838383"}):
         plt.plot([i for i in range(len(y))], y)
 
