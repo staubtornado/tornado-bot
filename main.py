@@ -57,7 +57,7 @@ async def on_interaction(interaction: Interaction):
 
     if interaction.is_command():
         print(f"[DEFAULT] [{strftime('%d.%m.%y %H:%M', localtime())}] "
-              f"{interaction.user} executed {interaction.type.name} in {interaction.guild}")
+              f"{interaction.user} executed /{interaction.data['name']} in {interaction.guild}")
 
 
 @bot.event
