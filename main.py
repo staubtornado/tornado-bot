@@ -64,6 +64,7 @@ async def on_application_command_error(ctx: ApplicationContext, error):
         await ctx.respond(f"❌ An **error occurred**: `{error}`.")
         raise error
     save_traceback(error)
+    print(f"[ERROR] [{strftime('%d.%m.%y %H:%M', localtime())}] {ctx.user} executed {ctx.command.name} in {ctx.guild}")
 
     if isinstance(error, CheckFailure):
         if ctx.command.name == "play":
