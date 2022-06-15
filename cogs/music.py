@@ -1,9 +1,10 @@
 from asyncio import sleep
 from math import ceil
+from os import environ
 from typing import Union
 
 from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option, \
-    AutocompleteContext
+    AutocompleteContext, HTTPException
 from discord.ext.commands import Cog, check
 from discord.utils import get, basic_autocomplete
 from psutil import virtual_memory
@@ -13,10 +14,11 @@ from yt_dlp import utils
 from cogs.settings import Settings
 from data.config.settings import SETTINGS
 from data.db.memory import database
+from lib.music.exceptions import YTDLError
 from lib.music.extraction import YTDLSource
 from lib.music.search import process
 from lib.music.song import Song, SongStr
-from lib.music.spotify import search_on_spotify
+from lib.music.api import search_on_spotify, get_lyrics
 from lib.music.voicestate import VoiceState
 from lib.utils.utils import ordinal
 
@@ -360,9 +362,9 @@ class Music(Cog):
                                          f"{YTDLSource.parse_duration(ctx.voice_state.songs.get_duration())}\n⠀",
                              colour=0xFF0000)
         embed.add_field(name="🎶 Now Playing", value=f"[{ctx.voice_state.current.source.title_limited_embed}]"
-                                                    f"({ctx.voice_state.current.source.url})\n"
-                                                    f"[{ctx.voice_state.current.source.uploader}]"
-                                                    f"({ctx.voice_state.current.source.uploader_url})", inline=False)
+                                                     f"({ctx.voice_state.current.source.url})\n"
+                                                     f"[{ctx.voice_state.current.source.uploader}]"
+                                                     f"({ctx.voice_state.current.source.uploader_url})", inline=False)
         embed.add_field(name="⠀", value=queue, inline=False)
         embed.set_footer(text=f"Page {page}/{pages}")
         await ctx.respond(embed=embed)
@@ -452,8 +454,19 @@ class Music(Cog):
         await ctx.respond(f"🔁 **Unlooped queue /**`iterate`e to **enable** loop.")
 
     @slash_command()
-    async def lyrics(self, ctx: ApplicationContext):
-        pass
+    async def lyrics(self, ctx: CustomApplicationContext):
+        await ctx.defer()
+
+        try:
+            embed = Embed(title="Lyrics", description=get_lyrics(ctx.voice_state.current.source.title,
+                                                                 ctx.voice_state.current.source.uploader),
+                          colour=0xFF0000)
+            embed.set_author(name=f"{ctx.voice_state.current.source.title_limited_embed} by "
+                                  f"{ctx.voice_state.current.source.uploader}",
+                             icon_url=ctx.voice_state.current.source.thumbnail)
+            await ctx.respond(embed=embed)
+        except (AttributeError, HTTPException):
+            await ctx.respond("❌ **Can not find any lyrics** for the current song.")
 
     @slash_command()
     @check(Settings.has_beta)

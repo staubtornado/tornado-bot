@@ -5,7 +5,7 @@ from spotipy import SpotifyException
 
 from lib.music.extraction import YTDLSource
 from lib.music.song import SongStr, Song
-from lib.music.spotify import get_playlist_track_names, get_track_name, get_album_track_names, get_artist_top_songs
+from lib.music.api import get_playlist_track_names, get_track_name, get_album_track_names, get_artist_top_songs
 from lib.utils.utils import url_is_valid
 
 

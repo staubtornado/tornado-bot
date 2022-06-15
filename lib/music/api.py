@@ -1,9 +1,12 @@
 from os import environ
 
+from dotenv import load_dotenv
 from spotipy import Spotify, SpotifyClientCredentials
-
+from lyricsgenius import Genius
+load_dotenv("../../data/config/.env")
 sp: Spotify = Spotify(auth_manager=SpotifyClientCredentials(client_id=environ['SPOTIFY_CLIENT_ID'],
                                                             client_secret=environ['SPOTIFY_CLIENT_SECRET']))
+genius = Genius(environ["LYRICS_FIND_ACCESS_TOKEN"])
 
 
 def search_on_spotify(search: str, pattern: str = "track,artist") -> tuple[list[str], list[str]]:
@@ -52,3 +55,7 @@ def get_artist_top_songs(artist_id) -> list[str]:
         artist = song["artists"][0]["name"]
         songs.append(f"{name} by {artist}")
     return songs
+
+
+def get_lyrics(song: str, artist: str) -> str:
+    return genius.search_song(title=song, artist=artist.replace(" - Topic", "")).lyrics
