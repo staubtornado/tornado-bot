@@ -14,7 +14,7 @@ class Song:
         self.source = source
         self.requester = source.requester
 
-    def create_embed(self, songs, size: int = 2):
+    def create_embed(self, songs, size: int = 2) -> Embed:
         description = f"[Video]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) **|** " \
                       f"{self.source.duration} **|** {self.requester.mention}"
 
