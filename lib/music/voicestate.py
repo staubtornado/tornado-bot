@@ -88,7 +88,11 @@ class VoiceState:
                 except TimeoutError:
                     self.bot.loop.create_task(self.stop())
                     self.exists = False
-                    await self._ctx.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to **inactivity**.")
+
+                    try:
+                        await self._ctx.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to **inactivity**.")
+                    except AttributeError:
+                        pass
                     return
 
                 if isinstance(self.current, SongStr):
