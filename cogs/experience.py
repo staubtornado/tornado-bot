@@ -8,7 +8,7 @@ from discord.ext.commands import Cog
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
-from lib.utils.utils import ordinal
+from lib.utils.utils import ordinal, progress_bar
 
 on_cooldown: list = []
 
@@ -98,10 +98,6 @@ class ExperienceSystem:
             xp += self.calc_xp(level=i)
         return xp + self.xp
 
-    def progress_bar(self) -> str:
-        percent = (self.xp / self.calc_xp()) * 100
-        return round(percent / 10) * "◻️" + round((100 - percent) / 10) * "▪️"
-
     async def check_for_level_up(self) -> None:
         required: int = self.calc_xp()
 
@@ -114,7 +110,8 @@ class ExperienceSystem:
         if level_up:
             embed = Embed(title="Level Up!", description=f"GG, you are now level {self.level} on this server.",
                           colour=SETTINGS["Colours"]["Default"])
-            embed.add_field(name=f"Progress ({self.xp}XP / {required}XP)", value=self.progress_bar())
+            embed.add_field(name=f"Progress ({self.xp}XP / {required}XP)",
+                            value=progress_bar(amount=self.xp, total=self.calc_xp(), start="◻️", end="▪️"))
             embed.set_author(name=self.message.author.name, icon_url=self.message.author.avatar.url)
             await self.message.reply(embed=embed, delete_after=60)
 
@@ -141,7 +138,8 @@ class Experience(Cog):
             embed.add_field(name="Level", value=f"`{system.get_level()}`")
             embed.add_field(name="Total XP", value=f"`{system.total_xp()}`")
             embed.add_field(name="Messages", value=f"`{system.get_messages()}`")
-            embed.add_field(name=f"{system.get_xp()} / {system.calc_xp()} XP", value=system.progress_bar())
+            embed.add_field(name=f"{system.get_xp()} / {system.calc_xp()} XP",
+                            value=progress_bar(amount=system.xp, total=system.calc_xp(), start="◻️", end="▪️"))
         except TypeError:
             await ctx.respond("❌ I **do not have** any **information about you or this user**.")
             return

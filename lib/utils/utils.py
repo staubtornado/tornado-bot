@@ -75,3 +75,9 @@ def create_graph(y: list[int], title: str = None) -> tuple[str, File]:
 def url_is_valid(url: str) -> tuple[bool, ParseResult]:
     parsed = urlparse(url)
     return bool(parsed.netloc) and bool(parsed.scheme), parsed
+
+
+def progress_bar(amount: Union[int, float], total: Union[int, float],
+                 start: str = "◻️", mid: str = "", end: str = "▪️") -> str:
+    percent = (amount / total) * 100
+    return round(percent / 10) * start + mid + round((100 - percent) / 10) * end
