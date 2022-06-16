@@ -1,6 +1,5 @@
 from asyncio import sleep
 from math import ceil
-from os import environ
 from typing import Union
 
 from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option, \
@@ -14,11 +13,11 @@ from yt_dlp import utils
 from cogs.settings import Settings
 from data.config.settings import SETTINGS
 from data.db.memory import database
+from lib.music.api import search_on_spotify, get_lyrics
 from lib.music.exceptions import YTDLError
 from lib.music.extraction import YTDLSource
 from lib.music.search import process
 from lib.music.song import Song, SongStr
-from lib.music.api import search_on_spotify, get_lyrics
 from lib.music.voicestate import VoiceState
 from lib.utils.utils import ordinal
 
