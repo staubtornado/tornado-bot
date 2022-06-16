@@ -1,5 +1,6 @@
 from asyncio import sleep
 from math import ceil
+from time import time
 from typing import Union
 
 from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option, \
@@ -19,7 +20,7 @@ from lib.music.extraction import YTDLSource
 from lib.music.search import process
 from lib.music.song import Song, SongStr
 from lib.music.voicestate import VoiceState
-from lib.utils.utils import ordinal
+from lib.utils.utils import ordinal, progress_bar, time_to_string
 
 utils.bug_reports_message = lambda: ''
 
@@ -201,10 +202,24 @@ class Music(Cog):
         await ctx.defer()
 
         try:
-            await ctx.respond(embed=ctx.voice_state.current.create_embed(ctx.voice_state.songs,
-                                                                         ctx.voice_state.embed_size))
+            embed: Embed = ctx.voice_state.current.create_embed(ctx.voice_state.songs, ctx.voice_state.embed_size)
         except AttributeError:
             await ctx.respond("❌ **Nothing** is currently **playing**.")
+            return
+
+        duration: int = int(ctx.voice_state.current.source.data.get('duration'))
+        if not ctx.voice_state.voice.is_paused():
+            if not ctx.voice_state.song_position[0] + (round(time()) - ctx.voice_state.song_position[1]) > duration:
+                ctx.voice_state.song_position[0] += round(time()) - ctx.voice_state.song_position[1]
+            else:
+                ctx.voice_state.song_position[0] = duration
+            ctx.voice_state.song_position[1] = round(time())
+
+        bar = progress_bar(ctx.voice_state.song_position[0], duration, start="---", mid="•**", end="---")
+        embed.description = f"**{time_to_string(ctx.voice_state.song_position[0])} {bar} " \
+                            f"**{time_to_string(duration)}**\n" \
+                            f"{embed.description}".replace(f"**|** {ctx.voice_state.current.source.duration} ", "")
+        await ctx.respond(embed=embed)
 
     @slash_command()
     async def pause(self, ctx: CustomApplicationContext):
@@ -218,6 +233,8 @@ class Music(Cog):
 
         if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
             ctx.voice_state.voice.pause()
+            ctx.voice_state.song_position[0] += round(time()) - ctx.voice_state.song_position[1]
+            ctx.voice_state.song_position[1] = round(time())
             await ctx.respond("⏯ **Paused** song, use **/**`resume` to **continue**.")
 
             for i in range(10):
@@ -227,6 +244,7 @@ class Music(Cog):
                         if i >= 9:
                             ctx.voice_state.loop = False
                             ctx.voice_state.songs.clear()
+                            ctx.voice_state.exists = False
                             ctx.voice_state.voice.stop()
                             ctx.voice_state.current = None
                             await ctx.send("💤 **Stopped** the player **due to inactivity**.")
@@ -250,6 +268,7 @@ class Music(Cog):
 
         if ctx.voice_state.is_playing and ctx.voice_state.voice.is_paused():
             ctx.voice_state.voice.resume()
+            ctx.voice_state.song_position[1] = round(time())
             return await ctx.respond("⏯ **Resumed** song, use **/**`pause` to **pause**.")
         await ctx.respond("❌ Either is the **song is not paused**, **or nothing** is currently **playing**.")
 

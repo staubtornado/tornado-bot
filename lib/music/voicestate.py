@@ -1,4 +1,5 @@
 from asyncio import Event, wait_for, shield, TimeoutError
+from time import time
 
 from discord import Bot, FFmpegPCMAudio, Embed, ApplicationContext
 
@@ -25,7 +26,7 @@ class VoiceState:
         self.songs: SongQueue = SongQueue()
         self.exists: bool = True
         self.loop_duration: int = 0
-        self.error: int = 0
+        self.song_position = None
 
         self._loop: bool = False
         self._iterate: bool = False
@@ -127,6 +128,7 @@ class VoiceState:
                 self.current.source.volume = self._volume
                 self.voice.play(self.current.source, after=self.play_next_song)
 
+                self.song_position = [0, round(time())]
                 if self.update_embed:
                     await self.current.source.channel.send(embed=self.current.create_embed(self.songs, self.embed_size),
                                                            delete_after=float(self.current.source.data.get("duration")))
@@ -144,6 +146,7 @@ class VoiceState:
                 self.now = FFmpegPCMAudio(self.current.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
                 self.voice.play(self.now, after=self.play_next_song)
 
+                self.song_position = [0, round(time())]
                 if self.update_embed:
                     await self.current.source.channel.send(embed=self.current.create_embed(self.songs, self.embed_size),
                                                            delete_after=float(self.current.source.data.get("duration")))
