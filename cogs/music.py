@@ -380,9 +380,9 @@ class Music(Cog):
                                          f"{YTDLSource.parse_duration(ctx.voice_state.songs.get_duration())}\n⠀",
                              colour=0xFF0000)
         embed.add_field(name="🎶 Now Playing", value=f"[{ctx.voice_state.current.source.title_limited_embed}]"
-                                                     f"({ctx.voice_state.current.source.url})\n"
-                                                     f"[{ctx.voice_state.current.source.uploader}]"
-                                                     f"({ctx.voice_state.current.source.uploader_url})", inline=False)
+                                                    f"({ctx.voice_state.current.source.url})\n"
+                                                    f"[{ctx.voice_state.current.source.uploader}]"
+                                                    f"({ctx.voice_state.current.source.uploader_url})", inline=False)
         embed.add_field(name="⠀", value=queue, inline=False)
         embed.set_footer(text=f"Page {page}/{pages}")
         await ctx.respond(embed=embed)
@@ -472,19 +472,19 @@ class Music(Cog):
         await ctx.respond(f"🔁 **Unlooped queue /**`iterate` to **enable** loop.")
 
     @slash_command()
-    async def lyrics(self, ctx: CustomApplicationContext):
+    async def lyrics(self, ctx: CustomApplicationContext, title: str = None, artist: str = None):
+        """Search for lyrics, default search is current song."""
         await ctx.defer()
 
         try:
-            embed = Embed(title="Lyrics", description=get_lyrics(ctx.voice_state.current.source.title,
-                                                                 ctx.voice_state.current.source.uploader),
-                          colour=0xFF0000)
-            embed.set_author(name=f"{ctx.voice_state.current.source.title_limited_embed} by "
-                                  f"{ctx.voice_state.current.source.uploader}",
-                             icon_url=ctx.voice_state.current.source.thumbnail)
+            response = get_lyrics(title or ctx.voice_state.current.source.title,
+                                  artist or ctx.voice_state.current.source.uploader)
+
+            embed = Embed(title="Lyrics", description=response[0], colour=0xFF0000)
+            embed.set_author(name=f"{response[2]} by {response[3]}", icon_url=response[1])
             await ctx.respond(embed=embed)
         except (AttributeError, HTTPException):
-            await ctx.respond("❌ **Can not find any lyrics** for the current song.")
+            await ctx.respond("❌ **Can not find any lyrics** for that song.")
 
     @slash_command()
     @check(Settings.has_beta)
