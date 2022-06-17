@@ -188,7 +188,7 @@ class Settings(Cog):
 
     @settings.command()
     async def beta(self, ctx: ApplicationContext, key: str) -> None:
-        """Deactivate or activate beta features on this server."""
+        """Activate beta features on this server with a key."""
         await ctx.defer(ephemeral=True)
 
         cur = database.cursor()

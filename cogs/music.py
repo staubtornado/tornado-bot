@@ -137,7 +137,7 @@ class Music(Cog):
 
     @slash_command()  # TODO: MERGE WITH JOIN COMMAND
     async def summon(self, ctx: CustomApplicationContext, *, channel: VoiceChannel = None):
-        """Summons the bot to a voice channel. If no channel was specified, it joins your channel."""
+        """[DEPRECATED] Summons the bot to a voice channel. If no channel was specified, it joins your channel."""
 
         if not channel and not ctx.author.voice:
             await ctx.respond("❌ You are **not in a voice channel** and you **did not specify** a voice "
@@ -171,7 +171,7 @@ class Music(Cog):
 
     @slash_command()
     async def volume(self, ctx: CustomApplicationContext, volume: int):
-        """Sets the volume of the current song."""
+        """Changes the volume of the current song."""
         await ctx.defer()
 
         instance = ensure_voice_state(ctx, requires_song=True)
@@ -198,7 +198,7 @@ class Music(Cog):
 
     @slash_command()
     async def now(self, ctx: CustomApplicationContext):
-        """Displays the currently playing song."""
+        """Currently playing song."""
         await ctx.defer()
 
         try:
@@ -223,7 +223,7 @@ class Music(Cog):
 
     @slash_command()
     async def pause(self, ctx: CustomApplicationContext):
-        """Pauses the currently playing song."""
+        """Pauses the current song."""
         await ctx.defer()
 
         instance = ensure_voice_state(ctx, requires_song=True)
@@ -258,7 +258,7 @@ class Music(Cog):
 
     @slash_command()
     async def resume(self, ctx: CustomApplicationContext):
-        """Resumes a currently paused song."""
+        """Resumes the paused song."""
         await ctx.defer()
 
         instance = ensure_voice_state(ctx)
@@ -274,7 +274,7 @@ class Music(Cog):
 
     @slash_command()
     async def stop(self, ctx: CustomApplicationContext):
-        """Stops playing song and clears the queue."""
+        """Stops playing and clears the queue."""
         await ctx.defer()
 
         instance = ensure_voice_state(ctx, no_processing=True)
@@ -293,7 +293,7 @@ class Music(Cog):
     async def skip(self, ctx: CustomApplicationContext,
                    force: Option(str, "Bypasses votes and directly skips song.", choices=["True"],
                                  required=False) = "False"):
-        """Vote to skip a song. The requester can automatically skip."""
+        """(Vote) skip to the next song. The requester can always skip."""
         await ctx.defer()
 
         instance = ensure_voice_state(ctx, requires_song=True)
@@ -355,7 +355,7 @@ class Music(Cog):
 
     @slash_command()
     async def queue(self, ctx: CustomApplicationContext, *, page: int = 1):
-        """Shows the queue. You can optionally specify the page to show. Each page contains 10 elements."""
+        """Shows the queue. You can optionally specify the page to show."""
         await ctx.defer()
 
         if len(ctx.voice_state.songs) == 0:
@@ -433,7 +433,7 @@ class Music(Cog):
 
     @slash_command()
     async def loop(self, ctx: CustomApplicationContext):
-        """Loops the currently playing song. Invoke this command again to disable loop."""
+        """Loops current song. Invoke this command again to disable loop."""
         await ctx.defer()
 
         instance = ensure_voice_state(ctx, requires_song=True)
@@ -451,7 +451,7 @@ class Music(Cog):
 
     @slash_command()
     async def iterate(self, ctx: CustomApplicationContext):
-        """Iterates the current queue. Invoke this command again to disable iteration."""
+        """Iterates current queue. Invoke this command again to disable iteration."""
         await ctx.defer()
 
         instance = ensure_voice_state(ctx, requires_queue=True)
@@ -491,7 +491,7 @@ class Music(Cog):
     async def play(self, ctx: CustomApplicationContext,
                    search: Option(str, "Enter the name of the song, a URL or a preset.",
                                   autocomplete=basic_autocomplete(auto_complete), required=True)):
-        """Play a song through the bot, by searching a song with the name or by URL."""
+        """Play a song through the bot. Enter link (song or Playlist) or song name"""
         await ctx.defer()
 
         instance = ensure_voice_state(ctx, no_processing=True)

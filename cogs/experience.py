@@ -125,7 +125,7 @@ class Experience(Cog):
 
     @slash_command()
     async def rank(self, ctx: ApplicationContext, user: Member = None):
-        """Displays information about your stats on this server."""
+        """Information about your rank on this server."""
         await ctx.defer()
 
         if user is not None:
@@ -152,7 +152,7 @@ class Experience(Cog):
 
     @slash_command()
     async def leaderboard(self, ctx: ApplicationContext, *, page: int = 1):
-        """Most active users on this server."""
+        """Leaderboard of the most active users on this server."""
         await ctx.defer()
 
         cur: Cursor = database.cursor()

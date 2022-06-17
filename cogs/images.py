@@ -62,7 +62,7 @@ class Images(Cog):
     async def image(self, ctx: ApplicationContext,
                     category: Option(str, "Choose a category from which the bot selects an image.",
                                      autocomplete=get_categories)):
-        """Select a category from wich the bot will send a random image."""
+        """Random image from a given category."""
 
         categories = {"porn": True, "ass": True, "asian": True, "masturbation": True, "shaved": True, "close-up": True,
                       "pussy": True, "cat": True, "boobs": True, "milf": True, "meme":  False}

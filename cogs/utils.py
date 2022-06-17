@@ -55,7 +55,7 @@ class Utilities(Cog):
     async def purge(self, ctx: ApplicationContext, amount: int = 100,
                     order: Option(str, "Select where the bot should start deleting.",
                                   required=False, choices=["Oldest", "Newest"]) = "Newest"):
-        """Deletes latest 100 messages in this channel by default. Can be increased up to 1000."""
+        """Deletes specified amount of messages. Can be increased up to 1000."""
         await ctx.defer()
 
         await ctx.respond(

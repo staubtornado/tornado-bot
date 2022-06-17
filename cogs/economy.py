@@ -170,7 +170,7 @@ class Economy(Cog):
 
     @slash_command()
     async def wallet(self, ctx: ApplicationContext, *, user: Member = None):
-        """Displays information about your wallet."""
+        """Information about your wallet."""
         await ctx.defer()
         target = user or ctx.author
 
@@ -185,7 +185,7 @@ class Economy(Cog):
 
     @slash_command()
     async def transfer(self, ctx: ApplicationContext, amount: int, user: Member):
-        """Sends an amount of coins from your wallet to a selected user."""
+        """Transfer coins to other users."""
         await ctx.defer(ephemeral=True)
 
         source: Wallet = self.wallets[ctx.author.id]
@@ -314,7 +314,7 @@ class Economy(Cog):
     async def sell(self, ctx: ApplicationContext,
                    subject: Option(str, "The subject you want to sell. If nothing appears, nothing is available.",
                                    autocomplete=get_property, required=True), price: int):
-        """Sell something you own on this server. You receive the money once a user buys it."""
+        """Sell subjects on this server. You receive coins once a user buys it."""
 
         integers_in_subject = list(map(int, findall(r'\d+', subject)))
         subject = ctx.bot.get_channel(integers_in_subject[len(integers_in_subject) - 1])
