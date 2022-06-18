@@ -1,7 +1,7 @@
 from asyncio import run
 from os import getenv, listdir, remove
 from os.path import join
-from sqlite3 import connect, Error
+from sqlite3 import connect, Error, Connection
 from time import time, localtime, strftime
 from traceback import format_exc
 
@@ -23,7 +23,7 @@ db_initialized: bool = False
 @loop(seconds=SETTINGS["ServiceSyncInSeconds"])
 async def sync_database():
     global db_initialized
-    local_db: connect = connect("./data/db/database.db", check_same_thread=False)
+    local_db: Connection = connect("./data/db/database.db", check_same_thread=False)
 
     print("Syncing database...")
     try:

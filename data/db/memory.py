@@ -1,3 +1,3 @@
-from sqlite3 import connect
+from sqlite3 import connect, Connection
 
-database: connect = connect(":memory:")
+database: Connection = connect(":memory:")
