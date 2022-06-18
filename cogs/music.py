@@ -244,7 +244,6 @@ class Music(Cog):
                         if i >= 9:
                             ctx.voice_state.loop = False
                             ctx.voice_state.songs.clear()
-                            ctx.voice_state.exists = False
                             ctx.voice_state.voice.stop()
                             ctx.voice_state.current = None
                             await ctx.send("💤 **Stopped** the player **due to inactivity**.")
