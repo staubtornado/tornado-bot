@@ -1,13 +1,17 @@
 from difflib import get_close_matches
+from json import loads
 from time import time
 
 from discord import Bot, slash_command, ApplicationContext, AutocompleteContext, Option, Embed, SlashCommandGroup
 from discord.ext.commands import Cog
+from requests import get
 
 from data.config.settings import SETTINGS
 from lib.utils.utils import time_to_string, get_permissions, create_graph
 
 
+def get_releases() -> list[str]:
+    return [tag["name"] for tag in loads(get("https://api.github.com/repos/staubtornado/tornado-bot/tags").text)]
 
 
 async def get_cogs(ctx: AutocompleteContext) -> list[str]:
@@ -105,6 +109,41 @@ class Utilities(Cog):
                     if not all(elem in client_permissions for elem in required_permissions):  # False -> perm granted
                         continue
                 embed.add_field(name=f"/{command.qualified_name}", value=f"`{command.description}`", inline=False)
+        await ctx.respond(embed=embed)
+
+    @slash_command()
+    async def news(self, ctx: ApplicationContext,
+                   version: Option(str, description="Select a version.", required=False, choices=get_releases())):
+        await ctx.defer()
+
+        version: str = version or get_releases()[0]
+        embed: Embed = Embed(title=f"{version} Release Notes", description="", colour=SETTINGS["Colours"]["Default"])
+
+        for tag in loads(get("https://api.github.com/repos/staubtornado/tornado-bot/tags").text):
+            if isinstance(version, dict):
+                version: tuple[dict[str, dict], dict[str, dict]] = tag, version
+                break
+
+            if tag["name"] == version:
+                version = tag
+
+        try:
+            old: str = version[0]['commit']['sha']
+            new: str = version[1]['commit']['sha']
+        except KeyError:
+            await ctx.respond(f"❌ **Can not find changes for** that **release**.")
+            return
+
+        response = loads(get(f"https://api.github.com/repos/staubtornado/tornado-bot/compare/{old}...{new}").text)
+        for commit in response["commits"]:
+            row = f"[`{commit['sha'][0:6]}`]({commit['html_url']}) {commit['commit']['message']}\n"
+
+            if not len(row) + len(embed.description) > 3896:
+                embed.description += row
+                continue
+            embed.description += f"\n**[View More]({response['html_url']})**"
+            break
+        embed.set_footer(text=f"{response['total_commits']} commits")
         await ctx.respond(embed=embed)
 
 
