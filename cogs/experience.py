@@ -111,7 +111,7 @@ class ExperienceSystem:
             embed = Embed(title="Level Up!", description=f"GG, you are now level {self.level} on this server.",
                           colour=SETTINGS["Colours"]["Default"])
             embed.add_field(name=f"Progress ({self.xp}XP / {required}XP)",
-                            value=progress_bar(amount=self.xp, total=self.calc_xp(), start="◻️", end="▪️"))
+                            value=progress_bar(amount=self.xp, total=self.calc_xp()))
             embed.set_author(name=self.message.author.name, icon_url=self.message.author.avatar.url)
             await self.message.reply(embed=embed, delete_after=60)
 
@@ -139,7 +139,7 @@ class Experience(Cog):
             embed.add_field(name="Total XP", value=f"`{system.total_xp()}`")
             embed.add_field(name="Messages", value=f"`{system.get_messages()}`")
             embed.add_field(name=f"{system.get_xp()} / {system.calc_xp()} XP",
-                            value=progress_bar(amount=system.xp, total=system.calc_xp(), start="◻️", end="▪️"))
+                            value=progress_bar(amount=system.xp, total=system.calc_xp()))
         except TypeError:
             await ctx.respond("❌ I **do not have** any **information about you or this user**.")
             return

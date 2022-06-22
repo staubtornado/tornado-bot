@@ -4,9 +4,9 @@ from traceback import format_tb
 from typing import Union, Any
 from urllib.parse import ParseResult, urlparse
 
-from matplotlib import use
 import matplotlib.pyplot as plt
 from discord import Permissions, File
+from matplotlib import use
 from millify import millify
 
 
@@ -78,6 +78,6 @@ def url_is_valid(url: str) -> tuple[bool, ParseResult]:
 
 
 def progress_bar(amount: Union[int, float], total: Union[int, float],
-                 start: str = "◻️", mid: str = "", end: str = "▪️") -> str:
+                 content: tuple[str, str, str] = ("◻", "", "▪")) -> str:
     percent = (amount / total) * 100
-    return round(percent / 10) * start + mid + round((100 - percent) / 10) * end
+    return round(percent / 10) * content[0] + content[1] + round((100 - percent) / 10) * content[2]
