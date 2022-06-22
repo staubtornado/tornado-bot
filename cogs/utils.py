@@ -35,7 +35,7 @@ async def get_cogs(ctx: AutocompleteContext) -> list[str]:
 
 class Utilities(Cog):
     """
-    Useful commands for moderators, server owners and information about the bot.
+    Useful commands and information about the bot.
     """
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -69,10 +69,11 @@ class Utilities(Cog):
                                   "&permissions=1394047577334&scope=bot%20applications.commands)⠀|⠀"
                                   f"[<:rooBless:980086267360468992> Support Server](https://discord.gg/C3Wz6fRZbV)⠀|⠀"
                                   f"<a:rooLove:980087863477669918> Vote on Top.gg⠀|⠀"
-                                  f"<:rooSellout:980086802834681906> Donate\n{'-'*60}\n"
+                                  f"<:rooSellout:980086802834681906> Donate\n{'-'*82}\n"
                                   f"**Ping**: `{round(self.bot.latency * 1000)}ms` | "
                                   f"**Uptime**: `{time_to_string(time() - self.bot.uptime)}` | "
-                                  f"**Version**: `{SETTINGS['Version']}`\n{'-'*60}")
+                                  f"**Version**: [`{SETTINGS['Version']}`](https://github.com/staubtornado/tornado-bot)"
+                                  f"\n{'-'*82}")
 
         if extension is None:
             for cog in self.bot.cogs:
@@ -117,7 +118,9 @@ class Utilities(Cog):
     @slash_command()
     async def news(self, ctx: ApplicationContext,
                    version: Option(str, description="Select a version.", required=False, choices=get_releases())):
+        """Latest changelog and version info about the bot."""
         await ctx.defer()
+
         try:
             version: str = version or get_releases()[0]
             embed: Embed = Embed(title=f"{version} Changes", description="", colour=SETTINGS["Colours"]["Default"])
