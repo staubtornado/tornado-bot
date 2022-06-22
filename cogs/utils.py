@@ -1,6 +1,7 @@
+from datetime import datetime
 from difflib import get_close_matches
 from json import loads
-from time import time
+from time import time, strptime, mktime
 
 from discord import Bot, slash_command, ApplicationContext, AutocompleteContext, Option, Embed, SlashCommandGroup
 from discord.ext.commands import Cog
@@ -11,7 +12,9 @@ from lib.utils.utils import time_to_string, get_permissions, create_graph
 
 
 def get_releases() -> list[str]:
-    return [tag["name"] for tag in loads(get("https://api.github.com/repos/staubtornado/tornado-bot/tags").text)]
+    rtrn: list = []
+    rtrn.extend([tag["name"] for tag in loads(get("https://api.github.com/repos/staubtornado/tornado-bot/tags").text)])
+    return rtrn
 
 
 async def get_cogs(ctx: AutocompleteContext) -> list[str]:
@@ -115,23 +118,22 @@ class Utilities(Cog):
     async def news(self, ctx: ApplicationContext,
                    version: Option(str, description="Select a version.", required=False, choices=get_releases())):
         await ctx.defer()
-
-        version: str = version or get_releases()[0]
-        embed: Embed = Embed(title=f"{version} Release Notes", description="", colour=SETTINGS["Colours"]["Default"])
-
-        for tag in loads(get("https://api.github.com/repos/staubtornado/tornado-bot/tags").text):
-            if isinstance(version, dict):
-                version: tuple[dict[str, dict], dict[str, dict]] = tag, version
-                break
-
-            if tag["name"] == version:
-                version = tag
-
         try:
+            version: str = version or get_releases()[0]
+            embed: Embed = Embed(title=f"{version} Changes", description="", colour=SETTINGS["Colours"]["Default"])
+
+            for tag in loads(get("https://api.github.com/repos/staubtornado/tornado-bot/tags").text):
+                if isinstance(version, dict):
+                    version: tuple[dict[str, dict], dict[str, dict]] = tag, version
+                    break
+
+                if tag["name"] == version:
+                    version = tag
+
             old: str = version[0]['commit']['sha']
             new: str = version[1]['commit']['sha']
-        except KeyError:
-            await ctx.respond(f"❌ **Can not find changes for** that **release**.")
+        except (KeyError, IndexError, TypeError):
+            await ctx.respond(f"❌ **Cannot get any news**. Please **try again later**.")
             return
 
         response = loads(get(f"https://api.github.com/repos/staubtornado/tornado-bot/compare/{old}...{new}").text)
@@ -143,7 +145,11 @@ class Utilities(Cog):
                 continue
             embed.description += f"\n**[View More]({response['html_url']})**"
             break
+        date = response['commits'][0]['commit']['committer']['date'].replace("T", " ").replace("Z", "")
+        date_time_obj = datetime.fromtimestamp(mktime(strptime(date, "%Y-%m-%d %H:%M:%S")))
+        embed.description = f"Published <t:{str(date_time_obj.timestamp())[:-2]}:R>\n\n" + embed.description
         embed.set_footer(text=f"{response['total_commits']} commits")
+
         await ctx.respond(embed=embed)
 
 
