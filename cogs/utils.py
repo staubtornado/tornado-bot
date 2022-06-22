@@ -136,17 +136,17 @@ class Utilities(Cog):
             await ctx.respond(f"❌ **Cannot get any news**. Please **try again later**.")
             return
 
-        response = loads(get(f"https://api.github.com/repos/staubtornado/tornado-bot/compare/{old}...{new}").text)
+        response: dict = loads(get(f"https://api.github.com/repos/staubtornado/tornado-bot/compare/{old}...{new}").text)
         for commit in response["commits"]:
-            row = f"[`{commit['sha'][0:6]}`]({commit['html_url']}) {commit['commit']['message']}\n"
+            row: str = f"[`{commit['sha'][0:6]}`]({commit['html_url']}) {commit['commit']['message']}\n"
 
             if not len(row) + len(embed.description) > 3896:
                 embed.description += row
                 continue
             embed.description += f"\n**[View More]({response['html_url']})**"
             break
-        date = response['commits'][0]['commit']['committer']['date'].replace("T", " ").replace("Z", "")
-        date_time_obj = datetime.fromtimestamp(mktime(strptime(date, "%Y-%m-%d %H:%M:%S")))
+        date: str = response['commits'][0]['commit']['committer']['date'].replace("T", " ").replace("Z", "")
+        date_time_obj: datetime = datetime.fromtimestamp(mktime(strptime(date, "%Y-%m-%d %H:%M:%S")))
         embed.description = f"Published <t:{str(date_time_obj.timestamp())[:-2]}:R>\n\n" + embed.description
         embed.set_footer(text=f"{response['total_commits']} commits")
 
