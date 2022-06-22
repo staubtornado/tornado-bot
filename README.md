@@ -13,10 +13,9 @@ MEE6, Dank Memer, or Dyno.
 ## How do I install TornadoBot?
  1. [Download the latest release](https://github.com/staubtornado/tornado-bot/releases) or clone the repository if you 
     want to use the development version.
- 3. Install Python 3.8
+ 3. Install Python 3.10
  4. Install all the dependencies 
     - pip install -r requirements.txt
-    - install selenium drivers for chrome, Firefox, or edge
     - install ffmpeg
  5. Create a bot in the discord developer portal
  6. Create an application in the Spotify developer portal
@@ -54,12 +53,13 @@ The bot has the following features:
     - **[/]** `join` Joins the bot to the voice channel.
     - **[/]** `leave` Leaves the bot from the voice channel.
     - **[/]** `summon [voice channel]` Joins the bot to the voice channel.
+    - **[/]** `lyrics [song] [artist]` Search for the lyrics of the current song or by name and artist.
 
 #####
 
 - Images
-    - The bot can scrape images from various sources. This is done via Selenium to support JavaScript rendered websites.
-    - **[/]** `images [category]` Scrapes a random image by the given category from the web.
+    - The bot can scrape images from all subreddits.
+    - **[/]** `images [category]` Scrapes a random image by the given category from Reddit.
 
 #####
 
@@ -79,6 +79,7 @@ The bot has the following features:
   - **[/]** `sell [subject] [price]` Sell an object you own to someone.
   - **[/]** `claim [daily | work | special]` Claim available coins or prices.
   - **[/]** `work` Start working and claim your payment after oe hour.
+  - **[/]** `wallstreet` Check out the latest stock prices.
 
 ####
 
@@ -86,11 +87,12 @@ The bot has the following features:
   - **[/]** `ban [user] [reason]` Bans a user from the guild and tells them the reason.
   - **[/]** `unban [user]` Unbans a user from the guild.
   - **[/]** `purge [amount] [Oldest | Newest] [ignore: user]` Deletes an amount of messages in a channel.
+  - **[/]** `kick [user] [reason]` Kick a user from a guild.
 
 ####
 
 - Settings (Not finished)
-  - **[/]** `settings music [embed size: (Small | Medium | Large) | delete embed when finished: (True | False)]` 
+  - **[/]** `settings music [embed size: (Small | Medium | Large) | update embed: (True | False)]` 
              Configure the music player.
   - **[/]** `settings experience [enabled (true | false) | multiplier (1 - 5)]` Configure the leveling.
   - **[/]** `settings tickets voice [True | False]` Enable or disable the creation of a voice channel for each ticket.
@@ -101,7 +103,7 @@ The bot has the following features:
 ## What needs to be done?
 - [ ] Add image processing commands
 - [ ] Make music streaming more efficient and more stable
-- [ ] Add premium and beta functionality
+- [x] Add premium and beta functionality
 - [ ] Add auto updates
 - [ ] Add a ticket system
 - [x] Only display NSFW commands in NSFW channels (While they do not work in non-NSFW channels, they should still not 
