@@ -23,7 +23,8 @@ async def guess_type(search: str, ctx, loop) -> YTDLSource:
     return source
 
 
-async def process(search: str, ctx, loop) -> Union[str, YTDLSource]:
+async def process(search: str, ctx, loop, priority: bool = False) -> Union[str, YTDLSource]:
+    priority: str = {False: "songs", True: "priority_songs"}[priority]
     search_tracks = []
     output = ""
     url = url_is_valid(search)
@@ -45,9 +46,12 @@ async def process(search: str, ctx, loop) -> Union[str, YTDLSource]:
                 search_tracks.extend(await YTDLSource.create_source_playlist(url_type, search,
                                                                              loop=loop))
 
+    if priority == "priority_songs" and (len(ctx.voice_state.priority_songs) + len(search_tracks)) >= 5:
+        return "❌ **Priority Queue** cannot get **larger than 5 songs**."
+
     for i, track in enumerate(search_tracks):
-        if len(ctx.voice_state.songs) < 100:
-            await ctx.voice_state.songs.put(SongStr(track, ctx))
+        if len(ctx.voice_state.songs) + len(ctx.voice_state.songs) < 100:
+            await ctx.voice_state.__getattribute__(priority).put(SongStr(track, ctx))
             continue
         return f"❌ **Queue reached its limit in size**, therefore **only {i + 1} songs added** from **{output}**."
     else:
@@ -60,5 +64,5 @@ async def process(search: str, ctx, loop) -> Union[str, YTDLSource]:
         source = await guess_type(search, ctx, loop)
     else:
         source = await YTDLSource.create_source(ctx, search=search, loop=loop)
-    await ctx.voice_state.songs.put(Song(source))
+    await ctx.voice_state.__getattribute__(priority).put(Song(source))
     return source

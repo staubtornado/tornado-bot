@@ -27,6 +27,7 @@ utils.bug_reports_message = lambda: ''
 
 class CustomApplicationContext(ApplicationContext):
     voice_state: VoiceState
+    priority: bool = False
 
 
 async def auto_complete(ctx: AutocompleteContext) -> list[str]:
@@ -60,7 +61,7 @@ def ensure_voice_state(ctx: CustomApplicationContext, requires_song: bool = Fals
     if isinstance(ctx.voice_state.current, SongStr) and (requires_song or no_processing):
         return "❌ Next **song is** currently **processing**, please **wait**."
 
-    if len(ctx.voice_state.songs) == 0 and requires_queue:
+    if not len(ctx.voice_state.songs) + len(ctx.voice_state.priority_songs) and requires_queue:
         return "❌ The **queue** is **empty**."
 
     if ctx.voice_state.processing and no_processing:
@@ -95,6 +96,7 @@ class Music(Cog):
         cur.execute("""INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""", (ctx.guild.id,))
         cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id,))
         ctx.voice_state = self.get_voice_state(ctx)
+        ctx.priority = False
 
     @slash_command()
     async def join(self, ctx: CustomApplicationContext):
@@ -132,6 +134,7 @@ class Music(Cog):
             return
 
         ctx.voice_state.songs.clear()
+        ctx.voice_state.priority_songs.clear()
         ctx.voice_state.loop = False
         await ctx.respond("🧹 **Cleared** the queue.")
 
@@ -202,7 +205,8 @@ class Music(Cog):
         await ctx.defer()
 
         try:
-            embed: Embed = ctx.voice_state.current.create_embed(ctx.voice_state.songs, ctx.voice_state.embed_size)
+            songs: tuple = (ctx.voice_state.songs, ctx.voice_state.priority_songs)
+            embed: Embed = ctx.voice_state.current.create_embed(songs, ctx.voice_state.embed_size)
         except AttributeError:
             await ctx.respond("❌ **Nothing** is currently **playing**.")
             return
@@ -283,6 +287,7 @@ class Music(Cog):
 
         ctx.voice_state.loop = False
         ctx.voice_state.songs.clear()
+        ctx.voice_state.priority_songs.clear()
         ctx.voice_state.voice.stop()
         ctx.voice_state.current = None
         await ctx.respond("⏹ **Stopped** the player and **cleared** the **queue**.")
@@ -357,7 +362,7 @@ class Music(Cog):
         """Shows the queue. You can optionally specify the page to show."""
         await ctx.defer()
 
-        if len(ctx.voice_state.songs) == 0:
+        if not len(ctx.voice_state.songs) + len(ctx.voice_state.priority_songs):
             await ctx.respond('❌ The **queue** is **empty**.')
             return
 
@@ -370,19 +375,31 @@ class Music(Cog):
         queue: str = ""
         for i, song in enumerate(ctx.voice_state.songs[start:end], start=start):
             if isinstance(song, Song):
-                queue += f"`{i + 1}`. [{song.source.title_limited_embed}]({song.source.url})\n"
+                queue += f"`{i + 1 + len(ctx.voice_state.priority_songs)}`. [{song.source.title_limited_embed}]" \
+                         f"({song.source.url})\n"
             else:
-                queue += f"`{i + 1}`. {song}\n"
+                queue += f"`{i + 1 + len(ctx.voice_state.priority_songs)}`. {song}\n"
 
         embed: Embed = Embed(title="Queue",
-                             description=f"**Songs:** {len(ctx.voice_state.songs)}\n**Duration:** "
+                             description=f"**Songs:** "
+                                         f"{len(ctx.voice_state.songs) + len(ctx.voice_state.priority_songs)}"
+                                         f"\n**Duration:** "
                                          f"{YTDLSource.parse_duration(ctx.voice_state.songs.get_duration())}\n⠀",
                              colour=0xFF0000)
         embed.add_field(name="🎶 Now Playing", value=f"[{ctx.voice_state.current.source.title_limited_embed}]"
                                                     f"({ctx.voice_state.current.source.url})\n"
                                                     f"[{ctx.voice_state.current.source.uploader}]"
                                                     f"({ctx.voice_state.current.source.uploader_url})", inline=False)
-        embed.add_field(name="⠀", value=queue, inline=False)
+        p_queue: str = ""
+        for i, song in enumerate(ctx.voice_state.priority_songs, start=0):
+            if isinstance(song, Song):
+                p_queue += f"`{i + 1}.` [{song.source.title_limited_embed}]({song.source.url} " \
+                           f"'{song.source.title}')\n"
+            else:
+                p_queue += f"`{i + 1}.` {song}\n"
+        embed.add_field(name="\nPriority Queue", value=p_queue, inline=False) if p_queue != "" else None
+
+        embed.add_field(name="⠀\nQueue", value=queue, inline=False) if queue != "" else None
         embed.set_footer(text=f"Page {page}/{pages}")
         await ctx.respond(embed=embed)
 
@@ -397,6 +414,7 @@ class Music(Cog):
             return
 
         ctx.voice_state.songs.shuffle()
+        ctx.voice_state.priority_songs.shuffle() if len(ctx.voice_state.priority_songs) > 0 else None
         await ctx.respond("🔀 **Shuffled** the queue.")
 
     @slash_command()
@@ -409,7 +427,8 @@ class Music(Cog):
             await ctx.respond(instance)
             return
 
-        ctx.voice_state.songs.reverse()
+        ctx.voice_state.songs.reverse() if len(ctx.voice_state.songs) else None
+        ctx.voice_state.priority_songs.reverse() if len(ctx.voice_state.priority_songs) else None
         await ctx.respond("↩ **Reversed** the **queue**.")
 
     @slash_command()
@@ -424,7 +443,10 @@ class Music(Cog):
         try:
             if index < 0:
                 raise IndexError
-            ctx.voice_state.songs.remove(index - 1)
+            if index <= len(ctx.voice_state.priority_songs):
+                ctx.voice_state.priority_songs.remove(index - 1)
+            else:
+                ctx.voice_state.songs.remove(index - 1 - len(ctx.voice_state.priority_songs))
         except IndexError:
             await ctx.respond(f"❌ There is **no song with** the **{ordinal(n=index)} position** in queue.")
             return
@@ -487,6 +509,15 @@ class Music(Cog):
 
     @slash_command()
     @check(Settings.has_beta)
+    async def next(self, ctx: CustomApplicationContext,
+                   search: Option(str, "Enter the name of the song, a url or a preset.",
+                                  autocomplete=basic_autocomplete(auto_complete), required=True)):
+        """Adds a song to the priority queue, or plays the next song if the queue is empty."""
+        ctx.priority = True if len(ctx.voice_state.songs) else False
+        await self.play(ctx, search)
+
+    @slash_command()
+    @check(Settings.has_beta)
     async def play(self, ctx: CustomApplicationContext,
                    search: Option(str, "Enter the name of the song, a URL or a preset.",
                                   autocomplete=basic_autocomplete(auto_complete), required=True)):
@@ -526,7 +557,7 @@ class Music(Cog):
 
         ctx.voice_state.processing = True
         try:
-            source = await process(search, ctx, self.bot.loop)
+            source = await process(search, ctx, self.bot.loop, ctx.priority)
         except YTDLError as e:
             source = e
         except Exception as e:
@@ -537,7 +568,7 @@ class Music(Cog):
         if isinstance(source, str):
             await ctx.respond(source)
             return
-        await ctx.respond(f"✅ Added {source}")
+        await ctx.respond(f"✅ Added {source} {'to **priority queue**' if ctx.priority else ''}")
 
 
 def setup(bot):

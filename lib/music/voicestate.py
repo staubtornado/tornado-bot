@@ -1,4 +1,4 @@
-from asyncio import Event, wait_for, shield, TimeoutError
+from asyncio import Event, wait_for, TimeoutError, QueueEmpty
 from time import time
 
 from discord import Bot, FFmpegPCMAudio, Embed, ApplicationContext
@@ -24,6 +24,7 @@ class VoiceState:
         self.voice = None
         self.next: Event = Event()
         self.songs: SongQueue = SongQueue()
+        self.priority_songs: SongQueue = SongQueue()
         self.exists: bool = True
         self.loop_duration: int = 0
         self.song_position = None
@@ -45,37 +46,37 @@ class VoiceState:
         self.audio_player.cancel()
 
     @property
-    def loop(self):
+    def loop(self) -> bool:
         return self._loop
 
     @loop.setter
-    def loop(self, value: bool):
+    def loop(self, value: bool) -> None:
         self._iterate = False
         self.loop_duration = 0
 
         self._loop = value
 
     @property
-    def iterate(self):
+    def iterate(self) -> bool:
         return self._iterate
 
     @iterate.setter
-    def iterate(self, value: bool):
+    def iterate(self, value: bool) -> None:
         self._loop = False
         self.loop_duration = 0
 
         self._iterate = value
 
     @property
-    def volume(self):
+    def volume(self) -> float:
         return self._volume
 
     @volume.setter
-    def volume(self, value: float):
+    def volume(self, value: float) -> None:
         self._volume = value
 
     @property
-    def is_playing(self):
+    def is_playing(self) -> bool:
         return self.voice and self.current
 
     async def audio_player_task(self):
@@ -85,7 +86,10 @@ class VoiceState:
 
             if not self.loop:
                 try:
-                    self.current = await wait_for(shield(self.songs.get()), timeout=180)
+                    try:
+                        self.current = self.priority_songs.get_nowait()
+                    except QueueEmpty:
+                        self.current = await wait_for(self.songs.get(), timeout=180)
                 except TimeoutError:
                     self.bot.loop.create_task(self.stop())
                     self.exists = False
@@ -130,10 +134,12 @@ class VoiceState:
 
                 self.song_position = [0, round(time())]
                 if self.update_embed:
-                    await self.current.source.channel.send(embed=self.current.create_embed(self.songs, self.embed_size),
+                    await self.current.source.channel.send(embed=self.current.create_embed(
+                        (self.songs, self.priority_songs), self.embed_size),
                                                            delete_after=float(self.current.source.data.get("duration")))
                 else:
-                    await self.current.source.channel.send(embed=self.current.create_embed(self.songs, self.embed_size))
+                    await self.current.source.channel.send(embed=self.current.create_embed(
+                        (self.songs, self.priority_songs), self.embed_size))
 
             elif self.loop:
                 if self.loop_duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
@@ -148,7 +154,8 @@ class VoiceState:
 
                 self.song_position = [0, round(time())]
                 if self.update_embed:
-                    await self.current.source.channel.send(embed=self.current.create_embed(self.songs, self.embed_size),
+                    await self.current.source.channel.send(embed=self.current.create_embed(
+                        (self.songs, self.priority_songs), self.embed_size),
                                                            delete_after=float(self.current.source.data.get("duration")))
             await self.next.wait()
 
