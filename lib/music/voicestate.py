@@ -1,7 +1,8 @@
 from asyncio import Event, wait_for, TimeoutError, QueueEmpty
 from time import time
+from typing import Union
 
-from discord import Bot, FFmpegPCMAudio, Embed, ApplicationContext
+from discord import Bot, FFmpegPCMAudio, Embed, ApplicationContext, VoiceClient
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
@@ -21,7 +22,7 @@ class VoiceState:
         self.processing: bool = False
         self.now = None
         self.current = None
-        self.voice = None
+        self.voice: Union[VoiceClient, None] = None
         self.next: Event = Event()
         self.songs: SongQueue = SongQueue()
         self.priority_songs: SongQueue = SongQueue()

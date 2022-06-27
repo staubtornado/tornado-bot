@@ -1,10 +1,10 @@
 from asyncio import sleep
 from math import ceil
 from time import time
-from typing import Union
+from typing import Union, Optional
 
 from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option, \
-    AutocompleteContext, HTTPException
+    AutocompleteContext, HTTPException, VoiceProtocol, VoiceClient, StageChannel
 from discord.ext.commands import Cog, check
 from discord.utils import get, basic_autocomplete
 from psutil import virtual_memory
@@ -48,8 +48,8 @@ async def auto_complete(ctx: AutocompleteContext) -> list[str]:
 
 
 def ensure_voice_state(ctx: CustomApplicationContext, requires_song: bool = False, requires_queue: bool = False,
-                       no_processing: bool = False) -> Union[str, None]:
-    if ctx.author.voice is None:
+                       no_processing: bool = False, no_voice_required: bool = False) -> Union[str, None]:
+    if ctx.author.voice is None and not no_voice_required:
         return "❌ **You are not** connected to a **voice** channel."
 
     if ctx.voice_client:
@@ -99,14 +99,15 @@ class Music(Cog):
         ctx.priority = False
 
     @slash_command()
-    async def join(self, ctx: CustomApplicationContext):
+    async def join(self, ctx: CustomApplicationContext, channel: Optional[VoiceChannel]):
         """Joins a voice channel."""
 
-        instance = ensure_voice_state(ctx)
+        instance: Union[str, None] = ensure_voice_state(ctx, no_voice_required=bool(channel))
         if isinstance(instance, str):
-            return await ctx.respond(instance)
+            await ctx.respond(instance)
+            return
 
-        destination: VoiceChannel = ctx.author.voice.channel
+        destination: Union[VoiceChannel, StageChannel] = channel or ctx.author.voice.channel
         if ctx.guild.voice_client:
             await ctx.respond(f"🎶 I am **currently playing** in {ctx.voice_client.channel.mention}.")
             return
@@ -121,7 +122,7 @@ class Music(Cog):
                 await guild_channel.disconnect(force=True)
                 ctx.voice_state.voice = await destination.connect()
         await ctx.guild.change_voice_state(channel=destination, self_mute=False, self_deaf=True)
-        await ctx.respond(f"👍 **Hello**! Joined {ctx.author.voice.channel.mention}.")
+        await ctx.respond(f"👍 **Hello**! Joined {destination.mention}.")
 
     @slash_command()
     async def clear(self, ctx: CustomApplicationContext):
@@ -138,39 +139,24 @@ class Music(Cog):
         ctx.voice_state.loop = False
         await ctx.respond("🧹 **Cleared** the queue.")
 
-    @slash_command()  # TODO: MERGE WITH JOIN COMMAND
-    async def summon(self, ctx: CustomApplicationContext, *, channel: VoiceChannel = None):
-        """[DEPRECATED] Summons the bot to a voice channel. If no channel was specified, it joins your channel."""
-
-        if not channel and not ctx.author.voice:
-            await ctx.respond("❌ You are **not in a voice channel** and you **did not specify** a voice "
-                              "channel.")
-            return
-
-        destination = channel or ctx.author.voice.channel
-        if ctx.voice_state.voice:
-            await ctx.voice_state.voice.move_to(destination)
-            await ctx.guild.change_voice_state(channel=destination, self_mute=False, self_deaf=True)
-            await ctx.respond(f"👍 **Hello**! Joined {destination.mention}.")
-            return
-
-        ctx.voice_state.voice = await destination.connect()
-        await ctx.guild.change_voice_state(channel=destination, self_mute=False, self_deaf=True)
-        await ctx.respond(f"👍 **Hello**! Joined {destination.mention}.")
-
     @slash_command()
     async def leave(self, ctx: CustomApplicationContext):
         """Clears the queue and leaves the voice channel."""
-        try:
-            await ctx.voice_state.stop()
-            voice_channel = get(self.bot.voice_clients, guild=ctx.guild)
-            if voice_channel:
-                await voice_channel.disconnect(force=True)
 
-            await ctx.respond(f"👋 **Bye**. Left {ctx.author.voice.channel.mention}.")
+        voice: Union[VoiceProtocol, VoiceClient, None] = ctx.voice_state.voice
+
+        if not isinstance(voice, VoiceClient):
+            voice = get(self.bot.voice_clients, guild=ctx.guild)
+        await ctx.voice_state.stop()
+
+        if isinstance(voice, VoiceProtocol):
+            await voice.disconnect(force=True)
+        del self.voice_states[ctx.guild.id]
+
+        try:
+            await ctx.respond(f"👋 **Bye**. Left {voice.channel.mention}.")
         except AttributeError:
             await ctx.respond(f"⚙ I am **not connected** to a voice channel so my **voice state has been reset**.")
-        del self.voice_states[ctx.guild.id]
 
     @slash_command()
     async def volume(self, ctx: CustomApplicationContext, volume: int):
