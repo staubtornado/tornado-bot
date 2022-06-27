@@ -175,14 +175,8 @@ class Music(Cog):
                 await ctx.respond("The **volume cannot be turned off**. Use **/**`pause` pause.")
             return
 
-        if volume < 50:
-            emoji: str = "🔈"
-        elif volume == 50:
-            emoji: str = "🔉"
-        else:
-            emoji: str = "🔊"
-
         ctx.voice_state.current.source.volume = volume / 100
+        emoji: str = "🔈" if volume < 50 else "🔉" if volume == 50 else "🔊"
         await ctx.respond(f"{emoji} **Volume** of the song **set to {volume}%**.")
 
     @slash_command()
@@ -527,7 +521,7 @@ class Music(Cog):
             if not ctx.guild.voice_client:
                 raise ClientException
         except ClientException:
-            await self.join(ctx)
+            await self.join(ctx, None)
 
         presets: dict = {"Charts": "https://open.spotify.com/playlist/37i9dQZEVXbNG2KDcFcKOF",
                          "New Releases": "https://open.spotify.com/playlist/37i9dQZF1DWUW2bvSkjcJ6",
