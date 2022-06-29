@@ -148,8 +148,11 @@ class Utilities(Cog):
                 continue
             embed.description += f"\n**[View More]({response['html_url']})**"
             break
-        date: str = response['commits'][0]['commit']['committer']['date'].replace("T", " ").replace("Z", "")
+
+        latest_commit: dict = response['commits'][len(response['commits']) - 1]
+        date: str = latest_commit['commit']['committer']['date'].replace("T", " ").replace("Z", "")
         date_time_obj: datetime = datetime.fromtimestamp(mktime(strptime(date, "%Y-%m-%d %H:%M:%S")))
+
         embed.description = f"Published <t:{str(date_time_obj.timestamp())[:-2]}:R>\n\n" + embed.description
         embed.set_footer(text=f"{response['total_commits']} commits")
 
