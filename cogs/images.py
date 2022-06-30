@@ -1,4 +1,5 @@
 from json import loads
+from os import listdir
 from random import choice, random
 from urllib.parse import urlparse
 
@@ -8,6 +9,7 @@ from requests import get, Response
 from tqdm import tqdm
 
 from data.config.settings import SETTINGS
+from lib.images.processing import ping
 
 
 async def get_categories(ctx: AutocompleteContext = None) -> list:
@@ -23,6 +25,7 @@ class Images(Cog):
     """
     View images from the most popular subreddits on Reddit. Image editing following soon.
     """
+
     def __init__(self, bot: Bot):
         self.bot = bot
 
@@ -65,12 +68,24 @@ class Images(Cog):
         """Random image from a given category."""
 
         categories = {"porn": True, "ass": True, "asian": True, "masturbation": True, "shaved": True, "close-up": True,
-                      "pussy": True, "cat": True, "boobs": True, "milf": True, "meme":  False}
+                      "pussy": True, "cat": True, "boobs": True, "milf": True, "meme": False}
 
         if category == "pussy":
             if not random() > 0.3:
                 category = "cat"
         await self.send(ctx, category, nsfw=categories[category])
+
+    @slash_command()
+    async def pong(self, ctx: ApplicationContext):
+        await ctx.defer()
+
+        if f"{ctx.guild.id}.png" not in listdir("./data/cache"):
+            await ctx.guild.icon.save(f"./data/cache/{ctx.guild.id}.png")
+        path, file = ping(f"./data/cache/{ctx.guild.id}.png")
+
+        embed: Embed = Embed(title="@everyone", colour=SETTINGS["Colours"]["Default"])
+        embed.set_image(url=path)
+        await ctx.respond(embed=embed, file=file)
 
 
 def setup(bot: Bot):
