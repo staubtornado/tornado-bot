@@ -50,7 +50,7 @@ async def process(search: str, ctx, loop, priority: bool = False) -> Union[str, 
         return "❌ **Priority Queue** cannot get **larger than 5 songs**."
 
     for i, track in enumerate(search_tracks):
-        if len(ctx.voice_state.songs) + len(ctx.voice_state.songs) < 100:
+        if len(ctx.voice_state.priority_songs) + len(ctx.voice_state.songs) < 100:
             await ctx.voice_state.__getattribute__(priority).put(SongStr(track, ctx))
             continue
         return f"❌ **Queue reached its limit in size**, therefore **only {i + 1} songs added** from **{output}**."
