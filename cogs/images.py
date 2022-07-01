@@ -1,5 +1,6 @@
 from json import loads
 from os import listdir
+from os.path import exists
 from random import choice, random
 from urllib.parse import urlparse
 
@@ -80,7 +81,12 @@ class Images(Cog):
         await ctx.defer()
 
         if f"{ctx.guild.id}.png" not in listdir("./data/cache"):
-            await ctx.guild.icon.save(f"./data/cache/{ctx.guild.id}.png")
+            try:
+                if not exists(f"./data/cache/{ctx.guild_id}"):
+                    await ctx.guild.icon.save(f"./data/cache/{ctx.guild.id}.png")
+            except AttributeError:
+                await ctx.respond("❌ This **guild has no icon**.")
+                return
         path, file = ping(f"./data/cache/{ctx.guild.id}.png")
 
         embed: Embed = Embed(title="@everyone", colour=SETTINGS["Colours"]["Default"])
