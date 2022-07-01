@@ -140,12 +140,7 @@ class YTDLSource(PCMVolumeTransformer):
 
         if data is None:
             raise YTDLError(f"**Could not retrieve any matches** for `{search}`")
-
-        numbers = []
-        for entry in data["entries"]:
-            if entry:
-                numbers.append(entry)
-        return numbers
+        return [entry for entry in data["entries"] if entry]
 
     @staticmethod
     def parse_duration(duration: Union[str, int, None]):

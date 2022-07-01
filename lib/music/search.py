@@ -1,5 +1,6 @@
 from difflib import SequenceMatcher
 from typing import Union
+from urllib.parse import ParseResult
 
 from spotipy import SpotifyException
 
@@ -27,7 +28,7 @@ async def process(search: str, ctx, loop, priority: bool = False) -> Union[str, 
     priority: str = {False: "songs", True: "priority_songs"}[priority]
     search_tracks = []
     output = ""
-    url = url_is_valid(search)
+    url: tuple[bool, ParseResult] = url_is_valid(search)
     if url[0]:
         if url[1].netloc == "open.spotify.com":
             algorithms = {"playlist": get_playlist_track_names, "artist": get_artist_top_songs,
