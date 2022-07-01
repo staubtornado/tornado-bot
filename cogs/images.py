@@ -4,7 +4,7 @@ from os.path import exists
 from random import choice, random
 from urllib.parse import urlparse
 
-from discord import Bot, slash_command, ApplicationContext, Embed, Option, AutocompleteContext
+from discord import Bot, ApplicationContext, Embed, Option, AutocompleteContext, SlashCommandGroup
 from discord.ext.commands import Cog
 from requests import get, Response
 from tqdm import tqdm
@@ -62,10 +62,12 @@ class Images(Cog):
         embed.set_footer(text=f"Provided by {urlparse(url).netloc}")
         await ctx.respond(embed=embed)
 
-    @slash_command()
-    async def image(self, ctx: ApplicationContext,
-                    category: Option(str, "Choose a category from which the bot selects an image.",
-                                     autocomplete=get_categories)):
+    image: SlashCommandGroup = SlashCommandGroup(name="image", description="Create or get images from the web.")
+
+    @image.command()
+    async def random(self, ctx: ApplicationContext,
+                     category: Option(str, "Choose a category from which the bot selects an image.",
+                                      autocomplete=get_categories)):
         """Random image from a given category."""
 
         categories = {"porn": True, "ass": True, "asian": True, "masturbation": True, "shaved": True, "close-up": True,
@@ -76,8 +78,9 @@ class Images(Cog):
                 category = "cat"
         await self.send(ctx, category, nsfw=categories[category])
 
-    @slash_command()
-    async def pong(self, ctx: ApplicationContext):
+    @image.command()
+    async def ping(self, ctx: ApplicationContext):
+        """Fool everyone by adding a ping to your guild icon."""
         await ctx.defer()
 
         if f"{ctx.guild.id}.png" not in listdir("./data/cache"):
