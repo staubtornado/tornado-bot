@@ -29,6 +29,7 @@ class VoiceState:
         self.exists: bool = True
         self.loop_duration: int = 0
         self.song_position = None
+        self.history: list[str] = []
 
         self._loop: bool = False
         self._iterate: bool = False
