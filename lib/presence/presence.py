@@ -7,6 +7,11 @@ from lib.utils.utils import shortened
 
 @loop(seconds=SETTINGS["ServiceSyncInSeconds"])
 async def update_rich_presence(bot: Bot):
+    try:
+        bot.latencies.append(bot.latency)
+    except AttributeError:
+        pass
+
     await bot.wait_until_ready()
     stats: str = f"{shortened(len(bot.guilds), precision=1)} servers | " \
                  f"{shortened(len(list(bot.get_all_members())), precision=1)} users"
