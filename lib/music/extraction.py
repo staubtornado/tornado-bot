@@ -87,14 +87,14 @@ class YTDLSource(PCMVolumeTransformer):
                     break
 
             if process_info is None:
-                raise YTDLError(f"**Could not find anything** that matches `{search}`.")
+                raise YTDLError(f"❌ **Could not find anything** that matches `{search}`.")
 
         webpage_url = process_info["webpage_url"]
         partial = func_partial(cls.ytdl.extract_info, webpage_url, download=False)
         processed_info = await loop.run_in_executor(None, partial)
 
         if processed_info is None:
-            raise YTDLError(f"**Could not fetch** `{webpage_url}`")
+            raise YTDLError(f"❌ **Could not fetch** `{webpage_url}`")
 
         if "entries" not in processed_info:
             info = processed_info
@@ -104,10 +104,10 @@ class YTDLSource(PCMVolumeTransformer):
                 try:
                     info = processed_info["entries"].pop(0)
                 except IndexError:
-                    raise YTDLError(f"**Could not retrieve any matches** for `{webpage_url}`")
+                    raise YTDLError(f"❌ **Could not retrieve any matches** for `{webpage_url}`")
 
         if int(info["duration"]) > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
-            raise YTDLError("**Songs** can not be **longer than three hours**. Use **/**`loop` to repeat songs.")
+            raise YTDLError("❌ **Songs** can not be **longer than three hours**. Use **/**`loop` to repeat songs.")
         return cls(ctx, FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
     @classmethod
@@ -139,7 +139,7 @@ class YTDLSource(PCMVolumeTransformer):
             data = await loop.run_in_executor(None, partial)
 
         if data is None:
-            raise YTDLError(f"**Could not retrieve any matches** for `{search}`")
+            raise YTDLError(f"❌ **Could not retrieve any matches** for `{search}`")
         return [entry for entry in data["entries"] if entry]
 
     @staticmethod
