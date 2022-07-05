@@ -86,9 +86,12 @@ class Images(Cog):
         if f"{ctx.guild.id}.png" not in listdir("./data/cache"):
             try:
                 if not exists(f"./data/cache/{ctx.guild_id}"):
-                    await ctx.guild.icon.save(f"./data/cache/{ctx.guild.id}.png")
+                    if ctx.guild is None:
+                        await ctx.author.avatar.save(f"./data/cache/{ctx.author.id}")
+                    else:
+                        await ctx.guild.icon.save(f"./data/cache/{ctx.guild.id}.png")
             except AttributeError:
-                await ctx.respond("❌ This **guild has no icon**.")
+                await ctx.respond("❌ This **guild / user has no icon**.")
                 return
         path, file = ping(f"./data/cache/{ctx.guild.id}.png")
 

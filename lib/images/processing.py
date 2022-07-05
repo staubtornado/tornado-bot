@@ -14,4 +14,3 @@ def ping(url: str) -> tuple[str, File]:
     output.paste(asset, position, asset)
     output.save(url, "PNG")
     return f"attachment://{url.split('/')[-1]}", File(url)
-
