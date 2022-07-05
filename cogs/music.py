@@ -337,6 +337,21 @@ class Music(Cog):
             await ctx.respond("❌ **Cheating** not allowed**!** You **already voted**.")
 
     @slash_command()
+    async def history(self, ctx: CustomApplicationContext):
+        """Latest played songs in the current session."""
+        await ctx.defer()
+
+        if not len(ctx.voice_state.history):
+            await ctx.respond("There is **no data in** this **session**.")
+            return
+
+        embed: Embed = Embed(title="History", description="Latest played songs in this session.\n\n", colour=0xFF0000)
+
+        for i, item in enumerate(ctx.voice_state.history):
+            embed.description += f"`{i + 1}`. {item}"
+        await ctx.respond(embed=embed)
+
+    @slash_command()
     async def queue(self, ctx: CustomApplicationContext, *, page: int = 1):
         """Shows the queue. You can optionally specify the page to show."""
         await ctx.defer()
