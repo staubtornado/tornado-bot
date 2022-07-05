@@ -322,17 +322,15 @@ class Music(Cog):
         elif voter.id not in ctx.voice_state.skip_votes:
             ctx.voice_state.skip_votes.add(voter.id)
             total_votes = len(ctx.voice_state.skip_votes)
+            required: int = ceil(len([member for member in ctx.author.voice.channel.members if not member.bot]) / 3)
 
-            required_votes: int = ceil(len([member for member in ctx.author.voice.channel.members if not member.bot])
-                                       * (1 / 3))
-
-            if total_votes >= required_votes:
-                await ctx.respond(f"⏭ **Skipped song**, as **{total_votes}/{required_votes}** users voted{loop_note}")
+            if total_votes >= required:
+                await ctx.respond(f"⏭ **Skipped song**, as **{total_votes}/{required}** users voted{loop_note}")
                 ctx.voice_state.skip()
                 for i in songs_to_skip:
                     ctx.voice_state.songs.remove(i)
             else:
-                await ctx.respond(f"🗳️ **Skip vote** added: **{total_votes}/{required_votes}**")
+                await ctx.respond(f"🗳️ **Skip vote** added: **{total_votes}/{required}**")
         else:
             await ctx.respond("❌ **Cheating** not allowed**!** You **already voted**.")
 
@@ -506,8 +504,8 @@ class Music(Cog):
     async def next(self, ctx: CustomApplicationContext,
                    search: Option(str, "Enter the name of the song, a url or a preset.",
                                   autocomplete=basic_autocomplete(auto_complete), required=True)):
-        """Adds a song to the priority queue, or plays the next song if the queue is empty."""
-        ctx.priority = True if len(ctx.voice_state.songs) else False
+        """Adds a song to the priority queue."""
+        ctx.priority = bool(len(ctx.voice_state.songs))
         await self.play(ctx, search)
 
     @slash_command()
@@ -559,7 +557,7 @@ class Music(Cog):
             raise e
         ctx.voice_state.processing = False
 
-        if isinstance(source, str):
+        if isinstance(source, str) or isinstance(source, YTDLError):
             await ctx.respond(source)
             return
         await ctx.respond(f"✅ Added {source} {'to **priority queue**' if ctx.priority else ''}")
