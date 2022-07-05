@@ -346,11 +346,11 @@ class Music(Cog):
         embed: Embed = Embed(title="History", description="Latest played songs in this session.\n\n", colour=0xFF0000)
 
         for i, item in enumerate(ctx.voice_state.history):
-            embed.description += f"`{i + 1}`. {item}"
+            embed.description += f"`{i + 1}`. {item}\n"
         await ctx.respond(embed=embed)
 
     @slash_command()
-    async def queue(self, ctx: CustomApplicationContext, *, page: int = 1):
+    async def queue(self, ctx: CustomApplicationContext, page: int = 1):
         """Shows the queue. You can optionally specify the page to show."""
         await ctx.defer()
 

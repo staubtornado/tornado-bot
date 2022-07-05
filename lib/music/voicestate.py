@@ -130,6 +130,9 @@ class VoiceState:
 
                         await self.current.source.channel.send("🔂 **The queue loop** has been **disabled** due to "
                                                                "**inactivity**.")
+                if len(self.history) == 5:
+                    del self.history[-1]
+                self.history.insert(0, str(self.current.source))
 
                 self.current.source.volume = self._volume
                 self.voice.play(self.current.source, after=self.play_next_song)
