@@ -19,6 +19,10 @@ async def get_categories(ctx: AutocompleteContext = None) -> list:
     if ctx is None or ctx.bot.get_channel(ctx.interaction.channel_id).is_nsfw():
         rtrn.extend(["porn", "ass", "asian", "masturbation", "shaved", "close-up", "pussy", "boobs", "milf"])
     rtrn.extend(["meme"])
+
+    if len([x for x in rtrn if x.lower().startswith(ctx.value.lower())]) == 0:
+        rtrn.clear()
+        rtrn = [ctx.value]
     return rtrn
 
 
@@ -51,8 +55,20 @@ class Images(Cog):
             return
         await ctx.defer()
 
-        content = choice(self.gallery[category])
-        title = content["title"]
+        try:
+            content = choice(self.gallery[category])
+        except KeyError:
+            content = self.request(subreddit=category, count=1)
+
+        try:
+            title = content["title"]
+        except TypeError:
+            content = loads(content.text)["memes"][0]
+            try:
+                title = content["title"]
+            except KeyError:
+                await ctx.respond("❌ **Cannot find** specified **subreddit**.")
+                return
         source = content["postLink"]
         url = content["url"]
         votes = content["ups"]
@@ -76,7 +92,10 @@ class Images(Cog):
         if category == "pussy":
             if not random() > 0.3:
                 category = "cat"
-        await self.send(ctx, category, nsfw=categories[category])
+        try:
+            await self.send(ctx, category, nsfw=categories[category])
+        except KeyError:
+            await self.send(ctx, category, nsfw=False)
 
     @image.command()
     async def ping(self, ctx: ApplicationContext):
