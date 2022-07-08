@@ -78,8 +78,8 @@ class Music(Cog):
         self.voice_states = {}
 
     def get_voice_state(self, ctx: ApplicationContext) -> VoiceState:
-        state = self.voice_states.get(ctx.guild_id)
-        if not state or not state.exists:
+        state: VoiceState = self.voice_states.get(ctx.guild_id)
+        if not state or not state.exists or state.audio_player.exception():
             state = VoiceState(self.bot, ctx)
             self.voice_states[ctx.guild_id] = state
         return state
