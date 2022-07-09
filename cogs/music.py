@@ -79,7 +79,7 @@ class Music(Cog):
 
     def get_voice_state(self, ctx: ApplicationContext) -> VoiceState:
         state: VoiceState = self.voice_states.get(ctx.guild_id)
-        if not state or not state.exists or state.audio_player.exception():
+        if not state or not state.exists:
             state = VoiceState(self.bot, ctx)
             self.voice_states[ctx.guild_id] = state
         return state
@@ -344,9 +344,8 @@ class Music(Cog):
             return
 
         embed: Embed = Embed(title="History", description="Latest played songs in this session.\n\n", colour=0xFF0000)
-
-        for i, item in enumerate(ctx.voice_state.history):
-            embed.description += f"`{i + 1}`. {item}\n"
+        for i, item in enumerate(ctx.voice_state.history, start=1):
+            embed.description += f"`{i}`. {item}\n"
         await ctx.respond(embed=embed)
 
     @slash_command()
@@ -383,12 +382,12 @@ class Music(Cog):
                                                     f"[{ctx.voice_state.current.source.uploader}]"
                                                     f"({ctx.voice_state.current.source.uploader_url})", inline=False)
         p_queue: str = ""
-        for i, song in enumerate(ctx.voice_state.priority_songs, start=0):
+        for i, song in enumerate(ctx.voice_state.priority_songs, start=1):
             if isinstance(song, Song):
-                p_queue += f"`{i + 1}.` [{song.source.title_limited_embed}]({song.source.url} " \
+                p_queue += f"`{i}.` [{song.source.title_limited_embed}]({song.source.url} " \
                            f"'{song.source.title}')\n"
             else:
-                p_queue += f"`{i + 1}.` {song}\n"
+                p_queue += f"`{i}.` {song}\n"
         embed.add_field(name="\nPriority Queue", value=p_queue, inline=False) if p_queue != "" else None
 
         embed.add_field(name="⠀\nQueue", value=queue, inline=False) if queue != "" else None
@@ -467,7 +466,7 @@ class Music(Cog):
         """Iterates current queue. Invoke this command again to disable iteration."""
         await ctx.defer()
 
-        instance = ensure_voice_state(ctx, requires_queue=True)
+        instance = ensure_voice_state(ctx, requires_queue=True, no_processing=True)
         if isinstance(instance, str):
             await ctx.respond(instance)
             return
@@ -480,9 +479,9 @@ class Music(Cog):
         if ctx.voice_state.iterate:
             await ctx.voice_state.songs.put(SongStr(ctx.voice_state.current, ctx))
 
-            await ctx.respond(f"🔁 **Looped queue /**`iterate` to **disable** loop.")
+            await ctx.respond(f"🔁 **Looped queue**, use **/**`iterate` to **disable** loop.")
             return
-        await ctx.respond(f"🔁 **Unlooped queue /**`iterate` to **enable** loop.")
+        await ctx.respond(f"🔁 **Unlooped queue**, use **/**`iterate` to **enable** loop.")
 
     @slash_command()
     async def lyrics(self, ctx: CustomApplicationContext, title: str = None, artist: str = None):
