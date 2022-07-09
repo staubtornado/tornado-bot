@@ -88,8 +88,7 @@ class Moderation(Cog):
         await ctx.defer()
 
         ints = extract_int(str(user).split("|")[0])
-        ints = ints[len(ints) - 1]
-        member = self.bot.get_user(ints)
+        member = self.bot.get_user(ints[-1])
 
         await ctx.guild.unban(member, reason=reason)
         await ctx.respond(f"🤝 **Unbanned {member}**.")

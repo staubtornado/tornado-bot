@@ -42,10 +42,12 @@ class Utilities(Cog):
 
     @slash_command()
     async def ping(self, ctx: ApplicationContext):
-        """Check the bots ping to the Discord API."""
+        """Check the bot's ping to the Discord API."""
+        await ctx.defer()
+
         self.bot.latencies.append(round(self.bot.latency * 1000))
 
-        embed = Embed(title="Ping", description="The bots ping to the Discord API.",
+        embed = Embed(title="Ping", description="The bot's ping to the Discord API.",
                       colour=SETTINGS["Colours"]["Default"])
         embed.add_field(name="Ping", value=f"`{round(self.bot.latency * 1000)}`**ms**")
 
@@ -66,9 +68,9 @@ class Utilities(Cog):
         embed = Embed(title="Help", colour=SETTINGS["Colours"]["Default"],
                       description=f"[<:member_join:980085600227065906> Add Me!]"
                                   f"(https://discord.com/api/oauth2/authorize?client_id={self.bot.user.id}"
-                                  "&permissions=1394047577334&scope=bot%20applications.commands)⠀|⠀"
-                                  f"[<:rooBless:980086267360468992> Support Server](https://discord.gg/C3Wz6fRZbV)⠀|⠀"
-                                  f"<a:rooLove:980087863477669918> Vote on Top.gg⠀|⠀"
+                                  "&permissions=1394047577334&scope=bot%20applications.commands)⠀**|**⠀"
+                                  f"[<:rooBless:980086267360468992> Support Server](https://discord.gg/C3Wz6fRZbV)⠀"
+                                  f"**|**⠀<a:rooLove:980087863477669918> Vote on Top.gg⠀**|**⠀"
                                   f"<:rooSellout:980086802834681906> Donate\n{'-'*82}\n"
                                   f"**Ping**: `{round(self.bot.latency * 1000)}ms` | "
                                   f"**Uptime**: `{time_to_string(time() - self.bot.uptime)}` | "
@@ -149,7 +151,7 @@ class Utilities(Cog):
             embed.description += f"\n**[View More]({response['html_url']})**"
             break
 
-        latest_commit: dict = response['commits'][len(response['commits']) - 1]
+        latest_commit: dict = response['commits'][-1]
         date: str = latest_commit['commit']['committer']['date'].replace("T", " ").replace("Z", "")
         date_time_obj: datetime = datetime.fromtimestamp(mktime(strptime(date, "%Y-%m-%d %H:%M:%S")))
 

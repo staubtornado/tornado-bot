@@ -85,7 +85,7 @@ class SongStr:
             return
 
         parts = data.split(" by ")
-        self.uploader = parts[len(parts) - 1]
+        self.uploader = parts[-1]
         if len(parts) > 2:
             self.title = data.replace(f" by {self.uploader}", "")
             return

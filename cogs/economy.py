@@ -155,12 +155,12 @@ class Economy(Cog):
         for company in self.shares:
             chance_to_rise = 0.5
 
-            latest_price = self.shares[company][len(self.shares[company]) - 1]
+            latest_price = self.shares[company][-1]
             if len(self.shares[company]) > 1:
 
-                if latest_price > self.shares[company][len(self.shares[company]) - 2]:
+                if latest_price > self.shares[company][-2]:
                     chance_to_rise = 0.6
-                elif latest_price < self.shares[company][len(self.shares[company]) - 2]:
+                elif latest_price < self.shares[company][-2]:
                     chance_to_rise = 0.4
 
             price = latest_price - randint(1, 5)
@@ -298,13 +298,13 @@ class Economy(Cog):
 
         if company is None:
             for share in self.shares:
-                embed.add_field(name=share, value=str(self.shares[share][len(self.shares[share]) - 1]), inline=False)
+                embed.add_field(name=share, value=str(self.shares[share][-1]), inline=False)
             embed.description += "\nUse **/**`wallstreet [company name]` for more details."
             await ctx.respond(embed=embed)
             return
 
         embed.title = f"{company} Share Price"
-        embed.add_field(name="Latest Price", value=self.shares[company][len(self.shares[company]) - 1])
+        embed.add_field(name="Latest Price", value=self.shares[company][-1])
 
         image, file = create_graph(self.shares[company])
         embed.set_image(url=image)
@@ -317,7 +317,7 @@ class Economy(Cog):
         """Sell subjects on this server. You receive coins once a user buys it."""
 
         integers_in_subject = list(map(int, findall(r'\d+', subject)))
-        subject = ctx.bot.get_channel(integers_in_subject[len(integers_in_subject) - 1])
+        subject = ctx.bot.get_channel(integers_in_subject[-1])
         embed = Embed(title="Confirm", description=f"You are about to sell {subject.mention} for {price}.",
                       colour=SETTINGS["Colours"]["Default"])
         embed.set_footer(text="I understand that my transaction may be canceled by a server admin or bot admin, and I "
