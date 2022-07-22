@@ -160,6 +160,17 @@ class Utilities(Cog):
 
         await ctx.respond(embed=embed)
 
+    @slash_command()
+    async def feedback(self, ctx: ApplicationContext, message: str):
+        """Send feedback to the bot's owners."""
+        embed: Embed = Embed(title="New Feedback", colour=SETTINGS["Colours"]["Default"])
+        embed.add_field(name="By", value=str(ctx.author.id), inline=True)
+        embed.add_field(name="On", value=str(ctx.guild_id), inline=True)
+        embed.add_field(name="Feedback", value=message, inline=False)
+
+        await self.bot.get_user(self.bot.owner_ids[0]).send(embed=embed)
+        await ctx.respond("🛫 **Thanks**! Your **feedback** has been **registered**.", ephemeral=True)
+
 
 def setup(bot: Bot):
     bot.add_cog(Utilities(bot))
