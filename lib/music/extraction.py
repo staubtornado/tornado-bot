@@ -102,9 +102,12 @@ class YTDLSource(PCMVolumeTransformer):
             info = None
             while info is None:
                 try:
-                    info = processed_info["entries"].pop(0)
+                    info = processed_info["entries"][0]
                 except IndexError:
                     raise YTDLError(f"❌ **Could not retrieve any matches** for `{webpage_url}`")
+
+        if info.get("duration") is None:
+            raise YTDLError("❌ **Livestreams are** currently **no longer supported**.")
 
         if int(info["duration"]) > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
             raise YTDLError("❌ **Songs** can not be **longer than three hours**. Use **/**`loop` to repeat songs.")
@@ -143,7 +146,7 @@ class YTDLSource(PCMVolumeTransformer):
         return [entry for entry in data["entries"] if entry]
 
     @staticmethod
-    def parse_duration(duration: Union[str, int, None]):
+    def parse_duration(duration: Union[str, int, None]) -> str:
         if duration is None:
             return "LIVE"
         duration: int = int(duration)
@@ -152,15 +155,11 @@ class YTDLSource(PCMVolumeTransformer):
         return "Error"
 
     @staticmethod
-    def parse_limited_title(title: str):
+    def parse_limited_title(title: str) -> str:
         title = title.replace('||', '')
-        if len(title) > 72:
-            return f"{title[:72]}..."
-        return title
+        return f"{title[:72]}..." if len(title) > 72 else title
 
     @staticmethod
-    def parse_limited_title_embed(title: str):
+    def parse_limited_title_embed(title: str) -> str:
         title = title.replace("[", "").replace("]", "").replace("||", "")
-        if len(title) > 45:
-            return f"{title[:43]}..."
-        return title
+        return f"{title[:43]}..." if len(title) > 45 else title
