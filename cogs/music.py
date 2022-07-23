@@ -3,7 +3,7 @@ from math import ceil
 from time import time
 from typing import Union, Optional
 
-from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, ClientException, Member, Option, \
+from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, Member, Option, \
     AutocompleteContext, HTTPException, VoiceProtocol, VoiceClient, StageChannel
 from discord.ext.commands import Cog, check
 from discord.utils import get, basic_autocomplete
@@ -111,15 +111,13 @@ class Music(Cog):
             await ctx.respond(f"🎶 I am **currently playing** in {ctx.voice_client.channel.mention}.")
             return
 
-        try:
-            ctx.voice_state.voice = await destination.connect()
-        except ClientException:
-            guild_channel = get(self.bot.voice_clients, guild=ctx.guild)
-            if guild_channel == destination:
-                pass
-            else:
-                await guild_channel.disconnect(force=True)
-                ctx.voice_state.voice = await destination.connect()
+        current: Union[VoiceProtocol, None] = get(self.bot.voice_clients, guild=ctx.guild)
+        if current is not None:
+            await current.disconnect(force=True)
+            ctx.voice_state.exists = False
+        ctx.voice_state = self.get_voice_state(ctx)
+        ctx.voice_state.voice = await destination.connect()
+
         await ctx.guild.change_voice_state(channel=destination, self_mute=False, self_deaf=True)
         await ctx.respond(f"👍 **Hello**! Joined {destination.mention}.")
 
@@ -528,23 +526,19 @@ class Music(Cog):
             await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please **try again later**.")
             return
 
-        try:
-            if not ctx.guild.voice_client:
-                raise ClientException
-        except ClientException:
+        if not ctx.guild.voice_client:
             await self.join(ctx, None)
 
-        presets: dict = {"Charts": "https://open.spotify.com/playlist/37i9dQZEVXbNG2KDcFcKOF",
-                         "New Releases": "https://open.spotify.com/playlist/37i9dQZF1DWUW2bvSkjcJ6",
-                         "Chill": "https://open.spotify.com/playlist/37i9dQZF1DWTvNyxOwkztu",
-                         "Party": "https://open.spotify.com/playlist/37i9dQZF1DXbX3zSzB4MO0",
-                         "Classical": "https://open.spotify.com/playlist/37i9dQZF1DWWEJlAGA9gs0",
-                         "K-Pop": "https://open.spotify.com/playlist/37i9dQZF1DX9tPFwDMOaN1",
-                         "Gaming": "https://open.spotify.com/playlist/37i9dQZF1DWTyiBJ6yEqeu",
-                         "Rock": "https://open.spotify.com/playlist/37i9dQZF1DWZJhOVGWqUKF",
-                         "TDTT": "https://open.spotify.com/playlist/669nUqEjX1ozcx2Uika2fR",
-                         "ESC22": "https://open.spotify.com/playlist/37i9dQZF1DWVCKO3xAlT1Q"}
-        search: str = presets.get(search) or search
+        search: str = {"Charts": "https://open.spotify.com/playlist/37i9dQZEVXbNG2KDcFcKOF",
+                       "New Releases": "https://open.spotify.com/playlist/37i9dQZF1DWUW2bvSkjcJ6",
+                       "Chill": "https://open.spotify.com/playlist/37i9dQZF1DWTvNyxOwkztu",
+                       "Party": "https://open.spotify.com/playlist/37i9dQZF1DXbX3zSzB4MO0",
+                       "Classical": "https://open.spotify.com/playlist/37i9dQZF1DWWEJlAGA9gs0",
+                       "K-Pop": "https://open.spotify.com/playlist/37i9dQZF1DX9tPFwDMOaN1",
+                       "Gaming": "https://open.spotify.com/playlist/37i9dQZF1DWTyiBJ6yEqeu",
+                       "Rock": "https://open.spotify.com/playlist/37i9dQZF1DWZJhOVGWqUKF",
+                       "TDTT": "https://open.spotify.com/playlist/669nUqEjX1ozcx2Uika2fR",
+                       "ESC22": "https://open.spotify.com/playlist/37i9dQZF1DWVCKO3xAlT1Q"}.get(search) or search
 
         ctx.voice_state.processing = True
         try:
