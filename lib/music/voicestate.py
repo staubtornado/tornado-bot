@@ -2,7 +2,7 @@ from asyncio import Event, wait_for, TimeoutError, QueueEmpty
 from time import time
 from typing import Union
 
-from discord import Bot, FFmpegPCMAudio, Embed, ApplicationContext, VoiceClient
+from discord import Bot, FFmpegPCMAudio, Embed, ApplicationContext, VoiceClient, VoiceChannel
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
@@ -85,6 +85,14 @@ class VoiceState:
         while True:
             self.next.clear()
             self.now = None
+
+            try:
+                channel: Union[VoiceChannel, None] = self.bot.get_channel(self.voice.channel.id)
+                if len([member for member in channel.members if not member.bot]) == 0:
+                    self.songs.clear()
+                    self.priority_songs.clear()
+            except AttributeError:
+                pass
 
             if not self.loop:
                 try:
