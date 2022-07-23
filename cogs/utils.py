@@ -58,7 +58,7 @@ class Utilities(Cog):
     @slash_command()
     async def uptime(self, ctx: ApplicationContext):
         """Check the bots' uptime."""
-        await ctx.respond(f"**Uptime**: {time_to_string(time() - self.bot.uptime)}")
+        await ctx.respond(f"⏱ **Uptime**: {time_to_string(time() - self.bot.uptime)}")
 
     @slash_command()
     async def help(self, ctx: ApplicationContext,
