@@ -63,7 +63,13 @@ class Images(Cog):
         try:
             title = content["title"]
         except TypeError:
-            content = loads(content.text)["memes"][0]
+            content = loads(content.text)
+            try:
+                content = content["memes"][0]
+            except KeyError:
+                await ctx.respond(f"❌ {content['message']}")
+                return
+
             try:
                 title = content["title"]
             except KeyError:
