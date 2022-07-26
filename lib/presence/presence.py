@@ -8,7 +8,7 @@ from lib.utils.utils import shortened
 @loop(seconds=SETTINGS["ServiceSyncInSeconds"])
 async def update_rich_presence(bot: Bot):
     try:
-        bot.latencies.append(bot.latency)
+        bot.latencies.append(round(bot.latency * 1000))
     except AttributeError:
         pass
 
