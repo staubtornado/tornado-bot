@@ -306,7 +306,7 @@ class Music(Cog):
                 if "DJ" in role.name:
                     await ctx.respond(f"❌ You are **not a DJ**.")
                     return
-            await ctx.respond(f"❌ **Only a DJ can force** song **skipping**.\nRoles that have `DJ` in their name are "
+            await ctx.respond(f"❌ **Only a DJ can force** song **skipping**.\n❔Roles that have `DJ` in their name are "
                               f"valid.")
             return
 
@@ -364,9 +364,9 @@ class Music(Cog):
         for i, song in enumerate(ctx.voice_state.songs[start:end], start=start):
             if isinstance(song, Song):
                 queue += f"`{i + 1 + len(ctx.voice_state.priority_songs)}`. [{song.source.title_limited_embed}]" \
-                         f"({song.source.url})\n"
+                         f"({song.source.url}) added by {song.requester.mention}\n"
             else:
-                queue += f"`{i + 1 + len(ctx.voice_state.priority_songs)}`. {song}\n"
+                queue += f"`{i + 1 + len(ctx.voice_state.priority_songs)}`. {song} added by {song.requester.mention}\n"
 
         embed: Embed = Embed(title="Queue",
                              description=f"**Songs:** "
@@ -382,9 +382,9 @@ class Music(Cog):
         for i, song in enumerate(ctx.voice_state.priority_songs, start=1):
             if isinstance(song, Song):
                 p_queue += f"`{i}.` [{song.source.title_limited_embed}]({song.source.url} " \
-                           f"'{song.source.title}')\n"
+                           f"'{song.source.title}') added by {song.requester.mention}\n"
             else:
-                p_queue += f"`{i}.` {song}\n"
+                p_queue += f"`{i}.` {song} added by {song.requester.mention}\n"
         embed.add_field(name="\nPriority Queue", value=p_queue, inline=False) if p_queue != "" else None
 
         embed.add_field(name="⠀\nQueue", value=queue, inline=False) if queue != "" else None
