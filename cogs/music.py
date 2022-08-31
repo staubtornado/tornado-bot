@@ -295,7 +295,7 @@ class Music(Cog):
         voter: Member = ctx.author
 
         if force == "True":
-            if "DJ" in [role.name for role in voter.roles] or voter.guild_permissions.manage_guild:
+            if [role.name for role in voter.roles if "DJ" in role.name] or voter.guild_permissions.manage_guild:
                 ctx.voice_state.skip()
                 for i in songs_to_skip:
                     ctx.voice_state.songs.remove(i)
@@ -306,8 +306,8 @@ class Music(Cog):
                 if "DJ" in role.name:
                     await ctx.respond(f"❌ You are **not a DJ**.")
                     return
-            await ctx.respond(f"❌ **Only a DJ can force** song **skipping**.\n❔Roles that have `DJ` in their name are "
-                              f"valid.")
+            await ctx.respond(f"❌ **Only a DJ can force** song **skipping**.\n"
+                              f"❔Roles that have `DJ` in their name are valid.")
             return
 
         if voter == ctx.voice_state.current.requester:
