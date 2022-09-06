@@ -2,6 +2,7 @@ from asyncio import sleep
 from math import ceil
 from time import time
 from typing import Union, Optional
+from re import sub
 
 from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, Member, Option, \
     AutocompleteContext, HTTPException, VoiceProtocol, VoiceClient, StageChannel
@@ -486,8 +487,9 @@ class Music(Cog):
         await ctx.defer()
 
         try:
-            response = get_lyrics(title or ctx.voice_state.current.source.title,
-                                  artist or ctx.voice_state.current.source.uploader)
+            response = list(get_lyrics(title or ctx.voice_state.current.source.title,
+                                       artist or ctx.voice_state.current.source.uploader))
+            response[0] = sub(r"\d*Embed$", "", response[0])
 
             embed = Embed(title="Lyrics", description=response[0], colour=0xFF0000)
             embed.set_author(name=f"{response[2]} by {response[3]}", icon_url=response[1])
