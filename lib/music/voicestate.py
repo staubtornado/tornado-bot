@@ -120,7 +120,7 @@ class VoiceState:
                             search = self.current.get_search()
 
                             if not url_is_valid(search)[0]:
-                                source = await guess_type(search, self._ctx, loop=self.bot.loop)
+                                source = await guess_type(search, self.current.ctx, loop=self.bot.loop)
                             else:
                                 source = await YTDLSource.create_source(self.current.ctx, search, loop=self.bot.loop)
                     except Exception as error:
