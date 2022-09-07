@@ -367,7 +367,7 @@ class Music(Cog):
                 queue += f"`{i + 1 + len(ctx.voice_state.priority_songs)}`. [{song.source.title_limited_embed}]" \
                          f"({song.source.url}) added by {song.requester.mention}\n"
             else:
-                queue += f"`{i + 1 + len(ctx.voice_state.priority_songs)}`. {song} added by {song.requester.mention}\n"
+                queue += f"`{i + 1 + len(ctx.voice_state.priority_songs)}`. {song} added by {song.ctx.author.mention}\n"
 
         embed: Embed = Embed(title="Queue",
                              description=f"**Songs:** "
@@ -385,7 +385,7 @@ class Music(Cog):
                 p_queue += f"`{i}.` [{song.source.title_limited_embed}]({song.source.url} " \
                            f"'{song.source.title}') added by {song.requester.mention}\n"
             else:
-                p_queue += f"`{i}.` {song} added by {song.requester.mention}\n"
+                p_queue += f"`{i}.` {song} added by {song.ctx.author.mention}\n"
         embed.add_field(name="\nPriority Queue", value=p_queue, inline=False) if p_queue != "" else None
 
         embed.add_field(name="⠀\nQueue", value=queue, inline=False) if queue != "" else None
