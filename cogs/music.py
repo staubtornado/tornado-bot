@@ -1,8 +1,8 @@
 from asyncio import sleep
 from math import ceil
+from re import sub
 from time import time
 from typing import Union, Optional
-from re import sub
 
 from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, Member, Option, \
     AutocompleteContext, HTTPException, VoiceProtocol, VoiceClient, StageChannel
@@ -16,19 +16,16 @@ from cogs.settings import Settings
 from data.config.settings import SETTINGS
 from data.db.memory import database
 from lib.music.api import search_on_spotify, get_lyrics
-from lib.music.exceptions import YTDLError
 from lib.music.extraction import YTDLSource
+from lib.music.exceptions import YTDLError
 from lib.music.search import process
-from lib.music.song import Song, SongStr
+from lib.music.song import Song
+from lib.music.views import LoopDecision
 from lib.music.voicestate import VoiceState
 from lib.utils.utils import ordinal, progress_bar, time_to_string
+from lib.music.other import CustomApplicationContext, ensure_voice_state
 
 utils.bug_reports_message = lambda: ''
-
-
-class CustomApplicationContext(ApplicationContext):
-    voice_state: VoiceState
-    priority: bool = False
 
 
 async def auto_complete(ctx: AutocompleteContext) -> list[str]:
@@ -46,26 +43,6 @@ async def auto_complete(ctx: AutocompleteContext) -> list[str]:
         pass
     return rtrn if len(rtrn) > 0 else ["Charts", "New Releases", "TDTT", "ESC22", "Chill", "Party", "Classical",
                                        "K-Pop", "Gaming", "Rock"]
-
-
-def ensure_voice_state(ctx: CustomApplicationContext, **kwargs) -> Union[str, None]:
-    if ctx.author.voice is None and not kwargs.get("no_voice_required"):
-        return "❌ **You are not** connected to a **voice** channel."
-
-    if ctx.voice_client:
-        if ctx.voice_client.channel != ctx.author.voice.channel:
-            return f"🎶 I am **currently playing** in {ctx.voice_client.channel.mention}."
-
-    if not ctx.voice_state.is_playing and kwargs.get("requires_song"):
-        return "❌ **Nothing** is currently **playing**."
-    if isinstance(ctx.voice_state.current, SongStr) and (kwargs.get("requires_song") or kwargs.get("no_processing")):
-        return "❌ Next **song is** currently **processing**, please **wait**."
-
-    if not len(ctx.voice_state.songs) + len(ctx.voice_state.priority_songs) and kwargs.get("requires_queue"):
-        return "❌ The **queue** is **empty**."
-
-    if ctx.voice_state.processing and kwargs.get("no_processing"):
-        return "⚠ I am **currently processing** the previous **request**."
 
 
 class Music(Cog):
@@ -403,7 +380,7 @@ class Music(Cog):
             return
 
         ctx.voice_state.songs.shuffle()
-        ctx.voice_state.priority_songs.shuffle() if len(ctx.voice_state.priority_songs) > 0 else None
+        ctx.voice_state.priority_songs.shuffle() if len(ctx.voice_state.priority_songs) else None
         await ctx.respond("🔀 **Shuffled** the queue.")
 
     @slash_command()
@@ -443,43 +420,8 @@ class Music(Cog):
 
     @slash_command()
     async def loop(self, ctx: CustomApplicationContext):
-        """Loops current song. Invoke this command again to disable loop."""
-        await ctx.defer()
-
-        instance = ensure_voice_state(ctx, requires_song=True)
-        if isinstance(instance, str):
-            await ctx.respond(instance)
-            return
-
-        ctx.voice_state.loop = not ctx.voice_state.loop
-
-        if ctx.voice_state.loop:
-            await ctx.respond("🔁 **Looped song /**`loop` to **disable** loop.\n"
-                              "❔ Looking for **queue loop?** **/**`iterate`")
-            return
-        await ctx.respond("🔁 **Unlooped song /**`loop` to **enable** loop.")
-
-    @slash_command()
-    async def iterate(self, ctx: CustomApplicationContext):
-        """Iterates current queue. Invoke this command again to disable iteration."""
-        await ctx.defer()
-
-        instance = ensure_voice_state(ctx, requires_queue=True, no_processing=True)
-        if isinstance(instance, str):
-            await ctx.respond(instance)
-            return
-
-        if ctx.voice_state.songs.get_duration() > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
-            await ctx.respond("❌ The **queue is too long** to be iterated through.")
-            return
-
-        ctx.voice_state.iterate = not ctx.voice_state.iterate
-        if ctx.voice_state.iterate:
-            await ctx.voice_state.songs.put(SongStr(ctx.voice_state.current, ctx))
-
-            await ctx.respond(f"🔁 **Looped queue**, use **/**`iterate` to **disable** loop.")
-            return
-        await ctx.respond(f"🔁 **Unlooped queue**, use **/**`iterate` to **enable** loop.")
+        """Loops current song/queue. Invoke this command again to disable loop."""
+        await ctx.respond("⚠️**What** do you want **to change?**", view=LoopDecision(ctx))
 
     @slash_command()
     async def lyrics(self, ctx: CustomApplicationContext, title: str = None, artist: str = None):
