@@ -1,6 +1,7 @@
 from datetime import datetime
 from difflib import get_close_matches
 from json import loads
+from re import sub
 from time import time, strptime, mktime
 
 from discord import Bot, slash_command, ApplicationContext, AutocompleteContext, Option, Embed, SlashCommandGroup
@@ -170,6 +171,18 @@ class Utilities(Cog):
 
         await self.bot.get_user(self.bot.owner_ids[0]).send(embed=embed)
         await ctx.respond("🛫 **Thanks**! Your **feedback** has been **registered**.", ephemeral=True)
+
+    @slash_command()
+    async def whois(self, ctx: ApplicationContext, ip: str):
+        await ctx.defer()
+
+        response = get(f'https://ipapi.co/{ip}/json/').json()
+        content: list[str, None] = [response.get("city"), response.get("region"), response.get("country_name")]
+
+        if all(content):
+            await ctx.respond("**🗺️ {}**".format(sub(r"[\[\]']", "", str(content).replace(', ', '** in **'))))
+            return
+        await ctx.respond("❌ Given input is **not a valid IP**.")
 
 
 def setup(bot: Bot):
