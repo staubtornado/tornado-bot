@@ -174,7 +174,7 @@ class Music(Cog):
                 ctx.voice_state.song_position[0] = duration
             ctx.voice_state.song_position[1] = round(time())
 
-        bar = progress_bar(ctx.voice_state.song_position[0], duration, content=("---", "•**", "---"))
+        bar = progress_bar(ctx.voice_state.song_position[0], duration, content=("-", "•**", "-"), length=30)
         embed.description = f"**{time_to_string(ctx.voice_state.song_position[0])} {bar} " \
                             f"**{time_to_string(duration)}**\n" \
                             f"{embed.description}".replace(f"**|** {ctx.voice_state.current.source.duration} ", "")
