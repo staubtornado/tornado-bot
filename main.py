@@ -25,7 +25,7 @@ async def sync_database():
     global db_initialized
     local_db: Connection = connect("./data/db/database.db", check_same_thread=False)
 
-    print("Syncing database...")
+    print("[SYSTEM] Syncing database...")
     try:
         if not db_initialized:
             with open("./data/db/build.sql", "r", encoding="utf-8") as script:
@@ -38,9 +38,9 @@ async def sync_database():
                 database.commit()
                 database.backup(local_db)
     except Error as e:
-        print(f"An error occurred while syncing database: {e}\n{format_exc()}")
+        print(f"[FATAL ERROR] An error occurred while syncing database: {e}\n{format_exc()}")
     else:
-        print("Synced database successfully.")
+        print("[SYSTEM] Synced database successfully.")
     local_db.close()
 
 
@@ -48,7 +48,7 @@ async def sync_database():
 async def on_ready():
     bot.uptime = round(time())
     bot.latencies = []
-    print(f"{bot.user} is online...")
+    print(f"[SYSTEM] {bot.user} is online...")
 
 
 @bot.event
@@ -88,7 +88,7 @@ def main():
 
     cache = "./data/cache"
     if len(listdir(cache)) > 0:
-        for f in tqdm(listdir(cache), "Cleaning cache"):
+        for f in tqdm(listdir(cache), "[SYSTEM] Cleaning cache"):
             remove(join(cache, f))
 
     sync_database.start()
@@ -99,7 +99,7 @@ def main():
             try:
                 bot.load_extension(f'cogs.{filename[:-3]}')
             except Exception as e:
-                print(f"Failed to load {filename}: {e} \n{format_exc()}")
+                print(f"[FATAL ERROR] Failed to load {filename}: {e} \n{format_exc()}")
     bot.run(getenv("DISCORD_BOT_TOKEN"))  # TODO: FIX STRG + C NOT MAKING A SAVE BEFORE EXIT
 
 

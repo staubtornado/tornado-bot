@@ -38,7 +38,7 @@ class Images(Cog):
                            "masturbation": "Fingering", "shaved": "shavedpussies", "close-up": "closeup",
                            "pussy": "pussy", "cat": "cats", "boobs": "tits", "milf": "milf", "meme": "dankmemes"}
         self.gallery = {}
-        for category in tqdm(self.categories, "Scraping image urls"):
+        for category in tqdm(self.categories, "[SYSTEM] Scraping image urls"):
             for response in dict(loads(self.request(subreddit=self.categories[category]).text))["memes"]:
                 try:
                     self.gallery[category]
