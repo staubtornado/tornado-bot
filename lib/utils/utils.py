@@ -1,4 +1,5 @@
 from datetime import datetime
+from math import floor, ceil
 from time import strftime, gmtime
 from traceback import format_tb
 from typing import Union, Any
@@ -80,4 +81,4 @@ def url_is_valid(url: str) -> tuple[bool, ParseResult]:
 def progress_bar(amount: Union[int, float], total: Union[int, float],
                  content: tuple[str, str, str] = ("◻", "", "▪️"), length: int = 10) -> str:
     percent: float = float((amount / total) if amount <= total else 1)
-    return round(percent * length) * content[0] + content[1] + round((1 - percent) * length) * content[2]
+    return floor(percent * length) * content[0] + content[1] + ceil((1 - percent) * length) * content[2]
