@@ -78,6 +78,6 @@ def url_is_valid(url: str) -> tuple[bool, ParseResult]:
 
 
 def progress_bar(amount: Union[int, float], total: Union[int, float],
-                 content: tuple[str, str, str] = ("◻", "", "▪")) -> str:
-    percent = (amount / total) * 100
-    return round(percent / 10) * content[0] + content[1] + round((100 - percent) / 10) * content[2]
+                 content: tuple[str, str, str] = ("◻", "", "▪️"), length: int = 10) -> str:
+    percent: float = float((amount / total) if amount <= total else 1)
+    return round(percent * length) * content[0] + content[1] + round((1 - percent) * length) * content[2]
