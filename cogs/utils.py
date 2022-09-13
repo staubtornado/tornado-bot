@@ -3,6 +3,7 @@ from difflib import get_close_matches
 from json import loads
 from re import sub
 from time import time, strptime, mktime
+from typing import Union
 
 from discord import Bot, slash_command, ApplicationContext, AutocompleteContext, Option, Embed, SlashCommandGroup
 from discord.ext.commands import Cog
@@ -177,7 +178,7 @@ class Utilities(Cog):
         await ctx.defer()
 
         response = get(f'https://ipapi.co/{ip}/json/').json()
-        content: list[str, None] = [response.get("city"), response.get("region"), response.get("country_name")]
+        content: list[Union[str, None]] = [response.get("city"), response.get("region"), response.get("country_name")]
 
         if all(content):
             await ctx.respond("**🗺️ {}**".format(sub(r"[\[\]']", "", str(content).replace(', ', '** in **'))))

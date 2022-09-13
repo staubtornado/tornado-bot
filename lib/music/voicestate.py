@@ -1,4 +1,5 @@
 from asyncio import Event, wait_for, TimeoutError, QueueEmpty
+from random import randrange
 from time import time
 from typing import Union
 
@@ -30,6 +31,8 @@ class VoiceState:
         self.loop_duration: int = 0
         self.song_position = None
         self.history: list[str] = []
+
+        self.id = '{0:010x}'.format(randrange(16**10)).upper()
 
         self._loop: bool = False
         self._iterate: bool = False
@@ -148,11 +151,13 @@ class VoiceState:
                 self.song_position = [0, round(time())]
                 if self.update_embed:
                     await self.current.source.channel.send(embed=self.current.create_embed(
-                        (self.songs, self.priority_songs), self.embed_size),
+                        (self.songs, self.priority_songs),
+                        f"{SETTINGS['ExternalIP']}:{SETTINGS['Port']}?{self.id}", self.embed_size),
                                                            delete_after=float(self.current.source.data.get("duration")))
                 else:
                     await self.current.source.channel.send(embed=self.current.create_embed(
-                        (self.songs, self.priority_songs), self.embed_size))
+                        (self.songs, self.priority_songs), f"{SETTINGS['ExternalIP']}:{SETTINGS['Port']}?{self.id}",
+                        self.embed_size))
 
             elif self.loop:
                 if self.loop_duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
@@ -168,7 +173,8 @@ class VoiceState:
                 self.song_position = [0, round(time())]
                 if self.update_embed:
                     await self.current.source.channel.send(embed=self.current.create_embed(
-                        (self.songs, self.priority_songs), self.embed_size),
+                        (self.songs, self.priority_songs), f"{SETTINGS['ExternalIP']}:{SETTINGS['Port']}?{self.id}",
+                        self.embed_size),
                                                            delete_after=float(self.current.source.data.get("duration")))
             await self.next.wait()
 

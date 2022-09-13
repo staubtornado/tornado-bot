@@ -1,4 +1,5 @@
 from discord import Intents, Colour
+from requests import get
 
 intents: Intents = Intents.default()
 intents.__setattr__("members", True)
@@ -37,5 +38,7 @@ SETTINGS: dict = {
     },
     "Version": "0.0.6.2a",  # Bot version
     "Production": False,  # If the bot is running in production or not
-    "ServiceSyncInSeconds": 1800  # How often the bot should sync with the service
+    "ServiceSyncInSeconds": 1800,  # How often the bot should sync with the service
+    "ExternalIP": get('https://api.ipify.org').content.decode('utf8'),
+    "Port": 65432
 }

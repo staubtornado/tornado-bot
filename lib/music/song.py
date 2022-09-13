@@ -14,12 +14,13 @@ class Song:
         self.source = source
         self.requester = source.requester
 
-    def create_embed(self, songs: tuple, size: int = 2) -> Embed:
+    def create_embed(self, songs: tuple, connection: str, size: int = 2) -> Embed:
         description = f"[Video]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) **|** " \
                       f"{self.source.duration} **|** {self.requester.mention}"
 
         embed: Embed = Embed(title=f"🎶 {self.source.title_limited_embed}", description=description, colour=0xFF0000)
         embed.set_thumbnail(url=self.source.thumbnail)
+        embed.set_footer(text=f"SessionID: {connection}")
 
         if size == 0:
             return embed
