@@ -151,13 +151,11 @@ class VoiceState:
                 self.song_position = [0, round(time())]
                 if self.update_embed:
                     await self.current.source.channel.send(embed=self.current.create_embed(
-                        (self.songs, self.priority_songs),
-                        f"{SETTINGS['ExternalIP']}:{SETTINGS['Port']}?{self.id}", self.embed_size),
+                        (self.songs, self.priority_songs), self.embed_size),
                                                            delete_after=float(self.current.source.data.get("duration")))
                 else:
                     await self.current.source.channel.send(embed=self.current.create_embed(
-                        (self.songs, self.priority_songs), f"{SETTINGS['ExternalIP']}:{SETTINGS['Port']}?{self.id}",
-                        self.embed_size))
+                        (self.songs, self.priority_songs), self.embed_size))
 
             elif self.loop:
                 if self.loop_duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
@@ -173,8 +171,7 @@ class VoiceState:
                 self.song_position = [0, round(time())]
                 if self.update_embed:
                     await self.current.source.channel.send(embed=self.current.create_embed(
-                        (self.songs, self.priority_songs), f"{SETTINGS['ExternalIP']}:{SETTINGS['Port']}?{self.id}",
-                        self.embed_size),
+                        (self.songs, self.priority_songs), self.embed_size),
                                                            delete_after=float(self.current.source.data.get("duration")))
             await self.next.wait()
 

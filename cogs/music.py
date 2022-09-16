@@ -5,7 +5,7 @@ from time import time
 from typing import Union, Optional
 
 from discord import ApplicationContext, Embed, Bot, slash_command, VoiceChannel, Member, Option, \
-    AutocompleteContext, HTTPException, VoiceProtocol, VoiceClient, StageChannel
+    AutocompleteContext, HTTPException, VoiceProtocol, VoiceClient, StageChannel, Forbidden
 from discord.ext.commands import Cog, check
 from discord.utils import get, basic_autocomplete
 from psutil import virtual_memory
@@ -438,6 +438,16 @@ class Music(Cog):
             await ctx.respond(embed=embed)
         except (AttributeError, HTTPException):
             await ctx.respond("❌ **Can not find any lyrics** for that song.")
+
+    @slash_command(name="sessionID")
+    async def session_id(self, ctx: CustomApplicationContext):
+        try:
+            await ctx.author.send(f"🔒 The **__secret__ ID** for the current session **is** "
+                                  f"`{SETTINGS['ExternalIP']}:{SETTINGS['Port']}?{ctx.voice_state.id}`")
+        except Forbidden:
+            await ctx.respond("❌ **Failed** to send. Please **check if** your **DMs are open**.")
+            return
+        await ctx.respond("📨 **Sent** the **__secret__ ID** for the current session **to your DMs**.")
 
     @slash_command()
     @check(Settings.has_beta)
