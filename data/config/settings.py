@@ -6,7 +6,7 @@ intents.__setattr__("members", True)
 intents.__setattr__("messages", True)
 
 # Bot settings, apply to all servers. Server specific settings are saved in the database.
-SETTINGS: dict = {
+SETTINGS: dict[str] = {
     "OwnerIDs": [272446903940153345],  # List of owner IDs
     "Description": "A feature-rich bot based on Python 3.10 and Pycord.",  # Bot description
     "Intents": intents,  # Bot intents | DO NOT TOUCH UNLESS YOU KNOW WHAT YOU'RE DOING
@@ -36,7 +36,7 @@ SETTINGS: dict = {
             "Companies": ["Puffus", "Foodiest", "QuickPacked", "MobileCRATE", "Cygner"]
         }
     },
-    "Version": "0.0.6.2a",  # Bot version
+    "Version": "0.0.6.3-hotfix",  # Bot version
     "Production": False,  # If the bot is running in production or not
     "ServiceSyncInSeconds": 1800,  # How often the bot should sync with the service
     "ExternalIP": get('https://api.ipify.org').content.decode('utf8'),
