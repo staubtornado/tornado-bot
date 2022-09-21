@@ -57,12 +57,14 @@ class YTDLSource(PCMVolumeTransformer):
         self.likes = data.get("like_count") if data.get("like_count") is not None else -1
         self.stream_url = data.get("url")
 
-        try:
-            self.dislikes = int(
-                dict(loads(req_get(f"https://returnyoutubedislikeapi.com/votes?videoId={data.get('id')}")
-                           .text))["dislikes"])
-        except KeyError:
-            self.dislikes = -1
+        # TEMPORARY DEACTIVATED DUE TO MASSIVE BUGS
+        # try:
+        #     self.dislikes = int(
+        #         dict(loads(req_get(f"https://returnyoutubedislikeapi.com/votes?videoId={data.get('id')}")
+        #                    .text))["dislikes"])
+        # except KeyError:
+        #     self.dislikes = -1
+        self.dislikes = -1
 
     def __str__(self):
         return f"**{self.title_limited}** by **{self.uploader}**"
