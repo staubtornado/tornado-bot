@@ -32,7 +32,8 @@ class VoiceState:
         self.song_position = None
         self.history: list[str] = []
 
-        self.id = '{0:010x}'.format(randrange(16**10)).upper()
+        self.id = '{0:010x}'.format(randrange(16**8)).upper()
+        self.registered_controls: dict[int, str] = {}
 
         self._loop: bool = False
         self._iterate: bool = False
@@ -83,6 +84,22 @@ class VoiceState:
     @property
     def is_playing(self) -> bool:
         return self.voice and self.current
+
+    async def channel_send(self, message: str = None, embed: Embed = None) -> None:
+        await self._ctx.send(content=message, embed=embed)
+
+    def register_user(self, u_id: int) -> Union[None, str]:
+        if self.registered_controls.get(u_id) is not None:
+            return "❌ You are **already connected**."
+
+        member_ids: list[int] = [member.id for member in self.voice.channel.members]
+        for control in self.registered_controls:
+            if control not in member_ids:
+                del self.registered_controls[control]
+
+        if len(self.registered_controls) >= 3:
+            return "❌ The **maximum of** 3 **users** is **reached**."
+        self.registered_controls[u_id] = '{0:010x}'.format(randrange(16**2)).upper()[8:]
 
     async def audio_player_task(self):
         while True:

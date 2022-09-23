@@ -40,5 +40,6 @@ SETTINGS: dict[str] = {
     "Production": False,  # If the bot is running in production or not
     "ServiceSyncInSeconds": 1800,  # How often the bot should sync with the service
     "ExternalIP": get('https://api.ipify.org').content.decode('utf8'),
-    "Port": 65432
+    "BetterMusicControlListenOnIP": "127.0.0.1",  # May need to be configured.
+    "BetterMusicControlListenOnPort": 65432
 }

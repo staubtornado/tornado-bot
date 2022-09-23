@@ -1,75 +1,93 @@
-from json import loads
-from selectors import DefaultSelector, EVENT_READ, EVENT_WRITE
-from socket import socket, AF_INET, SOCK_STREAM
-from types import SimpleNamespace
+from ast import literal_eval
+from asyncio import StreamReader, StreamWriter, start_server, sleep
 from typing import Union, Any
 
-from discord import Bot
+from discord import Bot, Cog, User
 
 from data.config.settings import SETTINGS
+from lib.music.voicestate import VoiceState
+
+class RateLimitedError(Exception):
+    pass
 
 
-class BetterMusicControl:
+class ControlRequest:
+    session: VoiceState
+    requester: User
+    action: str
+
+    def __init__(self, data: dict[str, Union[str, int]], voice_states: dict[int, VoiceState]):
+        self._data: dict[str, Union[str, int]] = data
+        if len(data) != 3:
+            raise ValueError("Data does not match required pattern.")
+
+        for guild_vs_id in voice_states:
+            if voice_states[guild_vs_id].id == data.get("sessionID").split("=")[0]:
+                self.session = voice_states[guild_vs_id]
+                break
+        else:
+            raise ValueError("Session ID is invalid.")
+
+        self.requester: Union[User, None] = self.session.bot.get_user(data.get("uID"))
+        if self.requester is None or self.requester.id not in self.session.registered_controls or \
+                self.session.registered_controls[self.requester.id] != data.get("sessionID").split("=")[1]:
+            raise ValueError("Missing permissions or invalid user.")
+
+        self.action: str = data.get("message")
+        if data.get("message") != "TOGGLE":  # Will later be replaced with list[str] when there are more than one types.
+            raise ValueError("Invalid request.")
+
+
+class BetterMusicControlReceiver:
+    bot: Bot
+    voice_states: dict[int, VoiceState]
+    _addresses_on_cooldown: list[str]
+    _addresses_on_rate_limit: list[str]
+
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.sel = DefaultSelector()
+        bot.loop.create_task(self.run_server())
 
-        self.listener = bot.loop.create_task(self._listener())
+        self._addresses_on_cooldown = []
+        self._addresses_on_rate_limit = []
 
-    def valid_request(self, ):
+    async def handle_data(self, reader: StreamReader, writer: StreamWriter) -> None:
+        """Called everytime a connection is established."""
 
-    def accept_wrapper(self, sock: Union[Any, socket]):
-        conn, addr = sock.accept()  # Should be ready to read
-        print(f"Accepted connection from {addr}")
-        conn.setblocking(False)
-        data = SimpleNamespace(addr=addr, inb=b"", outb=b"")
-        self.sel.register(conn, EVENT_READ | EVENT_WRITE, data=data)
-
-    def service_connection(self, con_key, con_mask):
-        sock = con_key.fileobj
-        data = con_key.data
-        if con_mask & EVENT_READ:
-            recv_data = sock.recv(1024)  # Should be ready to read
-            if recv_data:
-                data.outb += recv_data
-            else:
-                print(f"Closing connection to {data.addr}")
-                self.sel.unregister(sock)
-                sock.close()
-        if con_mask & EVENT_WRITE:
-            if data.outb:
-                message: dict = dict(loads(data.outb.decode("utf-8")))
-                print(f"[SYSTEM] Received {message.get('message')} from {data.addr}")
-
-
-                voice_states: dict[int] = self.bot.get_cog("Music").voice_states
-                if any([True for vs in voice_states if voice_states[vs].id == message.get("session_id")]):
-                    actions: dict[str] = {"TOGGLE": lambda : }
-
-
-
-                print(f"Echoing {data.outb!r} to {data.addr}")
-                sent = sock.send(data.outb)  # Should be ready to write
-                data.outb = data.outb[sent:]
-
-    async def _listener(self):
-        host, port = SETTINGS["ExternalIP"], SETTINGS["Port"]
-        l_sock = socket(AF_INET, SOCK_STREAM)
-        l_sock.bind((host, port))
-        l_sock.listen()
-        print(f"Listening on {(host, port)}")
-        l_sock.setblocking(False)
-        self.sel.register(l_sock, EVENT_READ, data=None)
+        data: bytes = await reader.read(1024)
+        address, port = writer.get_extra_info("peername")
+        print(f"[NETWORK] Accepting connection from {address}:{port}")
 
         try:
-            while True:
-                events = self.sel.select(timeout=None)
-                for key, mask in events:
-                    if key.data is None:
-                        self.accept_wrapper(key.fileobj)
-                    else:
-                        self.service_connection(key, mask)
-        except KeyboardInterrupt:
-            print("Caught keyboard interrupt, exiting")
-        finally:
-            self.sel.close()
+            self.voice_states
+        except AttributeError:
+            music: Union[Any, Cog] = self.bot.get_cog("Music")
+            self.voice_states = music.voice_states
+
+        while data != b"END":
+            try:
+                request = ControlRequest(data=literal_eval(data.decode()), voice_states=self.voice_states)
+            except (ValueError, RateLimitedError) as e:
+                print(f"[NETWORK] Received invalid request from {address}:{port}")
+                writer.write(bytes(str(e), "utf-8"))
+                await writer.drain()
+                break
+
+            print(f"[NETWORK] Received request from {address}:{port}")
+            if request.action == "TOGGLE":
+                if request.session.voice.is_playing():
+                    request.session.voice.pause()
+                    await request.session.channel_send(message=f"Paused by {request.requester.mention}")
+                else:
+                    request.session.voice.resume()
+                    await request.session.channel_send(
+                        message=f"Resumed by {request.requester.mention}")
+
+        print(f"[NETWORK] Closing connection to {address}:{port}")
+        await writer.wait_closed()
+
+    async def run_server(self) -> None:
+        server = await start_server(self.handle_data, SETTINGS["BetterMusicControlListenOnIP"],
+                                    SETTINGS["BetterMusicControlListenOnPort"])
+        async with server:
+            await server.serve_forever()
