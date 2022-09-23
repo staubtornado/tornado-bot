@@ -67,7 +67,7 @@ class BetterMusicControlReceiver:
         while data != b"END":
             try:
                 request = ControlRequest(data=literal_eval(data.decode()), voice_states=self.voice_states)
-            except (ValueError, RateLimitedError) as e:
+            except (ValueError, AttributeError) as e:
                 print(f"[NETWORK] Received invalid request from {address}:{port}")
                 writer.write(bytes(str(e), "utf-8"))
                 await writer.drain()
@@ -97,5 +97,7 @@ class BetterMusicControlReceiver:
     async def run_server(self) -> None:
         server = await start_server(self.handle_data, SETTINGS["BetterMusicControlListenOnIP"],
                                     SETTINGS["BetterMusicControlListenOnPort"])
+        print(f"[NETWORK] Listening on {SETTINGS['BetterMusicControlListenOnIP']}:"
+              f"{SETTINGS['BetterMusicControlListenOnPort']}")
         async with server:
             await server.serve_forever()
