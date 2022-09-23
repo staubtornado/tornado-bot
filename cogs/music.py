@@ -16,14 +16,15 @@ from cogs.settings import Settings
 from data.config.settings import SETTINGS
 from data.db.memory import database
 from lib.music.api import search_on_spotify, get_lyrics
-from lib.music.extraction import YTDLSource
+from lib.music.betterMusicControl import BetterMusicControlReceiver
 from lib.music.exceptions import YTDLError
+from lib.music.extraction import YTDLSource
+from lib.music.other import CustomApplicationContext, ensure_voice_state
 from lib.music.search import process
 from lib.music.song import Song
 from lib.music.views import LoopDecision
 from lib.music.voicestate import VoiceState
 from lib.utils.utils import ordinal, progress_bar, time_to_string
-from lib.music.other import CustomApplicationContext, ensure_voice_state
 
 utils.bug_reports_message = lambda: ''
 
@@ -54,6 +55,7 @@ class Music(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.voice_states = {}
+        self.controls = BetterMusicControlReceiver(bot)
 
     def get_voice_state(self, ctx: ApplicationContext) -> VoiceState:
         state: VoiceState = self.voice_states.get(ctx.guild_id)
@@ -102,9 +104,7 @@ class Music(Cog):
     @slash_command()
     async def clear(self, ctx: CustomApplicationContext):
         """Clears the whole queue."""
-        await ctx.defer()
-
-        instance = ensure_voice_state(ctx, requires_queue=True, no_processing=True)
+        instance: Union[str, None] = ensure_voice_state(ctx, requires_queue=True, no_processing=True)
         if isinstance(instance, str):
             await ctx.respond(instance)
             return
@@ -112,7 +112,7 @@ class Music(Cog):
         ctx.voice_state.songs.clear()
         ctx.voice_state.priority_songs.clear()
         ctx.voice_state.loop = False
-        await ctx.respond("🧹 **Cleared** the queue.")
+        await ctx.respond("🧹 **Cleared** the **queue**.")
 
     @slash_command()
     async def leave(self, ctx: CustomApplicationContext):
@@ -439,13 +439,32 @@ class Music(Cog):
         except (AttributeError, HTTPException):
             await ctx.respond("❌ **Can not find any lyrics** for that song.")
 
-    @slash_command(name="sessionID")
-    async def session_id(self, ctx: CustomApplicationContext):
+    @slash_command()
+    async def connect(self, ctx: CustomApplicationContext):
+        """Receive current session ID to hotkey control music."""
+
         try:
-            await ctx.author.send(f"🔒 The **__secret__ ID** for the current session **is** "
-                                  f"`{SETTINGS['ExternalIP']}:{SETTINGS['Port']}?{ctx.voice_state.id}`")
+            instance: Union[str, None] = ctx.voice_state.register_user(ctx.author.id)
+            if isinstance(instance, str):
+                await ctx.respond(instance)
+                return
+
+            embed: Embed = Embed(title="__Secret__ ID", color=0xFF0000,
+                                 description="This ID is personalized and should therefore **only be used by you**.\n"
+                                             "Sharing isn't caring, **sharing is __dangerous__**.")
+            embed.add_field(name="Session ID", value=f"`{SETTINGS['BetterMusicControlListenOnIP']}:"
+                                                     f"{SETTINGS['BetterMusicControlListenOnPort']}"
+                                                     f"?{ctx.voice_state.id}="
+                                                     f"{ctx.voice_state.registered_controls[ctx.author.id]}`")
+            embed.add_field(name="Software",
+                            value="BetterMusicControl is not installed yet?\nGet it "
+                                  "[here](https://github.com/staubtornado/BetterMusicControl/releases).", inline=False)
+            await ctx.author.send(embed=embed)
         except Forbidden:
             await ctx.respond("❌ **Failed** to send. Please **check if** your **DMs are open**.")
+            return
+        except AttributeError:
+            await ctx.respond("❌ Currently **not playing in** a **voice channel**.")
             return
         await ctx.respond("📨 **Sent** the **__secret__ ID** for the current session **to your DMs**.")
 
@@ -506,7 +525,6 @@ class Music(Cog):
         if isinstance(source, str) or isinstance(source, YTDLError):
             await ctx.respond(source)
             return
-        await ctx.respond(f"✅ Added {source} {'to **priority queue**' if ctx.priority else ''}")
 
 
 def setup(bot):
