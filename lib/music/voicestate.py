@@ -32,7 +32,7 @@ class VoiceState:
         self.song_position = None
         self.history: list[str] = []
 
-        self.id = '{0:010x}'.format(randrange(16**8)).upper()
+        self.id = '{0:010x}'.format(randrange(16**8)).upper()[2:]
         self.registered_controls: dict[int, str] = {}
 
         self._loop: bool = False
