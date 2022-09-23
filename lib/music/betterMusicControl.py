@@ -1,11 +1,13 @@
 from ast import literal_eval
-from asyncio import StreamReader, StreamWriter, start_server, sleep
+from asyncio import StreamReader, StreamWriter, start_server
 from typing import Union, Any
 
 from discord import Bot, Cog, User
+from pyrate_limiter import Limiter, RequestRate, Duration, BucketFullException
 
 from data.config.settings import SETTINGS
 from lib.music.voicestate import VoiceState
+
 
 class RateLimitedError(Exception):
     pass
@@ -41,15 +43,13 @@ class ControlRequest:
 class BetterMusicControlReceiver:
     bot: Bot
     voice_states: dict[int, VoiceState]
-    _addresses_on_cooldown: list[str]
-    _addresses_on_rate_limit: list[str]
+    _limiter: Limiter
 
     def __init__(self, bot: Bot):
         self.bot = bot
         bot.loop.create_task(self.run_server())
 
-        self._addresses_on_cooldown = []
-        self._addresses_on_rate_limit = []
+        self._limiter = Limiter(RequestRate(3, Duration.SECOND * 5))  # 3 requests per 5 seconds
 
     async def handle_data(self, reader: StreamReader, writer: StreamWriter) -> None:
         """Called everytime a connection is established."""
@@ -69,6 +69,14 @@ class BetterMusicControlReceiver:
                 request = ControlRequest(data=literal_eval(data.decode()), voice_states=self.voice_states)
             except (ValueError, RateLimitedError) as e:
                 print(f"[NETWORK] Received invalid request from {address}:{port}")
+                writer.write(bytes(str(e), "utf-8"))
+                await writer.drain()
+                break
+
+            try:
+                self._limiter.try_acquire(address)
+            except BucketFullException as e:
+                print(f"[NETWORK] Received rate-limited request from {address}:{port}")
                 writer.write(bytes(str(e), "utf-8"))
                 await writer.drain()
                 break
