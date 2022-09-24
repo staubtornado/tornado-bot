@@ -1,5 +1,5 @@
-from ast import literal_eval
 from asyncio import StreamReader, StreamWriter, start_server
+from json import loads
 from typing import Union, Any
 
 from discord import Bot, Cog, User
@@ -25,7 +25,7 @@ class ControlRequest:
 
         for guild_vs_id in voice_states:
             if voice_states[guild_vs_id].id == data.get("sessionID").split("=")[0]:
-                self.session = voice_states[guild_vs_id]
+                self.session: VoiceState = voice_states[guild_vs_id]
                 break
         else:
             raise ValueError("Session ID is invalid.")
@@ -66,7 +66,8 @@ class BetterMusicControlReceiver:
 
         while data != b"END":
             try:
-                request = ControlRequest(data=literal_eval(data.decode()), voice_states=self.voice_states)
+                info: dict[str, Union[str, int]] = dict(loads((await reader.read(1024)).decode().replace("'", '"')))
+                request: ControlRequest = ControlRequest(data=info, voice_states=self.voice_states)
             except (ValueError, AttributeError) as e:
                 print(f"[NETWORK] Received invalid request from {address}:{port}")
                 writer.write(bytes(str(e), "utf-8"))
@@ -90,6 +91,7 @@ class BetterMusicControlReceiver:
                     request.session.voice.resume()
                     await request.session.channel_send(
                         message=f"Resumed by {request.requester.mention}")
+            data = await reader.read(1024)
 
         print(f"[NETWORK] Closing connection to {address}:{port}")
         await writer.wait_closed()
