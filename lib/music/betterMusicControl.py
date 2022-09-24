@@ -1,8 +1,8 @@
 from asyncio import StreamReader, StreamWriter, start_server
 from json import loads
-from typing import Union, Any
+from typing import Union, Any, Callable
 
-from discord import Bot, Cog, User
+from discord import Bot, Cog, User, Embed
 from pyrate_limiter import Limiter, RequestRate, Duration, BucketFullException
 
 from data.config.settings import SETTINGS
@@ -66,7 +66,7 @@ class BetterMusicControlReceiver:
 
         while data != b"END":
             try:
-                info: dict[str, Union[str, int]] = dict(loads((await reader.read(1024)).decode().replace("'", '"')))
+                info: dict[str, Union[str, int]] = dict(loads(data.decode().replace("'", '"')))
                 request: ControlRequest = ControlRequest(data=info, voice_states=self.voice_states)
             except (ValueError, AttributeError) as e:
                 print(f"[NETWORK] Received invalid request from {address}:{port}")
@@ -84,13 +84,18 @@ class BetterMusicControlReceiver:
 
             print(f"[NETWORK] Received request from {address}:{port}")
             if request.action == "TOGGLE":
-                if request.session.voice.is_playing():
-                    request.session.voice.pause()
-                    await request.session.channel_send(message=f"Paused by {request.requester.mention}")
-                else:
-                    request.session.voice.resume()
-                    await request.session.channel_send(
-                        message=f"Resumed by {request.requester.mention}")
+                action: dict[bool, tuple[Callable, str]] = {
+                    True: (request.session.voice.pause, "Paused"), False: (request.session.voice.resume, "Resumed")}
+                embed: Embed = Embed(color=0xFF0000)
+
+                try:
+                    embed.set_author(name=request.requester, icon_url=request.requester.avatar.url)
+                except AttributeError:
+                    embed.set_author(name=request.requester, icon_url=request.requester.default_avatar)
+                embed.description = f"️⏯ **{action.get(request.session.voice.is_playing())[1]}** over hotkey-control."
+
+                action.get(request.session.voice.is_playing())[0]()
+                await request.session.channel_send(embed=embed)
             data = await reader.read(1024)
 
         print(f"[NETWORK] Closing connection to {address}:{port}")
