@@ -86,6 +86,8 @@ def main():
     print(f"VERSION: {SETTINGS['Version']}\nCopyright (c) 2021 - present Staubtornado\n{'-' * 30}")
     load_dotenv("./data/config/.env")
 
+    init_music_api()
+
     cache = "./data/cache"
     if len(listdir(cache)) > 0:
         for f in tqdm(listdir(cache), "[SYSTEM] Cleaning cache"):
@@ -104,9 +106,4 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("Exiting script...")
-        run(bot.close())
-        run(sync_database())
+    main()
