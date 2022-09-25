@@ -143,8 +143,8 @@ class BetterMusicControlReceiver:
             return
 
     async def run_server(self) -> None:
-        server = await start_server(self.handle_data, SETTINGS["BetterMusicControlListenOnIP"],
-                                    SETTINGS["BetterMusicControlListenOnPort"])
+        server = await start_server(
+            self.handle_data, SETTINGS["BetterMusicControlListenOnIP"], SETTINGS["BetterMusicControlListenOnPort"])
         print(f"[NETWORK] Listening on {SETTINGS['BetterMusicControlListenOnIP']}:"
               f"{SETTINGS['BetterMusicControlListenOnPort']}")
         async with server:
