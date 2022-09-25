@@ -25,8 +25,7 @@ class Song:
             return embed
 
         embed.add_field(name="Views", value=shortened(self.source.views), inline=True)
-        embed.add_field(name="Likes / Dislikes", value=f"{shortened(self.source.likes)} **/** "
-                                                       f"{shortened(self.source.dislikes)}", inline=True)
+        embed.add_field(name="Likes", value=f"{shortened(self.source.likes)}", inline=True)
 
         date: str = self.source.upload_date
         timestamp = f"<t:{str(datetime(int(date[6:]), int(date[3:-5]), int(date[:-8])).timestamp())[:-2]}:R>"

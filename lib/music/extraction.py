@@ -1,10 +1,8 @@
 from asyncio import get_event_loop
 from functools import partial as func_partial
-from json import loads
 from typing import Union
 
 from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio
-from requests import get as req_get
 from yt_dlp import YoutubeDL
 
 from data.config.settings import SETTINGS
@@ -56,15 +54,6 @@ class YTDLSource(PCMVolumeTransformer):
         self.views = data.get("view_count")
         self.likes = data.get("like_count") if data.get("like_count") is not None else -1
         self.stream_url = data.get("url")
-
-        # TEMPORARY DEACTIVATED DUE TO MASSIVE BUGS
-        # try:
-        #     self.dislikes = int(
-        #         dict(loads(req_get(f"https://returnyoutubedislikeapi.com/votes?videoId={data.get('id')}")
-        #                    .text))["dislikes"])
-        # except KeyError:
-        #     self.dislikes = -1
-        self.dislikes = -1
 
     def __str__(self):
         return f"**{self.title_limited}** by **{self.uploader}**"
