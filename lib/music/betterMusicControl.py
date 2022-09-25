@@ -107,7 +107,8 @@ class BetterMusicControlReceiver:
                         response = {
                             "title": request.session.current.title,
                             "uploader": request.session.current.uploader,
-                            "url": request.session.current.url
+                            "url": "#",
+                            "thumbnail": "https://dummyimage.com/600x400/4cc2ff/0011ff.jpg&text=No+thumbnail."
                         }
                     else:
                         response = {
@@ -124,15 +125,22 @@ class BetterMusicControlReceiver:
                         "thumbnail": ""
                     }
 
-                writer.write(bytes(str(response), "utf-8"))
-                await writer.drain()
+                try:
+                    writer.write(bytes(str(response), "utf-8"))
+                    await writer.drain()
+                except (ConnectionResetError, OSError):
+                    break
             try:
                 data = await reader.read(1024)
-            except ConnectionResetError:
+            except (ConnectionResetError, OSError):
                 break
 
         print(f"[NETWORK] Closing connection to {address}:{port}")
-        await writer.wait_closed()
+
+        try:
+            await writer.wait_closed()
+        except (ConnectionResetError, OSError):
+            return
 
     async def run_server(self) -> None:
         server = await start_server(self.handle_data, SETTINGS["BetterMusicControlListenOnIP"],
