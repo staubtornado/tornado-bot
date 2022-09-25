@@ -1,4 +1,3 @@
-from asyncio import run
 from os import getenv, listdir, remove
 from os.path import join
 from sqlite3 import connect, Error, Connection
@@ -12,6 +11,7 @@ from tqdm import tqdm
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
+from lib.music.api import init_music_api
 from lib.presence.presence import update_rich_presence
 from lib.utils.utils import save_traceback
 
