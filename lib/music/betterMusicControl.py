@@ -1,25 +1,25 @@
 from asyncio import StreamReader, StreamWriter, start_server
-from json import loads
+from json import loads, JSONDecodeError
 from typing import Union, Any, Callable
 
 from discord import Bot, Cog, User, Embed
 from pyrate_limiter import Limiter, RequestRate, Duration, BucketFullException
 
 from data.config.settings import SETTINGS
+from lib.music.song import SongStr
 from lib.music.voicestate import VoiceState
 
 
-class RateLimitedError(Exception):
-    pass
-
-
 class ControlRequest:
+    __slots__ = ("session", "requester", "action", "_data")
+
     session: VoiceState
     requester: User
     action: str
+    _data: dict[str, str]
 
-    def __init__(self, data: dict[str, Union[str, int]], voice_states: dict[int, VoiceState]):
-        self._data: dict[str, Union[str, int]] = data
+    def __init__(self, data: dict[str, str], voice_states: dict[int, VoiceState]):
+        self._data: dict[str, str] = data
         if len(data) != 3:
             raise ValueError("Data does not match required pattern.")
 
@@ -30,13 +30,13 @@ class ControlRequest:
         else:
             raise ValueError("Session ID is invalid.")
 
-        self.requester: Union[User, None] = self.session.bot.get_user(data.get("uID"))
+        self.requester: Union[User, None] = self.session.bot.get_user(int(data.get("uID")))
         if self.requester is None or self.requester.id not in self.session.registered_controls or \
                 self.session.registered_controls[self.requester.id] != data.get("sessionID").split("=")[1]:
             raise ValueError("Missing permissions or invalid user.")
 
         self.action: str = data.get("message")
-        if data.get("message") != "TOGGLE":  # Will later be replaced with list[str] when there are more than one types.
+        if data.get("message") not in ["TOGGLE", "FETCH"]:
             raise ValueError("Invalid request.")
 
 
@@ -66,9 +66,11 @@ class BetterMusicControlReceiver:
 
         while data != b"END":
             try:
-                info: dict[str, Union[str, int]] = dict(loads(data.decode().replace("'", '"')))
+                info: dict[str, str] = dict(loads(data.decode().replace("'", '"')))
                 request: ControlRequest = ControlRequest(data=info, voice_states=self.voice_states)
-            except (ValueError, AttributeError) as e:
+            except (ValueError, AttributeError, JSONDecodeError) as e:
+                print(data, "----------------------", e)
+
                 print(f"[NETWORK] Received invalid request from {address}:{port}")
                 writer.write(bytes(str(e), "utf-8"))
                 await writer.drain()
@@ -96,7 +98,38 @@ class BetterMusicControlReceiver:
 
                 action.get(request.session.voice.is_playing())[0]()
                 await request.session.channel_send(embed=embed)
-            data = await reader.read(1024)
+
+            if request.action == "FETCH":
+                response: dict[str, Union[str, None]]
+
+                try:
+                    if isinstance(request.session.current, SongStr):
+                        response = {
+                            "title": request.session.current.title,
+                            "uploader": request.session.current.uploader,
+                            "url": request.session.current.url
+                        }
+                    else:
+                        response = {
+                            "title": request.session.current.source.title_limited_embed,
+                            "uploader": request.session.current.source.uploader,
+                            "url": request.session.current.source.url,
+                            "thumbnail": request.session.current.source.thumbnail
+                        }
+                except AttributeError:
+                    response = {
+                        "title": "",
+                        "uploader": "",
+                        "url": "",
+                        "thumbnail": ""
+                    }
+
+                writer.write(bytes(str(response), "utf-8"))
+                await writer.drain()
+            try:
+                data = await reader.read(1024)
+            except ConnectionResetError:
+                break
 
         print(f"[NETWORK] Closing connection to {address}:{port}")
         await writer.wait_closed()
