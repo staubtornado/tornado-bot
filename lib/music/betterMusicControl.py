@@ -29,6 +29,8 @@ class ControlRequest:
                 break
         else:
             raise ValueError("Session ID is invalid.")
+        if self.session.voice is None:
+            raise ValueError("Session does no longer exist.")
 
         self.requester: Union[User, None] = self.session.bot.get_user(int(data.get("uID")))
         if self.requester is None or self.requester.id not in self.session.registered_controls or \
@@ -49,7 +51,10 @@ class BetterMusicControlReceiver:
         self.bot = bot
         bot.loop.create_task(self.run_server())
 
-        self._limiter = Limiter(RequestRate(3, Duration.SECOND * 5))  # 3 requests per 5 seconds
+        self._limiter = Limiter(RequestRate(3, Duration.SECOND * 5),  # 3 requests per 5 seconds
+                                RequestRate(20, Duration.MINUTE),  # 20 requests per minute
+                                RequestRate(1000, Duration.HOUR),  # 1000 requests per hour
+                                RequestRate(20000, Duration.DAY))  # 20000 requests per day
 
     async def handle_data(self, reader: StreamReader, writer: StreamWriter) -> None:
         """Called everytime a connection is established."""
@@ -78,9 +83,9 @@ class BetterMusicControlReceiver:
 
             try:
                 self._limiter.try_acquire(address)
-            except BucketFullException as e:
+            except BucketFullException:
                 print(f"[NETWORK] Received rate-limited request from {address}:{port}")
-                writer.write(bytes(str(e), "utf-8"))
+                writer.write(bytes("Exceeded rate-limit. Too many requests.", "utf-8"))
                 await writer.drain()
                 break
 
