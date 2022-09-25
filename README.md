@@ -1,5 +1,5 @@
 ## What is TornadoBot?
-Tornado-bot is a discord bot build in python 3.8 that is designed to be a simple and easy to use bot. It makes use of 
+Tornado-bot is a discord bot build in python 3.10 that is designed to be a simple and easy to use bot. It makes use of 
 the newest discord API features and is built on top of the Py-Cord (discord.py fork) library.
 
 ---
@@ -13,21 +13,21 @@ MEE6, Dank Memer, or Dyno.
 ## How do I install TornadoBot?
  1. [Download the latest release](https://github.com/staubtornado/tornado-bot/releases) or clone the repository if you 
     want to use the development version.
- 3. Install Python 3.10
- 4. Install all the dependencies 
+ 2. Install the newest Python 3.10
+ 3. Install all the dependencies 
     - pip install -r requirements.txt
     - install ffmpeg
- 5. Create a bot in the discord developer portal
- 6. Create an application in the Spotify developer portal
- 7. Create a `.env` file in `./data/config` and paste in the following information:
+ 4. Create a bot in the discord developer portal
+ 5. Create an application in the Spotify developer portal
+ 6. Create a `.env` file in `./data/config` and paste in the following information:
 
     #####
-
         DISCORD_BOT_TOKEN = your token from the discord developer portal
         SPOTIFY_CLIENT_ID = client id from the Spotify developer portal
         SPOTIFY_CLIENT_SECRET = client secret from the Spotify developer portal
- 8. Save your `.env` file
- 9. Run the bot with `main.py` file in the root directory  
+        LYRICS_FIND_ACCESS_TOKEN = token for the lyricsfind API
+ 7. Save your `.env` file
+ 8. Run the bot with `main.py` or (Recommended) `start.bat` if you are on Windows.  
 
 ---
 
@@ -54,7 +54,9 @@ The bot has the following features:
     - **[/]** `leave` Leaves the bot from the voice channel.
     - **[/]** `summon [voice channel]` Joins the bot to the voice channel.
     - **[/]** `lyrics [song] [artist]` Search for the lyrics of the current song or by name and artist.
-
+    - **[/]** `session` Control with [BetterMusicControl](https://github.com/staubtornado/BetterMusicControl/releases)
+                        the music without leaving your game. Hotkeys everywhere!
+    - **[/]** `next [search]` Adds a song to the priority queue.
 #####
 
 - Images
@@ -86,7 +88,7 @@ The bot has the following features:
 - Utilities (Not finished)
   - **[/]** `ban [user] [reason]` Bans a user from the guild and tells them the reason.
   - **[/]** `unban [user]` Unbans a user from the guild.
-  - **[/]** `purge [amount] [Oldest | Newest] [ignore: user]` Deletes an amount of messages in a channel.
+  - **[/]** `purge [amount] [ignore: user]` Deletes an amount of messages in a channel.
   - **[/]** `kick [user] [reason]` Kick a user from a guild.
 
 ####
@@ -101,7 +103,7 @@ The bot has the following features:
 ---
 
 ## What needs to be done?
-- [ ] Add image processing commands
+- [ ] Add more image processing commands
 - [ ] Make music streaming more efficient and more stable
 - [x] Add premium and beta functionality
 - [ ] Add auto updates
@@ -115,10 +117,13 @@ The bot has the following features:
 - [x] Add a help command
 - [ ] Add games to the bot
 - [ ] Add multiple languages to the bot
-- [ ] Create a requirements.txt file
+- [x] Create a requirements.txt file
 - [ ] Improve SQL so it can add missing columns
 - [ ] Add economy system
 - [ ] Add more server specific settings
+- [ ] Remove spagetti-code
+- [ ] Improve security and stability of the [BetterMusicControl](https://github.com/staubtornado/BetterMusicControl/releases)-Integration
+- [ ] Add dislikes back
 
 ---
 
