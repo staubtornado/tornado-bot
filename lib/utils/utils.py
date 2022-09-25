@@ -82,3 +82,9 @@ def progress_bar(amount: Union[int, float], total: Union[int, float],
                  content: tuple[str, str, str] = ("◻", "", "▪️"), length: int = 10) -> str:
     percent: float = float((amount / total) if amount <= total else 1)
     return floor(percent * length) * content[0] + content[1] + ceil((1 - percent) * length) * content[2]
+
+
+def split_list(lst: list, size: int):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), size):
+        yield lst[i:i + size]
