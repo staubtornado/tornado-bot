@@ -441,7 +441,7 @@ class Music(Cog):
             await ctx.respond("❌ **Can not find any lyrics** for that song.")
 
     @slash_command()
-    async def connect(self, ctx: CustomApplicationContext):
+    async def session(self, ctx: CustomApplicationContext):
         """Receive current session ID to hotkey control music."""
 
         try:
