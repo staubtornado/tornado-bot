@@ -30,7 +30,8 @@ utils.bug_reports_message = lambda: ''
 
 
 async def auto_complete(ctx: AutocompleteContext) -> list[str]:
-    rtrn = ["Charts", "New Releases", "TDTT", "ESC22", "Chill", "Party", "Classical", "K-Pop", "Gaming", "Rock"]
+    rtrn = ["Charts", "New Releases", "TDTT", "ESC22", "Chill", "Party", "Classical", "K-Pop", "Gaming", "Rock",
+            "Daily Random"]
 
     if len([x for x in rtrn if x.lower().startswith(ctx.value.lower())]) > 0:
         return [x for x in rtrn if x.lower().startswith(ctx.value.lower())]
@@ -43,7 +44,7 @@ async def auto_complete(ctx: AutocompleteContext) -> list[str]:
     except SpotifyException:
         pass
     return rtrn if len(rtrn) > 0 else ["Charts", "New Releases", "TDTT", "ESC22", "Chill", "Party", "Classical",
-                                       "K-Pop", "Gaming", "Rock"]
+                                       "K-Pop", "Gaming", "Rock", "Daily Random"]
 
 
 class Music(Cog):
@@ -510,7 +511,8 @@ class Music(Cog):
                        "Gaming": "https://open.spotify.com/playlist/37i9dQZF1DWTyiBJ6yEqeu",
                        "Rock": "https://open.spotify.com/playlist/37i9dQZF1DWZJhOVGWqUKF",
                        "TDTT": "https://open.spotify.com/playlist/669nUqEjX1ozcx2Uika2fR",
-                       "ESC22": "https://open.spotify.com/playlist/37i9dQZF1DWVCKO3xAlT1Q"}.get(search) or search
+                       "ESC22": "https://open.spotify.com/playlist/37i9dQZF1DWVCKO3xAlT1Q",
+                       "Daily Random": "https://open.spotify.com/playlist/6p21dRudS9FmcyGvKWPq2R"}.get(search) or search
 
         ctx.voice_state.processing = True
         try:
@@ -523,6 +525,8 @@ class Music(Cog):
         ctx.voice_state.processing = False
 
         if isinstance(source, str) or isinstance(source, YTDLError):
+            if "✅" in source and ctx.priority:
+                source += " to priority queue."
             await ctx.respond(source)
             return
 
