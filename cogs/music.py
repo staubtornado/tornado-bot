@@ -195,7 +195,10 @@ class Music(Cog):
             ctx.voice_state.voice.pause()
             ctx.voice_state.song_position[0] += round(time()) - ctx.voice_state.song_position[1]
             ctx.voice_state.song_position[1] = round(time())
-            await ctx.respond("⏯ **Paused** song, use **/**`resume` to **continue**.")
+            await ctx.respond(
+                "⏯ **Paused** song, use **/**`resume` to **continue**.\n"
+                "❔ **Did you know?** You can **pause songs with your media key** using **BetterMusicControl**.\n"
+                "Execute **/**`session` and follow the instructions.")
 
             for i in range(10):
                 await sleep(SETTINGS["Cogs"]["Music"]["MaxDuration"] / 10)
@@ -228,7 +231,10 @@ class Music(Cog):
         if ctx.voice_state.is_playing and ctx.voice_state.voice.is_paused():
             ctx.voice_state.voice.resume()
             ctx.voice_state.song_position[1] = round(time())
-            return await ctx.respond("⏯ **Resumed** song, use **/**`pause` to **pause**.")
+            return await ctx.respond(
+                "⏯ **Resumed** song, use **/**`pause` to **pause**.\n"
+                "❔ **Did you know?** You can **resume songs with your media key** using **BetterMusicControl**.\n "
+                "Execute **/**`session` and follow the instructions.")
         await ctx.respond("❌ Either is the **song is not paused**, **or nothing** is currently **playing**.")
 
     @slash_command()
@@ -262,9 +268,12 @@ class Music(Cog):
             return
 
         songs_to_skip: list = []
-        loop_note: str = "."
+        loop_note: str = ".\n❔ **Did you know?** You can **skip songs with your media key** using " \
+                         "**BetterMusicControl**.\n Execute **/**`session` and follow the instructions."
         if ctx.voice_state.iterate:
-            loop_note: str = " and **removed song from** queue **loop**."
+            loop_note = " and **removed song from** queue **loop**." \
+                        ".\n❔ **Did you know?** You can **skip songs with your media key** using " \
+                        "**BetterMusicControl**.\n Execute **/**`session` and follow the instructions."
 
             for i, song in enumerate(ctx.voice_state.songs):
                 if isinstance(song, Song):
@@ -457,9 +466,10 @@ class Music(Cog):
                                                      f"{SETTINGS['BetterMusicControlListenOnPort']}"
                                                      f"?{ctx.voice_state.id}="
                                                      f"{ctx.voice_state.registered_controls[ctx.author.id]}`")
-            embed.add_field(name="Software",
-                            value="BetterMusicControl is not installed yet?\nGet it "
-                                  "[here](https://github.com/staubtornado/BetterMusicControl/releases).", inline=False)
+            embed.add_field(
+                name="Software",
+                value="BetterMusicControl is not installed yet?\nGet it "
+                      "[here](https://github.com/staubtornado/BetterMusicControl/releases/latest).", inline=False)
             await ctx.author.send(embed=embed)
         except Forbidden:
             await ctx.respond("❌ **Failed** to send. Please **check if** your **DMs are open**.")
