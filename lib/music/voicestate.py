@@ -33,6 +33,7 @@ class VoiceState:
         self.history: list[str] = []
 
         self.id = '{0:010x}'.format(randrange(16**8)).upper()[2:]
+        self.connected_controls: int = 0
         self.registered_controls: dict[int, str] = {}
 
         self._loop: bool = False
@@ -97,7 +98,7 @@ class VoiceState:
             if control not in member_ids:
                 del self.registered_controls[control]
 
-        if len(self.registered_controls) >= 3:
+        if self.connected_controls >= 3:
             return "❌ The **maximum of** 3 **users** is **reached**."
         self.registered_controls[u_id] = '{0:010x}'.format(randrange(16**2)).upper()[8:]
 

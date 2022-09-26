@@ -68,11 +68,13 @@ class BetterMusicControlReceiver:
         except AttributeError:
             music: Union[Any, Cog] = self.bot.get_cog("Music")
             self.voice_states = music.voice_states
+        request: Union[ControlRequest, None] = None
 
         while data != b"END":
             try:
                 info: dict[str, str] = dict(loads(data.decode().replace("'", '"')))
-                request: ControlRequest = ControlRequest(data=info, voice_states=self.voice_states)
+                request = ControlRequest(data=info, voice_states=self.voice_states)
+                request.session.connected_controls += 1
             except (ValueError, AttributeError, JSONDecodeError) as e:
                 print(data, "----------------------", e)
 
@@ -141,11 +143,12 @@ class BetterMusicControlReceiver:
                 break
 
         print(f"[NETWORK] Closing connection to {address}:{port}")
-
         try:
             await writer.wait_closed()
         except (ConnectionResetError, OSError):
-            return
+            pass
+        if request is not None:
+            request.session.connected_controls -= 1
 
     async def run_server(self) -> None:
         server = await start_server(
