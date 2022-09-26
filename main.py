@@ -102,7 +102,7 @@ def main():
                 bot.load_extension(f'cogs.{filename[:-3]}')
             except Exception as e:
                 print(f"[FATAL ERROR] Failed to load {filename}: {e} \n{format_exc()}")
-    bot.run(getenv("DISCORD_BOT_TOKEN"))  # TODO: FIX STRG + C NOT MAKING A SAVE BEFORE EXIT
+    bot.run(getenv("DISCORD_BOT_TOKEN"))
 
 
 if __name__ == "__main__":
