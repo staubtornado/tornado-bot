@@ -1,12 +1,13 @@
 from asyncio import StreamReader, StreamWriter, start_server
 from json import loads, JSONDecodeError
+from math import ceil
 from typing import Union, Any, Callable
 
 from discord import Bot, Cog, User, Embed
 from pyrate_limiter import Limiter, RequestRate, Duration, BucketFullException
 
 from data.config.settings import SETTINGS
-from lib.music.song import SongStr
+from lib.music.song import SongStr, Song
 from lib.music.voicestate import VoiceState
 
 
@@ -38,7 +39,7 @@ class ControlRequest:
             raise ValueError("Missing permissions or invalid user.")
 
         self.action: str = data.get("message")
-        if data.get("message") not in ["TOGGLE", "FETCH"]:
+        if data.get("message") not in ["TOGGLE", "FETCH", "SKIP"]:
             raise ValueError("Invalid request.")
 
 
@@ -105,6 +106,28 @@ class BetterMusicControlReceiver:
 
                 action.get(request.session.voice.is_playing())[0]()
                 await request.session.channel_send(embed=embed)
+
+            if request.action == "SKIP":
+                if isinstance(request.session.current, Song) and request.session.voice is not None:
+                    embed: Embed = Embed(color=0xFF0000, description="️⏯ **Skipped** over hotkey-control.")
+                    try:
+                        embed.set_author(name=request.requester, icon_url=request.requester.avatar.url)
+                    except AttributeError:
+                        embed.set_author(name=request.requester, icon_url=request.requester.default_avatar)
+
+                    if request.requester.id == request.session.current.requester.id:
+                        request.session.skip()
+                        await request.session.channel_send(embed=embed)
+                    else:
+                        request.session.skip_votes.add(request.requester.id)
+                        total_votes = len(request.session.skip_votes)
+                        required: int = ceil(len([m for m in request.session.voice.channel.members if not m.bot]) / 3)
+
+                        if total_votes >= required:
+                            request.session.skip()
+                        else:
+                            embed.description = f"🗳️ **Skip vote** added: **{total_votes}/{required}**"
+                        await request.session.channel_send(embed=embed)
 
             if request.action == "FETCH":
                 response: dict[str, Union[str, None]]
