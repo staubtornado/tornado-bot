@@ -137,9 +137,8 @@ class Music(Cog):
     @slash_command()
     async def volume(self, ctx: CustomApplicationContext, volume: int):
         """Changes the volume of the current song."""
-        await ctx.defer()
 
-        instance = ensure_voice_state(ctx, requires_song=True)
+        instance: Union[str, None] = ensure_voice_state(ctx, requires_song=True)
         if isinstance(instance, str):
             await ctx.respond(instance)
             return
@@ -148,7 +147,7 @@ class Music(Cog):
             if volume > 100:
                 await ctx.respond("The **volume** cannot be **larger than 100%**.")
             elif volume <= 0:
-                await ctx.respond("The **volume cannot be turned off**. Use **/**`pause` pause.")
+                await ctx.respond("The **volume cannot be 0%**. Use **/**`pause` pause.")
             return
 
         ctx.voice_state.current.source.volume = volume / 100
@@ -158,7 +157,6 @@ class Music(Cog):
     @slash_command()
     async def now(self, ctx: CustomApplicationContext):
         """Currently playing song."""
-        await ctx.defer()
 
         try:
             songs: tuple = (ctx.voice_state.songs, ctx.voice_state.priority_songs)
@@ -195,10 +193,7 @@ class Music(Cog):
             ctx.voice_state.voice.pause()
             ctx.voice_state.song_position[0] += round(time()) - ctx.voice_state.song_position[1]
             ctx.voice_state.song_position[1] = round(time())
-            await ctx.respond(
-                "⏯ **Paused** song, use **/**`resume` to **continue**.\n"
-                "❔ **Did you know?** You can **pause songs with your media key** using **BetterMusicControl**.\n"
-                "Execute **/**`session` and follow the instructions.")
+            await ctx.respond("⏯ **Paused** song, use **/**`resume` to **continue**.")
 
             for i in range(10):
                 await sleep(SETTINGS["Cogs"]["Music"]["MaxDuration"] / 10)
@@ -231,10 +226,7 @@ class Music(Cog):
         if ctx.voice_state.is_playing and ctx.voice_state.voice.is_paused():
             ctx.voice_state.voice.resume()
             ctx.voice_state.song_position[1] = round(time())
-            return await ctx.respond(
-                "⏯ **Resumed** song, use **/**`pause` to **pause**.\n"
-                "❔ **Did you know?** You can **resume songs with your media key** using **BetterMusicControl**.\n "
-                "Execute **/**`session` and follow the instructions.")
+            return await ctx.respond("⏯ **Resumed** song, use **/**`pause` to **pause**.")
         await ctx.respond("❌ Either is the **song is not paused**, **or nothing** is currently **playing**.")
 
     @slash_command()
@@ -268,12 +260,9 @@ class Music(Cog):
             return
 
         songs_to_skip: list = []
-        loop_note: str = ".\n❔ **Did you know?** You can **skip songs with your media key** using " \
-                         "**BetterMusicControl**.\n Execute **/**`session` and follow the instructions."
+        loop_note: str = "."
         if ctx.voice_state.iterate:
-            loop_note = " and **removed song from** queue **loop**." \
-                        ".\n❔ **Did you know?** You can **skip songs with your media key** using " \
-                        "**BetterMusicControl**.\n Execute **/**`session` and follow the instructions."
+            loop_note = " and **removed song from** queue **loop**."
 
             for i, song in enumerate(ctx.voice_state.songs):
                 if isinstance(song, Song):

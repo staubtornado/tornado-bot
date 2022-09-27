@@ -24,12 +24,16 @@ class Song:
         if size == 0:
             return embed
 
-        embed.add_field(name="Views", value=shortened(self.source.views), inline=True)
-        embed.add_field(name="Likes", value=f"{shortened(self.source.likes)}", inline=True)
+        embed.add_field(name="<a:rooCool:1024373563165249638> Did you know?",
+                        value="You can **pause**, **resume**, and **skip songs using** your media **buttons**.\n"
+                              "Execute **/**`session` and follow the instructions.", inline=False)
+
+        embed.insert_field_at(name="Views", value=shortened(self.source.views), inline=True, index=0)
+        embed.insert_field_at(name="Likes", value=f"{shortened(self.source.likes)}", inline=True, index=1)
 
         date: str = self.source.upload_date
         timestamp = f"<t:{str(datetime(int(date[6:]), int(date[3:-5]), int(date[:-8])).timestamp())[:-2]}:R>"
-        embed.add_field(name="Uploaded", value=timestamp, inline=True)
+        embed.insert_field_at(name="Uploaded", value=timestamp, inline=True, index=2)
 
         if size == 1:
             return embed
@@ -55,8 +59,9 @@ class Song:
                                f"'{song.source.title}')\n"
                 else:
                     p_queue += f"`{i + 1}.` {song}\n"
-            embed.add_field(name="Priority Queue", value=p_queue)
-        embed.add_field(name="Queue", value=queue, inline=False) if queue != "" else None
+            embed.insert_field_at(name="Priority Queue", value=p_queue, index=3)
+        if queue != "":
+            embed.insert_field_at(name="Queue", value=queue, inline=False, index=4 if len(embed.fields) == 5 else 3)
         return embed
 
 
