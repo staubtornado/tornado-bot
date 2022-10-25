@@ -88,3 +88,12 @@ def split_list(lst: list, size: int):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), size):
         yield lst[i:i + size]
+
+
+def all_equal(iterator) -> bool:
+    iterator = iter(iterator)
+    try:
+        first = next(iterator)
+    except StopIteration:
+        return True
+    return all(first == x for x in iterator)

@@ -93,7 +93,7 @@ class Utilities(Cog):
             if self.bot.get_cog(extension) is None:
                 matches = get_close_matches(extension, self.bot.cogs, n=1)
                 if len(matches) == 0:
-                    await ctx.respond(f"❌ `{extension}` is **not valid**.")
+                    await ctx.respond(f"❌ `{extension}` is **not is_valid**.")
                     return
                 extension = str(matches[0])
             extension = self.bot.get_cog(extension)
@@ -183,7 +183,7 @@ class Utilities(Cog):
         if all(content):
             await ctx.respond("**🗺️ {}**".format(sub(r"[\[\]']", "", str(content).replace(', ', '** in **'))))
             return
-        await ctx.respond("❌ Given input is **not a valid IP**.")
+        await ctx.respond("❌ Given input is **not a is_valid IP**.")
 
 
 def setup(bot: Bot):

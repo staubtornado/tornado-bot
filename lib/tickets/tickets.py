@@ -1,17 +1,9 @@
-from sqlite3 import Cursor
-
 from discord import Interaction
-
-from data.db.memory import database
 
 
 class TicketSystem:
     def __init__(self, ctx: Interaction):
-        self.ctx = ctx
-
-        cur: Cursor = database.cursor()
-
-        query: str = """SELECT """
+        self._ctx = ctx
 
     async def create(self):
         pass

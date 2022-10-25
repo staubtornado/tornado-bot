@@ -46,7 +46,8 @@ class Images(Cog):
                     self.gallery[category] = []
                 self.gallery[category].append(response)
 
-    def request(self, subreddit: str = "dankmemes", count: int = 50) -> Response:
+    @staticmethod
+    def request(subreddit: str = "dankmemes", count: int = 50) -> Response:
         return get(f"https://meme-api.herokuapp.com/gimme/{subreddit}/{count}")
 
     async def send(self, ctx: ApplicationContext, category: str, nsfw: bool = True):

@@ -11,7 +11,6 @@ from tqdm import tqdm
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
-from lib.music.api import init_music_api
 from lib.presence.presence import update_rich_presence
 from lib.utils.utils import save_traceback
 
@@ -85,8 +84,6 @@ async def on_application_command_error(ctx: ApplicationContext, error):
 def main():
     print(f"VERSION: {SETTINGS['Version']}\nCopyright (c) 2021 - present Staubtornado\n{'-' * 30}")
     load_dotenv("./data/config/.env")
-
-    init_music_api()
 
     cache = "./data/cache"
     if len(listdir(cache)) > 0:

@@ -28,8 +28,12 @@ SETTINGS: dict[str] = {
             }
         },
         "Music": {
-            "MaxQueueLength": 100,  # Max amount of songs that can be queued
-            "MaxDuration": 10800  # seconds
+            "MaxDuration": 10800,  # seconds
+            "Queue": {
+                "MaxQueueLength": 100,  # Max amount of songs that can be queued
+                "ItemsPerPage": 10,
+                "PriorityQueueSize": 5
+            }
         },
         "Economy": {
             "WallstreetFee": 0.003,
