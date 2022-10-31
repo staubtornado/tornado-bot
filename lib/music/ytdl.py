@@ -1,4 +1,3 @@
-import audioop
 from asyncio import get_event_loop
 from datetime import datetime
 from difflib import SequenceMatcher
@@ -6,7 +5,6 @@ from functools import partial as functools_partial, partial
 from itertools import islice
 from json import loads
 from re import sub
-from time import sleep
 from typing import Union, Any, Optional
 
 from aiohttp import ClientSession, ClientTimeout
@@ -15,7 +13,7 @@ from yt_dlp import YoutubeDL
 
 from data.config.settings import SETTINGS
 from lib.music.exceptions import YTDLError
-from lib.utils.utils import time_to_string, all_equal
+from lib.utils.utils import time_to_string, all_equal, url_is_valid
 
 
 class YTDLSource(PCMVolumeTransformer):
@@ -113,7 +111,7 @@ class YTDLSource(PCMVolumeTransformer):
             result: dict = music_results[i]
             ratio: float = SequenceMatcher(None, search, f"{result['title']} {result['uploader']}").ratio()
 
-            if result.get("view_count") > highest_views[1]:
+            if (result.get("view_count") or -1) > highest_views[1]:
                 highest_views[0] = i
                 highest_views[1] = result.get("view_count")
             if ratio > highest_match[1]:
@@ -130,8 +128,12 @@ class YTDLSource(PCMVolumeTransformer):
     async def create_source(cls, ctx: ApplicationContext, search: str, *, loop=None):
         loop = loop or get_event_loop()
 
-        data: dict = await cls._search(search)
-        if SequenceMatcher(None, f"{data.get('title')} {data.get('uploader')}", search).ratio() < 0.5:
+        if not url_is_valid(search)[0]:
+            data: dict = await cls._search(search)
+            if SequenceMatcher(None, f"{data.get('title')} {data.get('uploader')}", search).ratio() < 0.5:
+                part: partial = functools_partial(cls.ytdl.extract_info, search, download=False, process=False)
+                data = await loop.run_in_executor(None, part)
+        else:
             part: partial = functools_partial(cls.ytdl.extract_info, search, download=False, process=False)
             data = await loop.run_in_executor(None, part)
 
@@ -150,7 +152,7 @@ class YTDLSource(PCMVolumeTransformer):
             if process_info is None:
                 raise YTDLError(f"❌ **Could not find anything** that matches `{search}`")
 
-        webpage_url = process_info["url"]
+        webpage_url = process_info.get("webpage_url") or process_info.get("url")
         part: partial = functools_partial(cls.ytdl.extract_info, webpage_url, download=False)
         processed_info = await loop.run_in_executor(None, part)
 
