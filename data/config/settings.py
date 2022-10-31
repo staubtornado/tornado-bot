@@ -16,6 +16,7 @@ SETTINGS: dict[str] = {
         "Special": Colour.gold(),  # Event Colour
         "Music": 0xFF0000
     },
+    "OwnerGuilds": [795588352387579914],  # List of guild IDs where owner related commands are enabled
     "Cogs": {
         "Experience": {
             "Multiplication": 1,  # Multiplication factor for experience gained.
