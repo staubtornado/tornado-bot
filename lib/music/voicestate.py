@@ -200,7 +200,7 @@ class VoiceState:
             )
 
             self.history.insert(0, str(self.current))
-            if len(self.history) > 5:
+            if len(self.history) > SETTINGS["Cogs"]["Music"]["History"]["MaxHistoryLength"]:
                 del self.history[-1]
             self.voice.play(self.current.source, after=self.prepare_next_song)
             await self._waiter.wait()

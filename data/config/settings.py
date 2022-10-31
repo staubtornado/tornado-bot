@@ -34,6 +34,9 @@ SETTINGS: dict[str] = {
                 "MaxQueueLength": 100,  # Max amount of songs that can be queued
                 "ItemsPerPage": 10,
                 "PriorityQueueSize": 5
+            },
+            "History": {
+                "MaxHistoryLength": 5
             }
         },
         "Economy": {
@@ -41,7 +44,7 @@ SETTINGS: dict[str] = {
             "Companies": ["Puffus", "Foodiest", "QuickPacked", "MobileCRATE", "Cygner"]
         }
     },
-    "Version": "0.0.7a",  # Bot version
+    "Version": "0.0.8a",  # Bot version
     "Production": False,  # If the bot is running in production or not
     "ServiceSyncInSeconds": 1800,  # How often the bot should sync with the service
     "ExternalIP": get('https://api.ipify.org').content.decode('utf8'),
