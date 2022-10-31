@@ -68,7 +68,7 @@ class VoiceState:
 
         self._waiter = Event()
         self._player = bot.loop.create_task(self._player_task())
-        # self._checker = bot.loop.create_task(self._inactivity_check())
+        self._checker = bot.loop.create_task(self._inactivity_check())
         self._default_volume = 0.5
 
         row: tuple = database.cursor().execute(
@@ -79,6 +79,7 @@ class VoiceState:
 
     def __del__(self) -> None:
         self._player.cancel()
+        self._checker.cancel()
 
     @property
     def channel(self) -> Optional[Union[TextChannel, Any]]:
@@ -132,14 +133,13 @@ class VoiceState:
             pass
 
     async def _inactivity_check(self) -> None:
-        while True:
-            if self.voice is not None and self.voice.is_connected():
-                if not len([member for member in self.voice.channel.members if not member.bot]):
-                    break
-                await sleep(180)
-                continue
-            break
-        return await self._leave()
+        await sleep(30)
+        while self.voice is not None and self.voice.is_connected():
+            if not [member for member in self.voice.channel.members if not member.bot]:
+                break
+            await sleep(180)
+        if self.is_valid:
+            await self._leave()
 
     async def _player_task(self) -> None:
         while True:
@@ -151,7 +151,6 @@ class VoiceState:
 
             if self.loop != Loop.SONG:
                 self.current = None
-                # self.voice.source.
 
                 try:
                     try:
