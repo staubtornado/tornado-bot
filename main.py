@@ -1,3 +1,4 @@
+from logging import getLogger, DEBUG, FileHandler, Formatter
 from os import getenv, listdir, remove
 from os.path import join
 from sqlite3 import connect, Error, Connection
@@ -17,6 +18,13 @@ from lib.utils.utils import save_traceback
 bot: Bot = Bot(owner_ids=SETTINGS["OwnerIDs"], description=SETTINGS["Description"], intents=SETTINGS["Intents"])
 
 db_initialized: bool = False
+
+
+logger = getLogger('discord')
+logger.setLevel(DEBUG)
+handler = FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)
 
 
 @loop(seconds=SETTINGS["ServiceSyncInSeconds"])
