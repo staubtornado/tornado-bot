@@ -100,6 +100,7 @@ class Music(Cog):
         except ClientException:
             await ctx.guild.voice_client.disconnect(force=True)
             ctx.voice_state.voice = await destination.connect()
+        ctx.voice_state.skip()
         await ctx.guild.change_voice_state(channel=destination, self_mute=False, self_deaf=True)
         await ctx.respond(f"👍 **Hello**! Joined {destination.mention}.")
 
@@ -128,6 +129,7 @@ class Music(Cog):
             await ctx.guild.voice_client.disconnect(force=True)
         else:
             await ctx.respond("🔄 ️**Reset voice** state.")
+        await ctx.voice_state.stop()
         del self.voice_states[ctx.guild_id]
 
     @slash_command()
@@ -152,10 +154,6 @@ class Music(Cog):
             await self.join(ctx, None)
 
         search = PRESETS.get(search) or search
-        addition: str = "."
-        if ctx.playnext:
-            addition = " to playnext queue."
-
         ctx.voice_state.processing = True
         try:
             song_s: Union[Song, list[Song]] = await process(search, ctx)
@@ -188,10 +186,17 @@ class Music(Cog):
         else:
             if isinstance(song_s, list):
                 if len(song_s) > 1:
-                    await ctx.respond(f"✅ Added **{len(song_s)} songs**{addition}")
+                    await ctx.respond(f"✅ Enqueued **{len(song_s)} songs**.")
                     return
                 song_s = song_s[0]
-            await ctx.respond(f"✅ Added **{str(song_s).replace(' by ', '** by **')}**{addition}")
+
+            if ctx.voice_state.is_playing or ctx.voice_state.voice.is_paused():
+                if ctx.playnext:
+                    await ctx.respond(f"🎶 Playing 🔎 **{str(song_s).replace(' by ', '** by **')}** next!")
+                else:
+                    await ctx.respond(f"✅ Enqueued 🔎 **{str(song_s).replace(' by ', '** by **')}**.")
+            else:
+                await ctx.respond(f"🎶 Playing 🔎 **{str(song_s).replace(' by ', '** by **')}** now!")
         finally:
             ctx.voice_state.processing = False
 
@@ -410,10 +415,7 @@ class Music(Cog):
         elapsed: int = int(ctx.voice_state.voice.timestamp / 1000 * 0.02) - ctx.voice_state.position
         bar: str = progress_bar(elapsed, duration, content=("-", "•**", "-"), length=30)
         value: str = f"**{time_to_string(int(elapsed))} {bar} **{time_to_string(duration)}**"
-        if Song.embed_has_advertisement(embed):
-            embed.insert_field_at(3, name="‎", value=value, inline=False)
-        else:
-            embed.add_field(name="‎", value=value, inline=False)
+        embed.insert_field_at(3, name="‎", value=value, inline=False)
         await ctx.respond(embed=embed)
 
     @slash_command()

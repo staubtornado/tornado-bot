@@ -37,7 +37,6 @@ class VoiceState:
     position: int
     _loop: Loop
 
-
     session: dict[int, tuple[str, bool]]
     skip_votes: set[int]
 
@@ -162,7 +161,8 @@ class VoiceState:
                 try:
                     self.current = await wait_for(self.queue.get(), timeout=180)
                 except TimeoutError:
-                    return await self._leave()
+                    if self.is_valid:
+                        return await self._leave()
 
                 if self.loop == Loop.QUEUE:
                     try:
