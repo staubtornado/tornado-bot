@@ -1,6 +1,6 @@
 from discord import ApplicationContext
 
-from lib.music.modified_application_context import MusicApplicationContext
+from lib.music.music_application_context import MusicApplicationContext
 from lib.music.prepared_source import PreparedSource
 from lib.music.voicestate import VoiceState
 
@@ -24,7 +24,7 @@ def ensure_voice_state(ctx: MusicApplicationContext, **kwargs) -> None:
                                     (kwargs.get("requires_song") or kwargs.get("no_processing"))):
         raise ValueError("❌ Next **song is** currently **processing**, please **wait**.")
 
-    if not len(ctx.voice_state.queue) + len(ctx.voice_state.priority_queue) and kwargs.get("requires_queue"):
+    if not len(ctx.voice_state.queue) and kwargs.get("requires_queue"):
         raise ValueError("❌ The **queue** is **empty**.")
 
     if ctx.voice_state.processing and kwargs.get("no_processing"):

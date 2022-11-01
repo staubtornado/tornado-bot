@@ -55,7 +55,7 @@ class Song:
             }
         )
 
-    def create_embed(self, size: EmbedSize, *, queues: tuple[SongQueue, SongQueue]) -> Embed:
+    def create_embed(self, size: EmbedSize, *, queue: SongQueue) -> Embed:
         """Song embed containing all important information related to the song."""
 
         description: str = (f"[Video]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) "
@@ -80,17 +80,12 @@ class Song:
         if size == EmbedSize.NO_QUEUE:
             return self._add_advertisement(embed)
 
-        priority_queue: str = ""
-        for i, song in enumerate(queues[1][0:3], start=1):
-            priority_queue += f"`{i}`. [{song}]({song.source.url})\n"
+        queue_str: str = ""
+        for i, song in enumerate(queue[0:5], start=1):
+            queue_str += f"`{i}`. [{song}]({song.source.url})\n"
+        if len(queue) > 5:
+            remaining: int = len(queue) - queue_str.count("\n")
+            queue_str += f"Use **/**`queue` to show **{remaining}** more..."
 
-        queue: str = ""
-        for i, song in enumerate(queues[0][0:5], start=1 + len(queues[1])):
-            queue += f"`{i}`. [{song}]({song.source.url})\n"
-        if len(queues[0]) > 5:
-            remaining: int = len(queues[0]) + len(queues[1]) - (queue + priority_queue).count("\n")
-            queue += f"Use **/**`queue` to show **{remaining}** more..."
-
-        embed.add_field(name="Priority Queue", value=priority_queue, inline=False) if priority_queue else None
-        embed.add_field(name="Queue", value=queue, inline=False) if queue else None
+        embed.add_field(name="Queue", value=queue_str, inline=False) if len(queue) else None
         return self._add_advertisement(embed)

@@ -1,4 +1,4 @@
-from asyncio import Event, Task, sleep, QueueEmpty, wait_for, TimeoutError, QueueFull
+from asyncio import Event, Task, sleep, wait_for, TimeoutError, QueueFull
 from enum import IntEnum
 from random import randrange
 from traceback import format_exc
@@ -33,9 +33,10 @@ class VoiceState:
     current: Optional[Song]
     voice: Optional[VoiceClient]
     queue: SongQueue
-    priority_queue: SongQueue
     history: list[str]
+    position: int
     _loop: Loop
+
 
     session: dict[int, tuple[str, bool]]
     skip_votes: set[int]
@@ -59,8 +60,8 @@ class VoiceState:
         self.current = None
         self.voice = None
         self.queue = SongQueue(maxsize=SETTINGS["Cogs"]["Music"]["Queue"]["MaxQueueLength"])
-        self.priority_queue = SongQueue(maxsize=SETTINGS["Cogs"]["Music"]["Queue"]["PriorityQueueSize"])
         self.history = []
+        self.position = 0
         self._loop = Loop.NONE
 
         self.session: dict[int, tuple[str, bool]] = {}
@@ -119,6 +120,12 @@ class VoiceState:
             raise ValueError("❌ **Too many** users **are** already **connected**.")
         self.session[u_id] = ('{0:010x}'.format(randrange(16**2)).upper()[8:], False)
 
+    def put(self, song: Song, playnext: bool) -> None:
+        if playnext:
+            self.queue.insert(0, song)
+        else:
+            self.queue.put_nowait(song)
+
     async def send(self, message: str = None, embed: Embed = None, delete_after: float = None) -> None:
         if message is None and embed is None:
             return
@@ -153,10 +160,7 @@ class VoiceState:
                 self.current = None
 
                 try:
-                    try:
-                        self.current = self.priority_queue.get_nowait()
-                    except QueueEmpty:
-                        self.current = await wait_for(self.queue.get(), timeout=180)
+                    self.current = await wait_for(self.queue.get(), timeout=180)
                 except TimeoutError:
                     return await self._leave()
 
@@ -195,14 +199,17 @@ class VoiceState:
 
             await self.send(embed=self.current.create_embed(
                 (EmbedSize.SMALL, EmbedSize.NO_QUEUE, EmbedSize.DEFAULT)[self.embed_size],
-                queues=(self.queue, self.priority_queue)),
+                queue=self.queue),
                 delete_after=self.current.source.duration if self.update_embed else None
             )
 
             self.history.insert(0, str(self.current))
             if len(self.history) > SETTINGS["Cogs"]["Music"]["History"]["MaxHistoryLength"]:
                 del self.history[-1]
+
             self.voice.play(self.current.source, after=self.prepare_next_song)
+            self.position = int(self.voice.timestamp / 1000 * 0.02)
+
             await self._waiter.wait()
 
     def prepare_next_song(self, error=None) -> None:
@@ -222,7 +229,6 @@ class VoiceState:
 
     async def stop(self) -> None:
         self.queue.clear()
-        self.priority_queue.clear()
 
         self.loop = Loop.NONE
         self.is_valid = False

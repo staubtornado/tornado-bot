@@ -5,7 +5,7 @@ from discord import ButtonStyle, Interaction
 from discord.ui import View, button as ui_button, Button
 
 from data.config.settings import SETTINGS
-from lib.music.modified_application_context import MusicApplicationContext
+from lib.music.music_application_context import MusicApplicationContext
 from lib.music.other import ensure_voice_state
 from lib.music.prepared_source import PreparedSource
 from lib.music.song import Song

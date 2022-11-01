@@ -17,12 +17,11 @@ from data.db.memory import database
 from lib.music.api import search_on_spotify, get_lyrics
 from lib.music.betterMusicControl import BetterMusicControlReceiver
 from lib.music.exceptions import YTDLError
-from lib.music.modified_application_context import MusicApplicationContext
+from lib.music.music_application_context import MusicApplicationContext
 from lib.music.other import ensure_voice_state
 from lib.music.prepared_source import PreparedSource
 from lib.music.presets import PRESETS
 from lib.music.process import process, AdditionalInputRequiredError
-from lib.music.queue import SongQueue
 from lib.music.song import Song, EmbedSize
 from lib.music.views import LoopDecision, PlaylistParts, VariableButton
 from lib.music.voicestate import VoiceState, Loop
@@ -79,7 +78,7 @@ class Music(Cog):
         cur.execute("""INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""", (ctx.guild.id,))
         cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id,))
         ctx.voice_state = self.get_voice_state(ctx)
-        ctx.priority = False
+        ctx.playnext = False
 
     @slash_command()
     async def join(self, ctx: MusicApplicationContext, channel: Optional[VoiceChannel] = None) -> None:
@@ -116,7 +115,6 @@ class Music(Cog):
 
         ctx.voice_state.loop = Loop.NONE
         ctx.voice_state.queue.clear()
-        ctx.voice_state.priority_queue.clear()
         ctx.voice_state.voice.stop()
         ctx.voice_state.current = None
         await ctx.respond("⏹ **Stopped** song and **cleared** the **queue**.")
@@ -154,14 +152,13 @@ class Music(Cog):
             await self.join(ctx, None)
 
         search = PRESETS.get(search) or search
-        dest: SongQueue = ctx.voice_state.queue if not ctx.priority else ctx.voice_state.priority_queue
         addition: str = "."
-        if ctx.priority:
-            addition = " to priority queue."
+        if ctx.playnext:
+            addition = " to playnext queue."
 
         ctx.voice_state.processing = True
         try:
-            song_s: Union[Song, list[Song]] = await process(search, ctx, dest)
+            song_s: Union[Song, list[Song]] = await process(search, ctx)
         except (ValueError, YTDLError) as e:
             await ctx.respond(str(e))
         except AdditionalInputRequiredError as e:
@@ -186,8 +183,8 @@ class Music(Cog):
                 case _:
                     answer: list[str] = str(view.value).split(" - ")
                     tracks = e.args[2][int(answer[0]) - 1:int(answer[1])]
-            for track in tracks[:dest.maxsize - len(dest)]:
-                dest.put_nowait(Song(PreparedSource(ctx, track)))
+            for track in tracks[:ctx.voice_state.queue.maxsize - len(ctx.voice_state.queue)]:
+                ctx.voice_state.put(Song(PreparedSource(ctx, track)), ctx.playnext)
         else:
             if isinstance(song_s, list):
                 if len(song_s) > 1:
@@ -202,44 +199,83 @@ class Music(Cog):
     async def playnext(self, ctx: MusicApplicationContext,
                        search: Option(str, "Name or URL of song, playlist URL, or preset.",
                                       autocomplete=basic_autocomplete(auto_complete), required=True)) -> None:
-        """Same as /play but song is added to priority queue."""
-        ctx.priority = bool(len(ctx.voice_state.queue))
+        """Same as /play but appends to front of queue."""
+        ctx.playnext = True
         await self.play(ctx, search)
 
     @slash_command()
     async def queue(self, ctx: MusicApplicationContext, page: int = 1) -> None:
         """Shows the song queue."""
 
-        size: int = len(ctx.voice_state.queue) + len(ctx.voice_state.priority_queue)
+        size: int = len(ctx.voice_state.queue)
         if not size:
             await ctx.respond("❌ The **queue** is **empty**.")
             return
 
-        priority_queue: str = ""
-        for i, song in enumerate(ctx.voice_state.priority_queue, start=1):
-            priority_queue += f"`{i}.` [{song}]({song.source.url})\n"
-
         start: int = (page - 1) * SETTINGS["Cogs"]["Music"]["Queue"]["ItemsPerPage"]
         end: int = start + SETTINGS["Cogs"]["Music"]["Queue"]["ItemsPerPage"]
-        _visual_start: int = start + 1 + len(ctx.voice_state.priority_queue)
 
-        queue: str = ""
-        for i, song in enumerate(ctx.voice_state.queue[start:end], start=_visual_start):
-            queue += f"`{i}.` [{song}]({song.source.url})\n"
-
-        duration: int = ctx.voice_state.queue.duration + ctx.voice_state.priority_queue.duration
+        duration: int = ctx.voice_state.queue.duration
         embed: Embed = Embed(
             title="Queue", color=0xFF0000,
             description=f"**Size**: `{size}`\n**Duration**: `{time_to_string(duration)}`"
         )
 
         embed.add_field(
-            name="🎶 Now Playing",
+            name="Now Playing",
             value=f"[{ctx.voice_state.current}]({ctx.voice_state.current.source.url})",
             inline=False
         )
-        embed.add_field(name="Priority Queue", value=priority_queue, inline=False) if priority_queue else None
-        embed.add_field(name="Queue", value=queue, inline=False) if queue else None
+
+        emojis: list[str] = [
+            "<:aubanana:939542863929307216>",
+            "<:aublue:939543978892722247>",
+            "<:aubrown:939543989760167956>",
+            "<:aucoral:939543993816064100>",
+            "<:aucyan:939543991081398292>",
+            "<:aublack:939543985620406272>",
+            "<:augreen:939543980100698123>",
+            "<:aulime:939543992490676234>",
+            "<:aumaroon:939542861182025828>",
+            "<:auorange:939543983019933726>",
+            "<:aupink:939543981115715595>",
+            "<:aupurple:939543988229267507>",
+            "<:aured:939543977215008778>",
+            "<:aurose:939542862595498004>",
+            "<:autan:939542866294894642>",
+            "<:auwhite:939543986723508255>",
+            "<:auyellow:939543984139816991>",
+            "<:augray:939542865200152616>"
+        ]
+        shuffle(emojis)
+
+        requesters: dict[str, int] = {}
+        queue: list[Union[str, bool]] = ["", False]
+        queue_2: str = ""
+
+        for i, song in enumerate(ctx.voice_state.queue[start:end], start=start + 1):
+            if not requesters.get(song.requester.mention):
+                requesters[song.requester.mention] = end - i - 1
+            url: str = song.source.url.split("%")[0]
+            entry: str = f"`{i}.` {emojis[requesters[song.requester.mention]]} [{song}]({url})\n"
+
+            if len(queue[0]) + len(entry) > 1024 or queue[1]:
+                queue_2 += entry
+                queue[1] = True
+            else:
+                queue[0] += entry
+
+        _requesters: str = ""
+        for requester in requesters:
+            _requesters += f"{emojis[requesters[requester]]} {requester}\n"
+        embed.add_field(
+            name="Requesters",
+            value=_requesters,
+            inline=False
+        )
+
+        embed.add_field(name="Queue", value=queue[0], inline=False) if queue else None
+        embed.add_field(name="‎", value=queue_2, inline=False) if queue_2 else None
         embed.set_footer(
             text=f"Page {page}/{ceil(len(ctx.voice_state.queue) / SETTINGS['Cogs']['Music']['Queue']['ItemsPerPage'])}"
         )
@@ -256,7 +292,6 @@ class Music(Cog):
             return
 
         ctx.voice_state.queue.shuffle()
-        ctx.voice_state.priority_queue.shuffle()
         await ctx.respond("🔀 **Shuffled** the queue.")
 
     @slash_command()
@@ -270,7 +305,6 @@ class Music(Cog):
             return
 
         ctx.voice_state.queue.reverse()
-        ctx.voice_state.priority_queue.reverse()
         await ctx.respond("↩ **Reversed** the **queue**.")
 
     @slash_command()
@@ -288,10 +322,7 @@ class Music(Cog):
             return
 
         try:
-            if index <= len(ctx.voice_state.priority_queue):
-                ctx.voice_state.priority_queue.remove(index - 1)
-            else:
-                ctx.voice_state.queue.remove(index - 1)
+            ctx.voice_state.queue.remove(index - 1)
         except IndexError:
             await ctx.respond(f"❌ There is **no song with** the **{ordinal(n=index)} position** in queue.")
             return
@@ -308,7 +339,6 @@ class Music(Cog):
             return
 
         ctx.voice_state.queue.clear()
-        ctx.voice_state.priority_queue.clear()
         await ctx.respond("📂 **Cleared** the **queue**.")
 
     @slash_command()
@@ -372,11 +402,12 @@ class Music(Cog):
             await ctx.respond("⚠️Next song is **currently processing**.")
             return
 
-        queues: tuple[SongQueue, SongQueue] = (ctx.voice_state.queue, ctx.voice_state.priority_queue)
-        embed: Embed = ctx.voice_state.current.create_embed(EmbedSize(ctx.voice_state.embed_size), queues=queues)
+        embed: Embed = ctx.voice_state.current.create_embed(
+            EmbedSize(ctx.voice_state.embed_size), queue=ctx.voice_state.queue
+        )
 
         duration: int = int(ctx.voice_state.current.source.duration)
-        elapsed: int = int(ctx.voice_state.voice.timestamp / 1000 * 0.02)
+        elapsed: int = int(ctx.voice_state.voice.timestamp / 1000 * 0.02) - ctx.voice_state.position
         bar: str = progress_bar(elapsed, duration, content=("-", "•**", "-"), length=30)
         value: str = f"**{time_to_string(int(elapsed))} {bar} **{time_to_string(duration)}**"
         if Song.embed_has_advertisement(embed):

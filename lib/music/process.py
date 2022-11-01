@@ -5,9 +5,8 @@ from urllib.parse import ParseResult
 from asyncspotify import BadRequest, SimpleTrack, FullTrack
 
 from lib.music.api import get_track, get_tracks_from_playlist, get_tracks_from_album, get_songs_from_artist
-from lib.music.modified_application_context import MusicApplicationContext
+from lib.music.music_application_context import MusicApplicationContext
 from lib.music.prepared_source import PreparedSource
-from lib.music.queue import SongQueue
 from lib.music.song import Song
 from lib.music.ytdl import YTDLSource
 from lib.utils.utils import url_is_valid, split_list
@@ -17,7 +16,7 @@ class AdditionalInputRequiredError(Exception):
     pass
 
 
-async def process(search: str, ctx: MusicApplicationContext, dest: SongQueue) -> Union[list[Song], Song]:
+async def process(search: str, ctx: MusicApplicationContext) -> Union[list[Song], Song]:
 
     url: tuple[bool, ParseResult] = url_is_valid(search)
     res: Optional[Union[list[Union[FullTrack, SimpleTrack, dict, Song]], FullTrack, Song]] = None
@@ -43,12 +42,12 @@ async def process(search: str, ctx: MusicApplicationContext, dest: SongQueue) ->
     if isinstance(res, FullTrack):
         song: Song = Song(PreparedSource(ctx, res))
         try:
-            dest.put_nowait(song)
+            ctx.voice_state.put(song, ctx.playnext)
         except QueueFull:
             raise ValueError("❌ **Queue** is **full**.")
         return song
 
-    remaining: int = dest.maxsize - len(dest)
+    remaining: int = ctx.voice_state.queue.maxsize - len(ctx.voice_state.queue)
     if remaining <= 0:
         raise ValueError("❌ **Queue** is **full**.")
 
@@ -64,8 +63,8 @@ async def process(search: str, ctx: MusicApplicationContext, dest: SongQueue) ->
     if res:
         for i in range(len(res)):
             res[i]: Song = Song(PreparedSource(ctx, res[i]))
-            dest.put_nowait(res[i])
+            ctx.voice_state.put(res[i], ctx.playnext)
     else:
         res = Song(await YTDLSource.create_source(ctx, search, loop=ctx.bot.loop))
-        dest.put_nowait(res)
+        ctx.voice_state.put(res, ctx.playnext)
     return res

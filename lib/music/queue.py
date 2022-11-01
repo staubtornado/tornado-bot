@@ -1,11 +1,12 @@
 from asyncio import Queue
+from collections import deque
 from itertools import islice
 from random import shuffle
 from typing import Any
 
 
 class SongQueue(Queue):
-    _queue = None
+    _queue: deque
 
     def __getitem__(self, item) -> Any:
         if isinstance(item, slice):
@@ -25,12 +26,10 @@ class SongQueue(Queue):
         shuffle(self._queue)
 
     def reverse(self) -> None:
-        length: int = self.qsize()
+        self._queue.reverse()
 
-        for i in range(int(length / 2)):
-            n = self._queue[i]
-            self._queue[i] = self._queue[length - i - 1]
-            self._queue[length - i - 1] = n
+    def insert(self, index: int, item) -> None:
+        self._queue.insert(index, item)
 
     def remove(self, index: int) -> None:
         del self._queue[index]
