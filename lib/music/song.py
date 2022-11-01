@@ -1,105 +1,91 @@
-from datetime import datetime
-from typing import Union
+from enum import IntEnum
+from random import random
+from typing import Union, Any, Optional
 
-from discord import Embed
+from discord import Member, Embed
 
-from lib.music.extraction import YTDLSource
-from lib.utils.utils import shortened
+from lib.music.queue import SongQueue
+from lib.music.ytdl import YTDLSource
+from lib.music.prepared_source import PreparedSource
+from lib.utils.utils import time_to_string, shortened
+
+
+class EmbedSize(IntEnum):
+    SMALL = 0  # Only contains description with source, duration Aso...
+    NO_QUEUE = 1  # Everything except the queue
+    DEFAULT = 2  # Dynamic queue, contains all essential information
 
 
 class Song:
-    __slots__ = ("source", "requester")
+    source: Union[YTDLSource, PreparedSource]
+    requester: Union[Member, Any]  # Will always be Member
 
-    def __init__(self, source: YTDLSource):
+    def __init__(self, source: Union[YTDLSource, PreparedSource]) -> None:
         self.source = source
         self.requester = source.requester
 
-    def create_embed(self, songs: tuple, size: int = 2) -> Embed:
-        description = f"[Video]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) **|** " \
-                      f"{self.source.duration} **|** {self.requester.mention}"
+    def __str__(self) -> str:
+        return str(self.source)
 
-        embed: Embed = Embed(title=f"🎶 {self.source.title_limited_embed}", description=description, colour=0xFF0000)
-        embed.set_thumbnail(url=self.source.thumbnail)
+    @staticmethod
+    def embed_has_advertisement(embed: Embed) -> bool:
+        return len(embed.fields) == 4
 
-        if size == 0:
-            return embed
-
-        embed.add_field(name="<a:rooCool:1024373563165249638> Did you know?",
-                        value="You can **pause**, **resume**, and **skip songs using** your media **buttons**.\n"
-                              "Execute **/**`session` and follow the instructions.", inline=False)
-
-        embed.insert_field_at(name="Views", value=shortened(self.source.views), inline=True, index=0)
-        embed.insert_field_at(name="Likes", value=f"{shortened(self.source.likes)}", inline=True, index=1)
-
-        date: str = self.source.upload_date
-        timestamp = f"<t:{str(datetime(int(date[6:]), int(date[3:-5]), int(date[:-8])).timestamp())[:-2]}:R>"
-        embed.insert_field_at(name="Uploaded", value=timestamp, inline=True, index=2)
-
-        if size == 1:
-            return embed
-
-        queue: str = ""
-        if len(songs[0]) != 0:
-            for i, song in enumerate(songs[0][0:5], start=0):
-                if isinstance(song, Song):
-                    queue += f"`{i + 1 + len(songs[1])}.` [{song.source.title_limited_embed}]({song.source.url} " \
-                             f"'{song.source.title}')\n"
-                else:
-                    queue += f"`{i + 1 + len(songs[1])}.` {song}\n"
-
-        if len(songs[0]) > 6:
-            queue += f"Use **/**`queue` to show **{len(songs[0]) - 5}** more..."
-
-        if len(songs[1]) > 0:
-            p_queue: str = ""
-
-            for i, song in enumerate(songs[1][0:3], start=0):
-                if isinstance(song, Song):
-                    p_queue += f"`{i + 1}.` [{song.source.title_limited_embed}]({song.source.url} " \
-                               f"'{song.source.title}')\n"
-                else:
-                    p_queue += f"`{i + 1}.` {song}\n"
-            embed.insert_field_at(name="Priority Queue", value=p_queue, index=3)
-        if queue != "":
-            embed.insert_field_at(name="Queue", value=queue, inline=False, index=4 if len(embed.fields) == 5 else 3)
+    @staticmethod
+    def _add_advertisement(embed: Embed) -> Embed:
+        if random() <= 0.33:
+            embed.add_field(
+                name="<a:rooCool:1024373563165249638> Did you know?",
+                value=("You can **pause**, **resume**, and **skip songs using** your media **buttons**.\n"
+                       "Execute **/**`session` and follow the instructions."),
+                inline=False
+            )
         return embed
 
+    def to_prepared_src(self):
+        """Converts current YTDLSource Object into PreparedSource Object."""
 
-class SongStr:
-    __slots__ = ("title", "url", "uploader", "ctx", "source")
+        self.source = PreparedSource(
+            self.source.ctx,
+            {
+                "title": self.source.title,
+                "uploader": self.source.uploader,
+                "duration": self.source.duration,
+                "url": self.source.url
+            }
+        )
 
-    def __init__(self, data: Union[dict, str, Song], ctx):
-        self.title = ""
-        self.url = None
-        self.uploader = None
-        self.ctx = ctx
+    def create_embed(self, size: EmbedSize, *, queue: SongQueue) -> Embed:
+        """Song embed containing all important information related to the song."""
 
-        self.source = None
-        if isinstance(data, Song):
-            self.source = data.source
-            self.title = data.source.title
-            self.url = data.source.url
-            self.uploader = data.source.uploader
-            return
+        description: str = (f"[Video]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) "
+                            f"**|** {time_to_string(self.source.duration)} **|** {self.requester.mention}")
 
-        elif isinstance(data, dict):
-            self.title = data["title"]
-            self.url = data["url"]
-            self.uploader = data["uploader"]
-            return
+        embed: Embed = Embed(
+            title=self.source.title,
+            description=description,
+            color=0xFF0000
+        )
+        embed.set_thumbnail(url=self.source.thumbnail_url)
 
-        parts = data.split(" by ")
-        self.uploader = parts[-1]
-        if len(parts) > 2:
-            self.title = data.replace(f" by {self.uploader}", "")
-            return
-        self.title = parts[0]
+        if size == EmbedSize.SMALL:
+            return self._add_advertisement(embed)
 
-    def __str__(self):
-        if self.url is None:
-            return f"{YTDLSource.parse_limited_title_embed(self.title + ' by ' + self.uploader)}"
-        return f"[{YTDLSource.parse_limited_title_embed(self.title + ' by ' + str(self.uploader))}]({self.url})"
+        dislikes: Optional[int] = self.source.dislikes
+        embed.add_field(name="Views", value=shortened(self.source.views))
+        embed.add_field(name="Likes / Dislikes",
+                        value=f"{shortened(self.source.likes)} **/** {shortened(dislikes) if dislikes else 'Error'}")
+        embed.add_field(name="Uploaded", value=f"<t:{str(self.source.upload_date.timestamp())[:-2]}:R>")
 
-    def get_search(self) -> str:
-        search = self.url or f"{self.title} by {self.uploader}"
-        return search
+        if size == EmbedSize.NO_QUEUE:
+            return self._add_advertisement(embed)
+
+        queue_str: str = ""
+        for i, song in enumerate(queue[0:5], start=1):
+            queue_str += f"`{i}`. [{song}]({song.source.url})\n"
+        if len(queue) > 5:
+            remaining: int = len(queue) - queue_str.count("\n")
+            queue_str += f"Use **/**`queue` to show **{remaining}** more..."
+
+        embed.add_field(name="Queue", value=queue_str, inline=False) if len(queue) else None
+        return self._add_advertisement(embed)

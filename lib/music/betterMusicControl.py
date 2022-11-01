@@ -7,7 +7,8 @@ from discord import Bot, Cog, User, Embed
 from pyrate_limiter import Limiter, RequestRate, Duration, BucketFullException
 
 from data.config.settings import SETTINGS
-from lib.music.song import SongStr, Song
+from lib.music.prepared_source import PreparedSource
+from lib.music.song import Song
 from lib.music.voicestate import VoiceState
 
 
@@ -34,8 +35,9 @@ class ControlRequest:
             raise ValueError("Session does no longer exist.")
 
         self.requester: Union[User, None] = self.session.bot.get_user(int(data.get("uID")))
-        if self.requester is None or self.requester.id not in self.session.registered_controls or \
-                self.session.registered_controls[self.requester.id] != data.get("sessionID").split("=")[1]:
+        if (self.requester is None or self.requester.id not in self.session.session or
+                self.session.session[self.requester.id][0] != data.get("sessionID").split("=")[1] or
+                not self.session.session[self.requester.id]):
             raise ValueError("Missing permissions or invalid user.")
 
         self.action: str = data.get("message")
@@ -69,15 +71,14 @@ class BetterMusicControlReceiver:
         except AttributeError:
             music: Union[Any, Cog] = self.bot.get_cog("Music")
             self.voice_states = music.voice_states
-        request: Union[ControlRequest, None] = None
 
         while data != b"END":
             try:
                 info: dict[str, str] = dict(loads(data.decode().replace("'", '"')))
-                request = ControlRequest(data=info, voice_states=self.voice_states)
-                request.session.connected_controls += 1
+                request: ControlRequest = ControlRequest(data=info, voice_states=self.voice_states)
             except (ValueError, AttributeError, JSONDecodeError) as e:
-                print(data, "----------------------", e)
+                if isinstance(e, JSONDecodeError):
+                    e = "Error. Please restart/reinstall/update your application."
 
                 print(f"[NETWORK] Received invalid request from {address}:{port}")
                 writer.write(bytes(str(e), "utf-8"))
@@ -105,7 +106,7 @@ class BetterMusicControlReceiver:
                 embed.description = f"️⏯ **{action.get(request.session.voice.is_playing())[1]}** over hotkey-control."
 
                 action.get(request.session.voice.is_playing())[0]()
-                await request.session.channel_send(embed=embed)
+                await request.session.send(embed=embed)
 
             if request.action == "SKIP":
                 if isinstance(request.session.current, Song) and request.session.voice is not None:
@@ -117,7 +118,7 @@ class BetterMusicControlReceiver:
 
                     if request.requester.id == request.session.current.requester.id:
                         request.session.skip()
-                        await request.session.channel_send(embed=embed)
+                        await request.session.send(embed=embed)
                     else:
                         request.session.skip_votes.add(request.requester.id)
                         total_votes = len(request.session.skip_votes)
@@ -127,32 +128,23 @@ class BetterMusicControlReceiver:
                             request.session.skip()
                         else:
                             embed.description = f"🗳️ **Skip vote** added: **{total_votes}/{required}**"
-                        await request.session.channel_send(embed=embed)
+                        await request.session.send(embed=embed)
 
             if request.action == "FETCH":
                 response: dict[str, Union[str, None]]
-
-                try:
-                    if isinstance(request.session.current, SongStr):
-                        response = {
-                            "title": request.session.current.title,
-                            "uploader": request.session.current.uploader,
-                            "url": "#",
-                            "thumbnail": "https://dummyimage.com/600x400/4cc2ff/0011ff.jpg&text=No+thumbnail."
-                        }
-                    else:
-                        response = {
-                            "title": request.session.current.source.title_limited_embed,
-                            "uploader": request.session.current.source.uploader,
-                            "url": request.session.current.source.url,
-                            "thumbnail": request.session.current.source.thumbnail
-                        }
-                except AttributeError:
+                if isinstance(request.session.current.source, PreparedSource):
                     response = {
-                        "title": "",
-                        "uploader": "",
-                        "url": "",
-                        "thumbnail": ""
+                        "title": request.session.current.source.name,
+                        "uploader": request.session.current.source.artists[0],
+                        "url": request.session.current.source.url,
+                        "thumbnail": "https://dummyimage.com/600x400/4cc2ff/0011ff.jpg&text=No+thumbnail."
+                    }
+                else:
+                    response = {
+                        "title": request.session.current.source.title,
+                        "uploader": request.session.current.source.uploader,
+                        "url": request.session.current.source.url,
+                        "thumbnail": request.session.current.source.thumbnail_url
                     }
 
                 try:
@@ -170,8 +162,6 @@ class BetterMusicControlReceiver:
             await writer.wait_closed()
         except (ConnectionResetError, OSError):
             pass
-        if request is not None:
-            request.session.connected_controls -= 1
 
     async def run_server(self) -> None:
         server = await start_server(

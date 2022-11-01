@@ -1,216 +1,238 @@
-from asyncio import Event, wait_for, TimeoutError, QueueEmpty
+from asyncio import Event, Task, sleep, wait_for, TimeoutError, QueueFull
+from enum import IntEnum
 from random import randrange
-from time import time
-from typing import Union
+from traceback import format_exc
+from typing import Optional, Any, Union
 
-from discord import Bot, FFmpegPCMAudio, Embed, ApplicationContext, VoiceClient, VoiceChannel
+from discord import Bot, VoiceClient, Guild, Embed, FFmpegPCMAudio, TextChannel, ApplicationContext
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
-from lib.music.exceptions import VoiceError
-from lib.music.extraction import YTDLSource
+from lib.music.exceptions import YTDLError
+from lib.music.prepared_source import PreparedSource
 from lib.music.queue import SongQueue
-from lib.music.search import guess_type
-from lib.music.song import Song, SongStr
-from lib.utils.utils import url_is_valid
+from lib.music.song import Song, EmbedSize
+from lib.music.ytdl import YTDLSource
+
+
+class Loop(IntEnum):
+    NONE = 0
+    SONG = 1
+    QUEUE = 2
 
 
 class VoiceState:
-    def __init__(self, bot: Bot, ctx: ApplicationContext):
+    bot: Bot
+    guild: Guild
+    _channel: Union[TextChannel, Any]
+
+    processing: bool
+    is_valid: bool
+    id: str
+
+    current: Optional[Song]
+    voice: Optional[VoiceClient]
+    queue: SongQueue
+    history: list[str]
+    position: int
+    _loop: Loop
+
+    session: dict[int, tuple[str, bool]]
+    skip_votes: set[int]
+
+    _waiter: Event
+    _player: Task
+    _checker: Task
+    _default_volume: float
+    embed_size: int
+    update_embed: bool
+
+    def __init__(self, bot: Bot, ctx: ApplicationContext) -> None:
         self.bot = bot
-        self._ctx = ctx
+        self.guild = ctx.guild
+        self._channel = ctx.channel
 
-        self.processing: bool = False
-        self.now = None
-        self.current = None
-        self.voice: Union[VoiceClient, None] = None
-        self.next: Event = Event()
-        self.songs: SongQueue = SongQueue()
-        self.priority_songs: SongQueue = SongQueue()
-        self.exists: bool = True
-        self.loop_duration: int = 0
-        self.song_position = None
-        self.history: list[str] = []
-
+        self.processing = False
+        self.is_valid = True
         self.id = '{0:010x}'.format(randrange(16**8)).upper()[2:]
-        self.connected_controls: int = 0
-        self.registered_controls: dict[int, str] = {}
 
-        self._loop: bool = False
-        self._iterate: bool = False
-        self._volume: float = 0.5
-        self.skip_votes: set = set()
+        self.current = None
+        self.voice = None
+        self.queue = SongQueue(maxsize=SETTINGS["Cogs"]["Music"]["Queue"]["MaxQueueLength"])
+        self.history = []
+        self.position = 0
+        self._loop = Loop.NONE
 
-        self.audio_player = bot.loop.create_task(self.audio_player_task())
+        self.session: dict[int, tuple[str, bool]] = {}
+        self.skip_votes: set[int] = set()
 
-        cur = database.cursor()
-        cur.execute("""SELECT MusicEmbedSize FROM settings WHERE GuildID = ?""", (self._ctx.guild_id, ))
-        self.embed_size = cur.fetchone()[0]
-        cur.execute("""SELECT MusicDeleteEmbedAfterSong FROM settings WHERE GuildID = ?""", (self._ctx.guild_id, ))
-        self.update_embed = cur.fetchone()[0]
+        self._waiter = Event()
+        self._player = bot.loop.create_task(self._player_task())
+        self._checker = bot.loop.create_task(self._inactivity_check())
+        self._default_volume = 0.5
 
-    def __del__(self):
-        self.audio_player.cancel()
+        row: tuple = database.cursor().execute(
+            """SELECT MusicEmbedSize, MusicDeleteEmbedAfterSong FROM settings WHERE GuildID = ?""", (self.guild.id, )
+        ).fetchone()
+        self.embed_size = row[0]
+        self.update_embed = bool(row[1])
+
+    def __del__(self) -> None:
+        self._player.cancel()
+        self._checker.cancel()
 
     @property
-    def loop(self) -> bool:
+    def channel(self) -> Optional[Union[TextChannel, Any]]:
+        if self.current:
+            return self.current.source.channel
+        return self._channel
+
+    @property
+    def loop(self) -> Loop:
         return self._loop
 
     @loop.setter
-    def loop(self, value: bool) -> None:
-        self._iterate = False
-        self.loop_duration = 0
-
+    def loop(self, value: Loop) -> None:
         self._loop = value
 
     @property
-    def iterate(self) -> bool:
-        return self._iterate
-
-    @iterate.setter
-    def iterate(self, value: bool) -> None:
-        self._loop = False
-        self.loop_duration = 0
-
-        self._iterate = value
-
-    @property
     def volume(self) -> float:
-        return self._volume
+        if isinstance(self.current, Song):
+            return self.current.source.volume
+        return self._default_volume
 
     @volume.setter
-    def volume(self, value: float) -> None:
-        self._volume = value
+    def volume(self, value) -> None:
+        if isinstance(self.current, Song):
+            self.current.source.volume = value
 
     @property
     def is_playing(self) -> bool:
-        return self.voice and self.current
+        return bool(self.voice) and bool(self.current)
 
-    async def channel_send(self, message: str = None, embed: Embed = None) -> None:
-        await self._ctx.send(content=message, embed=embed)
+    def add_control(self, u_id: int) -> None:
+        if u_id in self.session:
+            raise ValueError(f"❌ Current **session ID** has **already been send** to you.")
 
-    def register_user(self, u_id: int) -> Union[None, str]:
-        if self.registered_controls.get(u_id) is not None:
-            return "❌ You are **already connected**."
+        connections: list[int] = [connection for connection in self.session if self.session[connection][1]]
+        if len(connections) >= 3:
+            raise ValueError("❌ **Too many** users **are** already **connected**.")
+        self.session[u_id] = ('{0:010x}'.format(randrange(16**2)).upper()[8:], False)
 
-        member_ids: list[int] = [member.id for member in self.voice.channel.members]
-        for control in self.registered_controls:
-            if control not in member_ids:
-                del self.registered_controls[control]
+    def put(self, song: Song, playnext: bool) -> None:
+        if playnext:
+            self.queue.insert(0, song)
+        else:
+            self.queue.put_nowait(song)
 
-        if self.connected_controls >= 3:
-            return "❌ The **maximum of** 3 **users** is **reached**."
-        self.registered_controls[u_id] = '{0:010x}'.format(randrange(16**2)).upper()[8:]
+    async def send(self, message: str = None, embed: Embed = None, delete_after: float = None) -> None:
+        if message is None and embed is None:
+            return
+        if self.channel:
+            await self.channel.send(content=message, embed=embed, delete_after=delete_after)
 
-    async def audio_player_task(self):
+    async def _leave(self) -> None:
+        self.bot.loop.create_task(self.stop())
+        try:
+            await self.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to **inactivity**.")
+        except AttributeError:
+            pass
+
+    async def _inactivity_check(self) -> None:
+        await sleep(30)
+        while self.voice is not None and self.voice.is_connected():
+            if not [member for member in self.voice.channel.members if not member.bot]:
+                break
+            await sleep(180)
+        if self.is_valid:
+            await self._leave()
+
+    async def _player_task(self) -> None:
         while True:
-            self.next.clear()
-            self.now = None
+            self._waiter.clear()
 
-            try:
-                channel: Union[VoiceChannel, None] = self.bot.get_channel(self.voice.channel.id)
-                if len([member for member in channel.members if not member.bot]) == 0:
-                    self.songs.clear()
-                    self.priority_songs.clear()
-            except AttributeError:
-                pass
+            previous: Optional[FFmpegPCMAudio] = None
+            if self.current:
+                previous: FFmpegPCMAudio = FFmpegPCMAudio(self.current.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
 
-            if not self.loop:
+            if self.loop != Loop.SONG:
+                self.current = None
+
                 try:
-                    try:
-                        self.current = self.priority_songs.get_nowait()
-                    except QueueEmpty:
-                        self.current = await wait_for(self.songs.get(), timeout=180)
+                    self.current = await wait_for(self.queue.get(), timeout=180)
                 except TimeoutError:
-                    self.bot.loop.create_task(self.stop())
-                    self.exists = False
+                    if self.is_valid:
+                        return await self._leave()
 
+                if self.loop == Loop.QUEUE:
                     try:
-                        await self._ctx.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to **inactivity**.")
-                    except AttributeError:
+                        self.queue.put_nowait(Song(PreparedSource(
+                            self.current.source.ctx,
+                            {"title": self.current.source.title,
+                             "uploader": self.current.source.uploader,
+                             "duration": self.current.source.duration,
+                             "url": self.current.source.url}
+                        )))
+                    except QueueFull:
                         pass
-                    return
 
-                if isinstance(self.current, SongStr):
-                    try:
-                        try:
-                            self.current.source.original = FFmpegPCMAudio(self.current.source.stream_url,
-                                                                          **YTDLSource.FFMPEG_OPTIONS)
-                            source = self.current.source
-                        except AttributeError:
-                            search = self.current.get_search()
+            else:  # Loop.SONG
+                if previous:
+                    self.voice.play(previous, after=self.prepare_next_song)
+                else:
+                    self.loop = Loop.NONE
 
-                            if not url_is_valid(search)[0]:
-                                source = await guess_type(search, self.current.ctx, loop=self.bot.loop)
-                            else:
-                                source = await YTDLSource.create_source(self.current.ctx, search, loop=self.bot.loop)
-                    except Exception as error:
-                        await self.current.ctx.send(embed=Embed(description=f"💥 **Error**: {error}"))
-                        continue
+            if isinstance(self.current.source, PreparedSource):  # Check if processing has to be done
+                try:
+                    source: YTDLSource = await YTDLSource.create_source(
+                        self.current.source.ctx, self.current.source.search, loop=self.bot.loop)
+                except Exception as e:
+                    embed: Embed = Embed(color=0xFF0000).set_author(name="Error")
+                    if isinstance(e, ValueError) or isinstance(e, YTDLError):
+                        embed.description = str(e)
                     else:
-                        self.current = Song(source)
+                        print(format_exc())
+                        embed.description = f"❌ An **unexpected error** occurred: `{e}`"
+                    await self.send(embed=embed)
+                    continue
+                self.current = Song(source)
 
-                if self.iterate:
-                    await self.songs.put(SongStr(self.current, self._ctx))
+            await self.send(embed=self.current.create_embed(
+                (EmbedSize.SMALL, EmbedSize.NO_QUEUE, EmbedSize.DEFAULT)[self.embed_size],
+                queue=self.queue),
+                delete_after=self.current.source.duration if self.update_embed else None
+            )
 
-                    self.loop_duration += int(self.current.source.data.get("duration"))
-                    if self.loop_duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
-                        self.iterate = False
+            self.history.insert(0, str(self.current))
+            if len(self.history) > SETTINGS["Cogs"]["Music"]["History"]["MaxHistoryLength"]:
+                del self.history[-1]
 
-                        await self.current.source.channel.send("🔂 **The queue loop** has been **disabled** due to "
-                                                               "**inactivity**.")
-                if len(self.history) == 5:
-                    del self.history[-1]
-                self.history.insert(0, str(self.current.source))
+            self.voice.play(self.current.source, after=self.prepare_next_song)
+            self.position = int(self.voice.timestamp / 1000 * 0.02)
 
-                self.current.source.volume = self._volume
-                self.voice.play(self.current.source, after=self.play_next_song)
+            await self._waiter.wait()
 
-                self.song_position = [0, round(time())]
-                if self.update_embed:
-                    await self.current.source.channel.send(embed=self.current.create_embed(
-                        (self.songs, self.priority_songs), self.embed_size),
-                                                           delete_after=float(self.current.source.data.get("duration")))
-                else:
-                    await self.current.source.channel.send(embed=self.current.create_embed(
-                        (self.songs, self.priority_songs), self.embed_size))
-
-            elif self.loop:
-                if self.loop_duration > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
-                    self.loop = False
-                    await self.current.source.channel.send("🔂 **The loop** has been **disabled** due to "
-                                                           "**inactivity**.")
-                else:
-                    self.loop_duration += int(self.current.source.data.get("duration"))
-
-                self.now = FFmpegPCMAudio(self.current.source.stream_url, **YTDLSource.FFMPEG_OPTIONS)
-                self.voice.play(self.now, after=self.play_next_song)
-
-                self.song_position = [0, round(time())]
-                if self.update_embed:
-                    await self.current.source.channel.send(embed=self.current.create_embed(
-                        (self.songs, self.priority_songs), self.embed_size),
-                                                           delete_after=float(self.current.source.data.get("duration")))
-            await self.next.wait()
-
-    def play_next_song(self, error=None):
+    def prepare_next_song(self, error=None) -> None:
         if error:
-            raise VoiceError(str(error))
+            print(f"[ERROR] An error occurred: {error}")
+        self.skip_votes.clear()
+        self._waiter.set()
 
-        self.next.set()
+    def skip(self) -> None:
         self.skip_votes.clear()
 
-    def skip(self):
-        self.skip_votes.clear()
-        self.loop = False
+        if self.loop == Loop.SONG:
+            self.loop = Loop.NONE
 
         if self.is_playing:
             self.voice.stop()
 
-    async def stop(self):
-        self.songs.clear()
-        self.loop = False
+    async def stop(self) -> None:
+        self.queue.clear()
 
-        if self.voice:
+        self.loop = Loop.NONE
+        self.is_valid = False
+
+        if self.voice is not None and self.voice.is_connected():
             await self.voice.disconnect()
             self.voice = None

@@ -34,19 +34,21 @@ class Images(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-        self.categories = {"porn": "Pornhub", "ass": "ass", "asian": "AsiansGoneWild",
+        self.categories = {"porn": "porn", "ass": "ass", "asian": "AsiansGoneWild",
                            "masturbation": "Fingering", "shaved": "shavedpussies", "close-up": "closeup",
                            "pussy": "pussy", "cat": "cats", "boobs": "tits", "milf": "milf", "meme": "dankmemes"}
         self.gallery = {}
         for category in tqdm(self.categories, "[SYSTEM] Scraping image urls"):
-            for response in dict(loads(self.request(subreddit=self.categories[category]).text))["memes"]:
+            d = self.request(subreddit=self.categories[category]).text
+            for response in dict(loads(d))["memes"]:
                 try:
                     self.gallery[category]
                 except KeyError:
                     self.gallery[category] = []
                 self.gallery[category].append(response)
 
-    def request(self, subreddit: str = "dankmemes", count: int = 50) -> Response:
+    @staticmethod
+    def request(subreddit: str = "dankmemes", count: int = 50) -> Response:
         return get(f"https://meme-api.herokuapp.com/gimme/{subreddit}/{count}")
 
     async def send(self, ctx: ApplicationContext, category: str, nsfw: bool = True):

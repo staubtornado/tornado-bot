@@ -25,7 +25,7 @@ def values_valid(option: str, value: str) -> bool:
 
 class Settings(Cog):
     """
-    Configure the bot. Every option has its valid values in the brackets. Require manage guild permission.
+    Configure the bot. Every option has its is_valid values in the brackets. Require manage guild permission.
     """
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -62,7 +62,7 @@ class Settings(Cog):
         await ctx.defer(ephemeral=True)
 
         if not values_valid(option, value.lower()):
-            await ctx.respond(f"❌ **{value} is not valid** for {option.split(': ')[0]}.\n"
+            await ctx.respond(f"❌ **{value} is not is_valid** for {option.split(': ')[0]}.\n"
                               "👉 **Valid options are** shown **in the brackets** behind the option.", ephemeral=True)
             return
 
@@ -89,7 +89,7 @@ class Settings(Cog):
         await ctx.defer(ephemeral=True)
 
         if not values_valid(option, value.lower()):
-            await ctx.respond(f"❌ **{value} is not valid** for {option.split(': ')[0]}.\n"
+            await ctx.respond(f"❌ **{value} is not is_valid** for {option.split(': ')[0]}.\n"
                               "👉 **Valid options are** shown **in the brackets** behind the option.", ephemeral=True)
             return
 
@@ -115,7 +115,7 @@ class Settings(Cog):
         await ctx.defer(ephemeral=True)
 
         if not values_valid(option, value.lower()):
-            await ctx.respond(f"❌ **{value} is not valid** for {option.split(': ')[0]}.\n"
+            await ctx.respond(f"❌ **{value} is not is_valid** for {option.split(': ')[0]}.\n"
                               "👉 **Valid options are** shown **in the brackets** behind the option.", ephemeral=True)
             return
 
@@ -151,7 +151,7 @@ class Settings(Cog):
                 return
 
         if not values_valid(option, value.lower()):
-            await ctx.respond(f"❌ **{value} is not valid** for {option.split(': ')[0]}.\n"
+            await ctx.respond(f"❌ **{value} is not is_valid** for {option.split(': ')[0]}.\n"
                               "👉 **Valid options are** shown **in the brackets** behind the option.", ephemeral=True)
             return
 

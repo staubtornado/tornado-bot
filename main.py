@@ -1,3 +1,4 @@
+from logging import getLogger, DEBUG, FileHandler, Formatter
 from os import getenv, listdir, remove
 from os.path import join
 from sqlite3 import connect, Error, Connection
@@ -11,13 +12,19 @@ from tqdm import tqdm
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
-from lib.music.api import init_music_api
 from lib.presence.presence import update_rich_presence
 from lib.utils.utils import save_traceback
 
 bot: Bot = Bot(owner_ids=SETTINGS["OwnerIDs"], description=SETTINGS["Description"], intents=SETTINGS["Intents"])
 
 db_initialized: bool = False
+
+
+logger = getLogger('discord')
+logger.setLevel(DEBUG)
+handler = FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)
 
 
 @loop(seconds=SETTINGS["ServiceSyncInSeconds"])
@@ -85,8 +92,6 @@ async def on_application_command_error(ctx: ApplicationContext, error):
 def main():
     print(f"VERSION: {SETTINGS['Version']}\nCopyright (c) 2021 - present Staubtornado\n{'-' * 30}")
     load_dotenv("./data/config/.env")
-
-    init_music_api()
 
     cache = "./data/cache"
     if len(listdir(cache)) > 0:
