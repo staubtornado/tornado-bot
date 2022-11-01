@@ -31,8 +31,7 @@ SETTINGS: dict[str] = {
         "Music": {
             "MaxDuration": 10800,  # seconds
             "Queue": {
-                "MaxQueueLength": 100,  # Max amount of songs that can be queued
-                "PriorityQueueSize": 5
+                "MaxQueueLength": 200,  # Max amount of songs that can be queued
                 "ItemsPerPage": 9
             },
             "History": {
