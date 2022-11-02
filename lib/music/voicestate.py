@@ -165,27 +165,37 @@ class VoiceState:
                         return await self._leave()
 
                 if self.loop == Loop.QUEUE:
-                    try:
-                        self.queue.put_nowait(Song(PreparedSource(
+                    remake: Song
+
+                    if isinstance(self.current.source, PreparedSource):
+                        remake = self.current
+                    else:
+                        remake = Song(PreparedSource(
                             self.current.source.ctx,
-                            {"title": self.current.source.title,
-                             "uploader": self.current.source.uploader,
-                             "duration": self.current.source.duration,
-                             "url": self.current.source.url}
-                        )))
+                            {
+                                "title": self.current.source.title,
+                                "uploader": self.current.source.uploader,
+                                "duration": self.current.source.duration,
+                                "url": self.current.source.url
+                            }
+                        ))
+                    try:
+                        self.queue.put_nowait(remake)
                     except QueueFull:
                         pass
 
-            else:  # Loop.SONG
+            elif self.loop == Loop.SONG:
                 if previous:
                     self.voice.play(previous, after=self.prepare_next_song)
                 else:
                     self.loop = Loop.NONE
+                    continue
 
             if isinstance(self.current.source, PreparedSource):  # Check if processing has to be done
                 try:
                     source: YTDLSource = await YTDLSource.create_source(
-                        self.current.source.ctx, self.current.source.search, loop=self.bot.loop)
+                        self.current.source.ctx, self.current.source.search, loop=self.bot.loop
+                    )
                 except Exception as e:
                     embed: Embed = Embed(color=0xFF0000).set_author(name="Error")
                     if isinstance(e, ValueError) or isinstance(e, YTDLError):
@@ -202,14 +212,14 @@ class VoiceState:
                 queue=self.queue),
                 delete_after=self.current.source.duration if self.update_embed else None
             )
-
-            self.history.insert(0, str(self.current))
-            if len(self.history) > SETTINGS["Cogs"]["Music"]["History"]["MaxHistoryLength"]:
-                del self.history[-1]
-
-            self.voice.play(self.current.source, after=self.prepare_next_song)
             self.position = int(self.voice.timestamp / 1000 * 0.02)
 
+            if self.loop != Loop.SONG:
+                self.history.insert(0, str(self.current))
+                if len(self.history) > SETTINGS["Cogs"]["Music"]["History"]["MaxHistoryLength"]:
+                    del self.history[-1]
+
+                self.voice.play(self.current.source, after=self.prepare_next_song)
             await self._waiter.wait()
 
     def prepare_next_song(self, error=None) -> None:

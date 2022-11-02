@@ -36,12 +36,12 @@ class LoopDecision(View):
             await interaction.response.edit_message(content=str(e), view=None)
             return
 
-        if self.ctx.voice_state.loop == Loop.NONE:
-            self.ctx.voice_state.loop = Loop.SONG
-            message: str = "🔁 **Looped song**, use **/**`loop` to **disable** loop."
-        else:
+        if self.ctx.voice_state.loop == Loop.SONG:
             self.ctx.voice_state.loop = Loop.NONE
             message: str = "🔁 **Unlooped song**, use **/**`loop` to **enable** loop."
+        else:
+            self.ctx.voice_state.loop = Loop.SONG
+            message: str = "🔁 **Looped song**, use **/**`loop` to **disable** loop."
         await interaction.response.edit_message(
             content=message,
             view=None
