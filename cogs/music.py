@@ -192,11 +192,11 @@ class Music(Cog):
 
             if ctx.voice_state.is_playing or ctx.voice_state.voice.is_paused():
                 if ctx.playnext:
-                    await ctx.respond(f"🎶 Playing 🔎 **{str(song_s).replace(' by ', '** by **')}** next!")
+                    await ctx.respond(f"🎶 **Playing** 🔎 `{str(song_s).replace(' by ', '` by `')}` **next**!")
                 else:
-                    await ctx.respond(f"✅ Enqueued 🔎 **{str(song_s).replace(' by ', '** by **')}**.")
+                    await ctx.respond(f"✅ **Enqueued** 🔎 `{str(song_s).replace(' by ', '` by `')}`.")
             else:
-                await ctx.respond(f"🎶 Playing 🔎 **{str(song_s).replace(' by ', '** by **')}** now!")
+                await ctx.respond(f"🎶 **Playing** 🔎 `{str(song_s).replace(' by ', '` by `')}` **now**!")
         finally:
             ctx.voice_state.processing = False
 
