@@ -6,7 +6,8 @@ from typing import Optional, Union
 
 from asyncspotify import FullTrack, SimpleTrack
 from discord import Bot, ApplicationContext, slash_command, VoiceChannel, StageChannel, ClientException, \
-    VoiceProtocol, Option, AutocompleteContext, Embed, ButtonStyle, Interaction, WebhookMessage, Forbidden
+    VoiceProtocol, Option, AutocompleteContext, Embed, ButtonStyle, Interaction, WebhookMessage, Forbidden, \
+    FFmpegPCMAudio
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 from psutil import virtual_memory
@@ -25,6 +26,7 @@ from lib.music.process import process, AdditionalInputRequiredError
 from lib.music.song import Song, EmbedSize
 from lib.music.views import LoopDecision, PlaylistParts, VariableButton
 from lib.music.voicestate import VoiceState, Loop
+from lib.music.ytdl import YTDLSource
 from lib.utils.utils import ordinal, time_to_string, progress_bar
 
 
@@ -200,6 +202,12 @@ class Music(Cog):
         finally:
             ctx.voice_state.processing = False
 
+    @slash_command(guild_ids=SETTINGS["OwnerGuilds"])
+    async def playtest(self, ctx: MusicApplicationContext):
+        source = FFmpegPCMAudio(source="https://player.ffn.de/radiobollerwagen.mp3", **YTDLSource.FFMPEG_OPTIONS)
+
+        ctx.voice_state.voice.play(source, after=lambda error: print(error))
+
     @slash_command()
     async def playnext(self, ctx: MusicApplicationContext,
                        search: Option(str, "Name or URL of song, playlist URL, or preset.",
@@ -219,17 +227,16 @@ class Music(Cog):
 
         start: int = (page - 1) * SETTINGS["Cogs"]["Music"]["Queue"]["ItemsPerPage"]
         end: int = start + SETTINGS["Cogs"]["Music"]["Queue"]["ItemsPerPage"]
-
         duration: int = ctx.voice_state.queue.duration
-        embed: Embed = Embed(
-            title="Queue", color=0xFF0000,
-            description=f"**Size**: `{size}`\n**Duration**: `{time_to_string(duration)}`"
-        )
 
-        embed.add_field(
-            name="Now Playing",
-            value=f"[{ctx.voice_state.current}]({ctx.voice_state.current.source.url})",
-            inline=False
+        description = (
+            f"**Size**: `{size}`\n"
+            f"**Duration**: `{time_to_string(duration)}`\n"
+            f"\n"
+            f"**Now Playing**\n"
+            f"[{ctx.voice_state.current}]({ctx.voice_state.current.source.url})\n"
+            f"\n"
+            f"**Requesters**\n"
         )
 
         emojis: list[str] = [
@@ -255,32 +262,18 @@ class Music(Cog):
         shuffle(emojis)
 
         requesters: dict[str, int] = {}
-        queue: list[Union[str, bool]] = ["", False]
-        queue_2: str = ""
-
         for i, song in enumerate(ctx.voice_state.queue[start:end], start=start + 1):
             if not requesters.get(song.requester.mention):
                 requesters[song.requester.mention] = end - i - 1
-            url: str = song.source.url.split("%")[0]
-            entry: str = f"`{i}.` {emojis[requesters[song.requester.mention]]} [{song}]({url})\n"
-
-            if len(queue[0]) + len(entry) > 1024 or queue[1]:
-                queue_2 += entry
-                queue[1] = True
-            else:
-                queue[0] += entry
-
-        _requesters: str = ""
         for requester in requesters:
-            _requesters += f"{emojis[requesters[requester]]} {requester}\n"
-        embed.add_field(
-            name="Requesters",
-            value=_requesters,
-            inline=False
-        )
+            description += f"{emojis[requesters[requester]]} {requester}\n"
+        description += "\n**Queue**\n"
 
-        embed.add_field(name="Queue", value=queue[0], inline=False) if queue else None
-        embed.add_field(name="‎", value=queue_2, inline=False) if queue_2 else None
+        for i, song in enumerate(ctx.voice_state.queue[start:end], start=start + 1):
+            url: str = song.source.url.split("%")[0]
+            description += f"`{i}.` {emojis[requesters[song.requester.mention]]} [{song}]({url})\n"
+
+        embed: Embed = Embed(title="Queue", color=0xFF0000, description=description)
         embed.set_footer(
             text=f"Page {page}/{ceil(len(ctx.voice_state.queue) / SETTINGS['Cogs']['Music']['Queue']['ItemsPerPage'])}"
         )
