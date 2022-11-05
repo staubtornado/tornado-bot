@@ -80,3 +80,4 @@ async def process(search: str, ctx: MusicApplicationContext) -> Union[list[Song]
         return res
     res = Song(await YTDLSource.create_source(ctx, search, loop=ctx.bot.loop))
     ctx.voice_state.put(res, ctx.playnext)
+    return res
