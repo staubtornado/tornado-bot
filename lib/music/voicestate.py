@@ -34,6 +34,7 @@ class VoiceState:
     voice: Optional[VoiceClient]
     queue: SongQueue
     history: list[str]
+    live: bool
     position: int
     _loop: Loop
 
@@ -60,6 +61,7 @@ class VoiceState:
         self.voice = None
         self.queue = SongQueue(maxsize=SETTINGS["Cogs"]["Music"]["Queue"]["MaxQueueLength"])
         self.history = []
+        self.live = False
         self.position = 0
         self._loop = Loop.NONE
 
@@ -131,6 +133,15 @@ class VoiceState:
         if self.channel:
             await self.channel.send(content=message, embed=embed, delete_after=delete_after)
 
+    def set_live_stream(self, stream_url: str) -> None:
+        self.queue.clear()
+        self.voice.stop()
+
+        self.loop = Loop.NONE
+        self.current = None
+        self.live = True
+        self.voice.play(FFmpegPCMAudio(stream_url, **YTDLSource.FFMPEG_OPTIONS))
+
     async def _leave(self) -> None:
         self.bot.loop.create_task(self.stop())
         try:
@@ -161,7 +172,7 @@ class VoiceState:
                 try:
                     self.current = await wait_for(self.queue.get(), timeout=180)
                 except TimeoutError:
-                    if self.is_valid:
+                    if self.is_valid and not self.live:
                         return await self._leave()
 
                 if self.loop == Loop.QUEUE:

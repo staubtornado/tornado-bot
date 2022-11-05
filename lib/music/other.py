@@ -18,6 +18,12 @@ def ensure_voice_state(ctx: MusicApplicationContext, **kwargs) -> None:
         if ctx.voice_client.channel != ctx.author.voice.channel:
             raise ValueError(f"🎶 I am **currently playing** in {ctx.voice_client.channel.mention}.")
 
+    if ctx.voice_state.live and kwargs.get("no_live_notice"):
+        raise ValueError(
+            "❌ **Not available while playing** a **live** stream.\n"
+            "❔Execute **/**`stop` to **switch to default song streaming**."
+        )
+
     if not ctx.voice_state.is_playing and kwargs.get("requires_song"):
         raise ValueError("❌ **Nothing** is currently **playing**.")
     if ctx.voice_state.current and (isinstance(ctx.voice_state.current.source, PreparedSource) and

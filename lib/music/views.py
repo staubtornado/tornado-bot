@@ -31,7 +31,7 @@ class LoopDecision(View):
     )
     async def song(self, button: Button, interaction: Interaction) -> None:
         try:
-            ensure_voice_state(self.ctx, requires_song=True)
+            ensure_voice_state(self.ctx, requires_song=True, no_live_notice=True)
         except ValueError as e:
             await interaction.response.edit_message(content=str(e), view=None)
             return
@@ -54,7 +54,7 @@ class LoopDecision(View):
     )
     async def queue(self, button: Button, interaction: Interaction):
         try:
-            ensure_voice_state(self.ctx, requires_song=True)
+            ensure_voice_state(self.ctx, requires_song=True, no_live_notice=True)
         except ValueError as e:
             await interaction.response.edit_message(content=str(e), view=None)
             return

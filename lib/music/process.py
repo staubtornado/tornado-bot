@@ -64,7 +64,19 @@ async def process(search: str, ctx: MusicApplicationContext) -> Union[list[Song]
         for i in range(len(res)):
             res[i]: Song = Song(PreparedSource(ctx, res[i]))
             ctx.voice_state.put(res[i], ctx.playnext)
-    else:
-        res = Song(await YTDLSource.create_source(ctx, search, loop=ctx.bot.loop))
-        ctx.voice_state.put(res, ctx.playnext)
-    return res
+        return res
+
+    if search == "https://ffn-stream19.radiohost.de/radiobollerwagen_mp3-192":
+        res = Song(PreparedSource(
+            ctx,
+            {
+                "title": "Radio",
+                "uploader": "Bollerwagen",
+                "duration": -1,
+                "url": "https://radiobollerwagen.de/"
+            }
+        ))
+        ctx.voice_state.set_live_stream(search)
+        return res
+    res = Song(await YTDLSource.create_source(ctx, search, loop=ctx.bot.loop))
+    ctx.voice_state.put(res, ctx.playnext)

@@ -6,8 +6,7 @@ from typing import Optional, Union
 
 from asyncspotify import FullTrack, SimpleTrack
 from discord import Bot, ApplicationContext, slash_command, VoiceChannel, StageChannel, ClientException, \
-    VoiceProtocol, Option, AutocompleteContext, Embed, ButtonStyle, Interaction, WebhookMessage, Forbidden, \
-    FFmpegPCMAudio
+    VoiceProtocol, Option, AutocompleteContext, Embed, ButtonStyle, Interaction, WebhookMessage, Forbidden
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 from psutil import virtual_memory
@@ -26,13 +25,11 @@ from lib.music.process import process, AdditionalInputRequiredError
 from lib.music.song import Song, EmbedSize
 from lib.music.views import LoopDecision, PlaylistParts, VariableButton
 from lib.music.voicestate import VoiceState, Loop
-from lib.music.ytdl import YTDLSource
 from lib.utils.utils import ordinal, time_to_string, progress_bar
 
 
 async def auto_complete(ctx: AutocompleteContext) -> list[str]:
-    rtrn = ["Charts", "New Releases", "TDTT", "ESC22", "Chill", "Party", "Classical", "K-Pop", "Gaming", "Rock",
-            "Daily Random"]
+    rtrn = list(PRESETS.keys())
 
     if len([x for x in rtrn if x.lower().startswith(ctx.value.lower())]) > 0:
         return [x for x in rtrn if x.lower().startswith(ctx.value.lower())]
@@ -44,8 +41,7 @@ async def auto_complete(ctx: AutocompleteContext) -> list[str]:
             rtrn.append(item) if item not in rtrn else None
     except SpotifyException:
         pass
-    return rtrn if len(rtrn) > 0 else ["Charts", "New Releases", "TDTT", "ESC22", "Chill", "Party", "Classical",
-                                       "K-Pop", "Gaming", "Rock", "Daily Random"]
+    return rtrn if len(rtrn) > 0 else list(PRESETS.keys())
 
 
 class Music(Cog):
@@ -120,6 +116,7 @@ class Music(Cog):
         ctx.voice_state.queue.clear()
         ctx.voice_state.voice.stop()
         ctx.voice_state.current = None
+        ctx.voice_state.live = False
         await ctx.respond("⏹ **Stopped** song and **cleared** the **queue**.")
 
     @slash_command()
@@ -143,7 +140,7 @@ class Music(Cog):
         await ctx.defer()
 
         try:
-            ensure_voice_state(ctx, no_processing=True)
+            ensure_voice_state(ctx, no_processing=True, no_live_notice=True)
         except ValueError as e:
             await ctx.respond(str(e))
             return
@@ -201,12 +198,6 @@ class Music(Cog):
                 await ctx.respond(f"🎶 **Playing** 🔎 `{str(song_s).replace(' by ', '` by `')}` **now**!")
         finally:
             ctx.voice_state.processing = False
-
-    @slash_command(guild_ids=SETTINGS["OwnerGuilds"])
-    async def playtest(self, ctx: MusicApplicationContext):
-        source = FFmpegPCMAudio(source="https://player.ffn.de/radiobollerwagen.mp3", **YTDLSource.FFMPEG_OPTIONS)
-
-        ctx.voice_state.voice.play(source, after=lambda error: print(error))
 
     @slash_command()
     async def playnext(self, ctx: MusicApplicationContext,
@@ -351,7 +342,7 @@ class Music(Cog):
         """(Vote) skip to next song. Requester can always skip."""
 
         try:
-            ensure_voice_state(ctx, requires_song=True)
+            ensure_voice_state(ctx, requires_song=True, no_live_notice=True)
         except ValueError as e:
             await ctx.respond(str(e))
             return
@@ -392,6 +383,13 @@ class Music(Cog):
     async def now(self, ctx: MusicApplicationContext) -> None:
         """Current playing song with elapsed time."""
 
+        if ctx.voice_state.live:
+            await ctx.respond(
+                "❌ **Not available while playing** a **live** stream.\n"
+                "❔Execute **/**`stop` to **switch to default song streaming**."
+            )
+            return
+
         if ctx.voice_state.current is None:
             await ctx.respond("❌ **Nothing** is currently **playing**.")
             return
@@ -416,7 +414,7 @@ class Music(Cog):
         """Pauses current song."""
 
         try:
-            ensure_voice_state(ctx, requires_song=True)
+            ensure_voice_state(ctx, requires_song=True, no_live_notice=True)
         except ValueError as e:
             await ctx.respond(str(e))
             return
@@ -432,7 +430,7 @@ class Music(Cog):
         """Resumes the current song."""
 
         try:
-            ensure_voice_state(ctx)
+            ensure_voice_state(ctx, no_live_notice=True)
         except ValueError as e:
             await ctx.respond(str(e))
             return
@@ -448,7 +446,7 @@ class Music(Cog):
         """Sets the volume of the current song."""
 
         try:
-            ensure_voice_state(ctx, requires_song=True)
+            ensure_voice_state(ctx, requires_song=True, no_live_notice=True)
         except ValueError as e:
             await ctx.respond(str(e))
             return

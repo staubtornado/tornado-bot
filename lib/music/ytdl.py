@@ -6,6 +6,7 @@ from itertools import islice
 from json import loads
 from re import sub
 from typing import Union, Any, Optional
+from urllib.parse import urlparse
 
 from aiohttp import ClientSession, ClientTimeout
 from discord import PCMVolumeTransformer, Member, TextChannel, FFmpegPCMAudio, ApplicationContext
@@ -64,19 +65,21 @@ class YTDLSource(PCMVolumeTransformer):
         self.requester = ctx.author
         self.channel = ctx.channel
 
-        self.uploader = sub(r" - Topic$", "", data.get("uploader"))
-        self.uploader_url = data.get("uploader_url")
+        self.uploader = sub(r" - Topic$", "", str(data.get("uploader")))
+        self.uploader_url = str(data.get("uploader_url"))
         self.title = str(data.get("title")).replace("||", "")[:73]
         self.title_embed = sub(r"[\[\]|]", "", str(data.get("title")))[:43]
-        self.thumbnail_url = data.get("thumbnail")
+        self.thumbnail_url = str(data.get("thumbnail"))
         self.duration = data.get("duration")
-        self.url = data.get("webpage_url")
+        self.url = str(data.get("webpage_url"))
         self.views = data.get("view_count")
         self.likes = data.get("like_count")
-        self.stream_url = data.get("url")
-        self.upload_date = datetime(int(data.get("upload_date")[:4]),
-                                    int(data.get("upload_date")[4:6]),
-                                    int(data.get("upload_date")[6:]))
+        self.stream_url = str(data.get("url"))
+        self.upload_date = datetime(
+            int(data.get("upload_date")[:4]),
+            int(data.get("upload_date")[4:6]),
+            int(data.get("upload_date")[6:])
+        )
         self.dislikes = data.get("dislikes")
         self.elapsed = 0
 
@@ -170,16 +173,19 @@ class YTDLSource(PCMVolumeTransformer):
                     raise YTDLError(f"❌ **Could not retrieve** any matches for: `{webpage_url}`")
 
         if info.get("duration") is None:
-            raise YTDLError("❌ **Livestreams are** currently **not supported**.")
+            # Early support for Radio Bollerwagen
+            if info.get("webpage_url") != "https://ffn-stream19.radiohost.de/radiobollerwagen_mp3-192":
+                raise YTDLError("❌ This **live stream source is not** currently **supported**.")
+            info["duration"] = -1
 
         if int(info["duration"]) > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
             duration: str = time_to_string(SETTINGS['Cogs']['Music']['MaxDuration'])
             raise YTDLError(f"❌ Songs cannot be longer than **{duration}**.")
 
-        async with ClientSession(timeout=ClientTimeout(total=3)) as session:
-            async with session.get(f"https://returnyoutubedislikeapi.com/votes?videoId={info['id']}") as resp:
-                info["dislikes"] = dict(loads(await resp.text()))["dislikes"]
-
+        if urlparse(info.get(webpage_url)).netloc == "youtube.com":
+            async with ClientSession(timeout=ClientTimeout(total=3)) as session:
+                async with session.get(f"https://returnyoutubedislikeapi.com/votes?videoId={info['id']}") as resp:
+                    info["dislikes"] = dict(loads(await resp.text()))["dislikes"]
         return cls(ctx, FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
     @classmethod
