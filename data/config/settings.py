@@ -43,7 +43,7 @@ SETTINGS: dict[str] = {
             "Companies": ["Puffus", "Foodiest", "QuickPacked", "MobileCRATE", "Cygner"]
         }
     },
-    "Version": "0.0.8.4a",  # Bot version
+    "Version": "0.0.9a",  # Bot version
     "Production": False,  # If the bot is running in production or not
     "ServiceSyncInSeconds": 1800,  # How often the bot should sync with the service
     "ExternalIP": get('https://api.ipify.org').content.decode('utf8'),
