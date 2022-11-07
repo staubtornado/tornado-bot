@@ -50,6 +50,9 @@ CREATE TABLE IF NOT EXISTS settings (
 --  Music
     MusicEmbedSize INTEGER DEFAULT 2,
     MusicDeleteEmbedAfterSong INTEGER DEFAULT 0,
+--  Audit-Log
+    GenerateAuditLog INTEGER DEFAULT 0,
+    AuditLogChannel INTEGER DEFAULT NULL,
 --  Tickets
     TicketsCreateVoiceChannel INTEGER DEFAULT 0,
     TicketsSupportRoleID INTEGER,
