@@ -177,6 +177,7 @@ class VoiceState:
 
                     if self.is_valid:
                         return await self._leave()
+                    return
 
                 if self.loop == Loop.QUEUE:
                     remake: Song
