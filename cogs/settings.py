@@ -1,9 +1,12 @@
-from discord import Bot, SlashCommandGroup, ApplicationContext, Option, CategoryChannel, Permissions, Embed
+from sqlite3 import Cursor
+
+from discord import Bot, SlashCommandGroup, ApplicationContext, Option, Permissions, Embed
 from discord.ext.commands import Cog
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
 from lib.economy.views import ConfirmTransaction
+from lib.logging.select_channel import DropdownView
 
 
 def values_valid(option: str, value: str) -> bool:
@@ -27,19 +30,20 @@ class Settings(Cog):
     """
     Configure the bot. Every option has its is_valid values in the brackets. Require manage guild permission.
     """
+
     def __init__(self, bot: Bot):
         self.bot = bot
 
     @staticmethod
     async def has_premium(ctx: ApplicationContext) -> bool:
         cur = database.cursor()
-        cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id, ))
+        cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id,))
         return bool(cur.execute("""SELECT HasPremium FROM guilds where GuildID = ?""", [ctx.guild_id]).fetchone()[0])
 
     @staticmethod
     async def has_beta(ctx: ApplicationContext) -> bool:
         cur = database.cursor()
-        cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id, ))
+        cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id,))
         return bool(cur.execute("""SELECT HasBeta FROM guilds WHERE GuildID = ?""", [ctx.guild_id]).fetchone()[0])
 
     async def cog_before_invoke(self, ctx: ApplicationContext):
@@ -129,37 +133,44 @@ class Settings(Cog):
         await ctx.respond(f"✅ **{option}** has been **set to {value}%**.", ephemeral=True)
 
     @settings.command()
-    async def tickets(self, ctx: ApplicationContext,
-                      option: Option(str, "Select an option.", choices=["voice channel: [True | False]"],
-                                     required=True), value: Option(str, "Set a value.", required=True)):
-        """Configure the ticket system."""
-        await ctx.defer(ephemeral=True)
-        cur = database.cursor()
-
-        for db_value in cur.execute("""SELECT TicketsCreateVoiceChannel, TicketsSupportRoleID, TicketsCategoryID 
-                                       FROM settings WHERE GuildID = ?""", (ctx.guild_id,)).fetchone():
-            if db_value is None:
-                view = ConfirmTransaction()
-
-                await ctx.respond("The **tickets are not ready** yet. Would you like to **set them up?**",
-                                  view=view, ephemeral=True)
-
-                await view.wait()
-                if view.value:
-                    # SETUP
-                    pass
-                return
+    async def logging(self, ctx: ApplicationContext,
+                      option: Option(str, "Select an option.",
+                                     choices=["welcome message: [True | False]", "activity log: [True | False]"],
+                                     required=True),
+                      value: Option(str, "Set a value.", required=True)):
+        """Configure Audit-Log (Channel) and welcome message."""
 
         if not values_valid(option, value.lower()):
             await ctx.respond(f"❌ **{value} is not is_valid** for {option.split(': ')[0]}.\n"
                               "👉 **Valid options are** shown **in the brackets** behind the option.", ephemeral=True)
             return
-
-        options = {"voice channel": """UPDATE settings SET TicketsCreateVoiceChannel = ? WHERE GuildID = ?"""}
-        values = {"voice channel": {"true": 1, "false": 0}}
         option = option.split(": ")[0]
 
-        cur.execute(options[option], (values[option][value], ctx.guild_id))
+        cur: Cursor = database.cursor()
+        cur.execute(
+            """INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""",
+            (ctx.guild_id,)
+        )
+
+        if option == "activity log":
+            if value == "True":
+                view: DropdownView = DropdownView(self.bot, ctx.guild)
+                embed: Embed = Embed(
+                    title="Select Channel",
+                    description="Select a channel where activities should be logged.",
+                    color=SETTINGS["Colours"]["Default"]
+                )
+                await ctx.respond(embed=embed, view=view, ephemeral=True)
+                return
+            cur.execute(
+                """UPDATE settings SET (GenerateAuditLog, AuditLogChannel) = (?, ?) WHERE GuildID = ?""",
+                (0, None, ctx.guild_id)
+            )
+        else:
+            cur.execute(
+                """UPDATE settings SET (WelcomeMessage) = (?) WHERE GuildID = ?""",
+                ({"True": 1, "False": 0}[value], ctx.guild_id)
+            )
         await ctx.respond(f"✅ **{option}** has been **set to {value}**.", ephemeral=True)
 
     # @settings.command()
@@ -214,7 +225,7 @@ class Settings(Cog):
             await ctx.respond("❌ **Invalid key**.")
             return
 
-        cur.execute("""UPDATE guilds SET HasPremium = 1 WHERE GuildID = ?""", (ctx.guild_id, ))
+        cur.execute("""UPDATE guilds SET HasPremium = 1 WHERE GuildID = ?""", (ctx.guild_id,))
         cur.execute("""DELETE FROM keys WHERE KeyString = ?""", [key])
 
         await ctx.respond(f"🌟 **Thanks for buying** TornadoBot **Premium**! **{ctx.guild.name} has** now all "
@@ -250,8 +261,8 @@ class Settings(Cog):
                                       colour=SETTINGS["Colours"]["Error"]), view=view, ephemeral=True)
         await view.wait()
         if view.value:
-            cur.execute("""UPDATE guilds SET HasBeta = 1 WHERE GuildID = ?""", (ctx.guild_id, ))
-            cur.execute("""DELETE FROM keys WHERE KeyString = ?""", (key_old, ))
+            cur.execute("""UPDATE guilds SET HasBeta = 1 WHERE GuildID = ?""", (ctx.guild_id,))
+            cur.execute("""DELETE FROM keys WHERE KeyString = ?""", (key_old,))
             await ctx.respond(f"🐞 **Beta features** are now **enabled on** this **server**.")
 
     # @ticket_settings.command()
