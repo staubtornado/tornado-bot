@@ -2,14 +2,14 @@ from io import BytesIO
 from typing import Union, Any
 
 from PIL import Image
-from discord import Member
+from discord import Member, File
 from easy_pil import Editor, Font
 from numpy import average
 
 from lib.utils.utils import ordinal
 
 
-async def generate_welcome_message(member: Member):
+async def generate_welcome_message(member: Member) -> File:
     try:
         background: bytes = await member.avatar.read()
     except AttributeError:
@@ -74,4 +74,13 @@ async def generate_welcome_message(member: Member):
         align="center",
         color=text_color
     )
-    editor.save("./test.png", format="PNG")
+
+    path: str = f"./data/cache/{member.guild.id}_{member.id}.png"
+    editor.save(path, format="PNG")
+
+    with open(path, "rb") as f:
+        path = path.replace("./data/cache/", "")
+
+        f: Any = f
+        picture = File(f, filename=path)
+    return picture
