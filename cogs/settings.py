@@ -162,6 +162,40 @@ class Settings(Cog):
         cur.execute(options[option], (values[option][value], ctx.guild_id))
         await ctx.respond(f"✅ **{option}** has been **set to {value}**.", ephemeral=True)
 
+    # @settings.command()
+    # async def tickets(self, ctx: ApplicationContext,
+    #                   option: Option(str, "Select an option.", choices=["voice channel: [True | False]"],
+    #                                  required=True), value: Option(str, "Set a value.", required=True)):
+    #     """Configure the ticket system."""
+    #     await ctx.defer(ephemeral=True)
+    #     cur = database.cursor()
+    #
+    #     for db_value in cur.execute("""SELECT TicketsCreateVoiceChannel, TicketsSupportRoleID, TicketsCategoryID
+    #                                    FROM settings WHERE GuildID = ?""", (ctx.guild_id,)).fetchone():
+    #         if db_value is None:
+    #             view = ConfirmTransaction()
+    #
+    #             await ctx.respond("The **tickets are not ready** yet. Would you like to **set them up?**",
+    #                               view=view, ephemeral=True)
+    #
+    #             await view.wait()
+    #             if view.value:
+    #                 # SETUP
+    #                 pass
+    #             return
+    #
+    #     if not values_valid(option, value.lower()):
+    #         await ctx.respond(f"❌ **{value} is not is_valid** for {option.split(': ')[0]}.\n"
+    #                           "👉 **Valid options are** shown **in the brackets** behind the option.", ephemeral=True)
+    #         return
+    #
+    #     options = {"voice channel": """UPDATE settings SET TicketsCreateVoiceChannel = ? WHERE GuildID = ?"""}
+    #     values = {"voice channel": {"true": 1, "false": 0}}
+    #     option = option.split(": ")[0]
+    #
+    #     cur.execute(options[option], (values[option][value], ctx.guild_id))
+    #     await ctx.respond(f"✅ **{option}** has been **set to {value}**.", ephemeral=True)
+
     @settings.command()
     async def activate(self, ctx: ApplicationContext, key: str) -> None:
         """Activate premium with a premium key."""
@@ -220,20 +254,20 @@ class Settings(Cog):
             cur.execute("""DELETE FROM keys WHERE KeyString = ?""", (key_old, ))
             await ctx.respond(f"🐞 **Beta features** are now **enabled on** this **server**.")
 
-    @ticket_settings.command()
-    async def category(self, ctx: ApplicationContext, category: CategoryChannel):
-        """Select a category where new tickets should be created."""
-        await ctx.defer(ephemeral=True)
-
-        cur = database.cursor()
-        if cur.execute("""SELECT TicketsCreateVoiceChannel FROM settings WHERE GuildID = ?""",
-                       (ctx.guild.id,)).fetchone() is None:
-            cur.execute("""INSERT INTO settings (GuildID, TicketsCreateVoiceChannel) VALUES (?, ?)""",
-                        (ctx.guild.id, category.id))
-        else:
-            cur.execute("""UPDATE settings SET TicketsCreateVoiceChannel = ? WHERE GuildID = ?""",
-                        (category.id, ctx.guild.id))
-        await ctx.respond(f"✅ New **tickets are now created in** `{category}`.")
+    # @ticket_settings.command()
+    # async def category(self, ctx: ApplicationContext, category: CategoryChannel):
+    #     """Select a category where new tickets should be created."""
+    #     await ctx.defer(ephemeral=True)
+    #
+    #     cur = database.cursor()
+    #     if cur.execute("""SELECT TicketsCreateVoiceChannel FROM settings WHERE GuildID = ?""",
+    #                    (ctx.guild.id,)).fetchone() is None:
+    #         cur.execute("""INSERT INTO settings (GuildID, TicketsCreateVoiceChannel) VALUES (?, ?)""",
+    #                     (ctx.guild.id, category.id))
+    #     else:
+    #         cur.execute("""UPDATE settings SET TicketsCreateVoiceChannel = ? WHERE GuildID = ?""",
+    #                     (category.id, ctx.guild.id))
+    #     await ctx.respond(f"✅ New **tickets are now created in** `{category}`.")
 
 
 def setup(bot: Bot):
