@@ -155,12 +155,7 @@ class Settings(Cog):
         if option == "activity log":
             if value == "True":
                 view: DropdownView = DropdownView(self.bot, ctx.guild)
-                embed: Embed = Embed(
-                    title="Select Channel",
-                    description="Select a channel where activities should be logged.",
-                    color=SETTINGS["Colours"]["Default"]
-                )
-                await ctx.respond(embed=embed, view=view, ephemeral=True)
+                await ctx.respond(view=view, ephemeral=True)
                 return
             cur.execute(
                 """UPDATE settings SET (GenerateAuditLog, AuditLogChannel) = (?, ?) WHERE GuildID = ?""",
