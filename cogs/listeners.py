@@ -1,7 +1,8 @@
 from sqlite3 import Cursor
 
-from discord import Guild, Member, Message, Embed, Bot, TextChannel, Forbidden
+from discord import Guild, Member, Message, Embed, Bot, TextChannel, Forbidden, VoiceState
 from discord.ext.commands import Cog
+from discord.utils import utcnow
 
 from cogs.experience import ExperienceSystem
 from data.config.settings import SETTINGS
@@ -13,6 +14,23 @@ class Listeners(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.public = False
+
+    async def send_audit_log(self, embed: Embed, row: tuple, member: Member, cursor) -> None:
+        channel = self.bot.get_channel(row[1])
+        if channel is None:
+            cursor.execute(
+                """UPDATE guilds SET (GenerateAuditLog = 0, AuditLogChannel = NULL) WHERE GuildID = ?""",
+                (member.guild.id,)
+            )
+            return database.commit()
+        try:
+            await channel.send(embed=embed)
+        except Forbidden:
+            cursor.execute(
+                """UPDATE guilds SET (GenerateAuditLog = 0, AuditLogChannel = NULL) WHERE GuildID = ?""",
+                (member.guild.id,)
+            )
+            database.commit()
 
     @Cog.listener()
     async def on_guild_join(self, guild: Guild):
@@ -70,38 +88,64 @@ class Listeners(Cog):
             """DELETE from experience WHERE GuildID = ? AND UserID = ?""",
             (member.guild.id, member.id)
         )
-        database.commit()
 
-        data: tuple[int, ...] = cur.execute(
+        cur.execute(
             """SELECT GenerateAuditLog, AuditLogChannel FROM settings WHERE GuildID = ?""",
             (member.guild.id,)
-        ).fetchone()
+        )
+        data: tuple[int, ...] = cur.fetchone()
 
         if not data[0]:
-            return
+            return database.commit()
 
         embed: Embed = Embed(
-            description=f"⬅️{member.mention} **left this server.**",
+            description=f"⬅️ {member.mention} **left this server.**",
             color=SETTINGS["Colours"]["Error"]
         )
         try:
             embed.set_author(name=member, icon_url=member.avatar.url)
         except AttributeError:
             embed.set_author(name=member, icon_url=member.default_avatar)
-
-        channel = self.bot.get_channel(data[1])
-        if channel is None:
-            cur.execute(
-                """UPDATE guilds SET (GenerateAuditLog = 0, AuditLogChannel = NULL) WHERE GuildID = ?""",
-                (member.guild.id,)
-            )
-            database.commit()
-            return
-        await channel.send(embed=embed)
+        await self.send_audit_log(embed, data, member, cur)
 
     @Cog.listener()
     async def on_message(self, message: Message):
         await ExperienceSystem(self.bot, message).start()
+
+    @Cog.listener()
+    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
+        if before.channel == after.channel:
+            return
+
+        cur: Cursor = database.cursor()
+        cur.execute(
+            """SELECT GenerateAuditLog, AuditLogChannel FROM settings WHERE GuildID = ?""",
+            (member.guild.id,)
+        )
+        data = cur.fetchone()
+
+        if not data[0]:
+            return
+
+        embed: Embed = Embed(timestamp=utcnow())
+
+        if before.channel is None:
+            embed.description = f"⬆️️ {member.mention} **joined** {after.channel.mention}."
+            embed.colour = 0x57F287
+
+        elif after.channel is None:
+            embed.description = f"⬇️️ {member.mention} **left** {before.channel.mention}."
+            embed.colour = 0xED4245
+        else:
+            embed.description = (f"↕️️️ {member.mention} **switched from** {before.channel.mention} **to**"
+                                 f" {after.channel.mention}.")
+            embed.colour = 0x5865F2
+
+        try:
+            embed.set_author(name=member, icon_url=member.avatar.url)
+        except AttributeError:
+            embed.set_author(name=member, icon_url=member.default_avatar)
+        await self.send_audit_log(embed, data, member, cur)
 
 
 def setup(bot):
