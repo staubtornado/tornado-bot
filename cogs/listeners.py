@@ -16,7 +16,9 @@ class Listeners(Cog):
 
     @Cog.listener()
     async def on_guild_join(self, guild: Guild):
-        database.cursor().execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", [guild.id])
+        cur: Cursor = database.cursor()
+        cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (guild.id,))
+        cur.execute("""INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""", (guild.id,))
         database.commit()
         await guild.owner.send(embed=Embed(
             title="Welcome!",
