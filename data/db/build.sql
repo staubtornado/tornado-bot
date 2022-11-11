@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS settings (
 --  Audit-Log
     GenerateAuditLog INTEGER DEFAULT 0,
     AuditLogChannel INTEGER DEFAULT NULL,
+    WelcomeMessage INTEGER DEFAULT 0,
 --  Tickets
     TicketsCreateVoiceChannel INTEGER DEFAULT 0,
     TicketsSupportRoleID INTEGER,
