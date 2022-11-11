@@ -11,10 +11,10 @@ SETTINGS: dict[str] = {
     "Description": "A feature-rich bot based on Python 3.10 and Pycord.",  # Bot description
     "Intents": intents,  # Bot intents | DO NOT TOUCH UNLESS YOU KNOW WHAT YOU'RE DOING
     "Colours": {
-        "Default": Colour.blue(),  # Default colour
-        "Error": Colour.red(),  # Error colour
-        "Special": Colour.gold(),  # Event Colour
-        "Music": 0xFF0000
+        "Default": Colour.blue(),  # Default Color
+        "Error": Colour.red(),  # Error Color
+        "Special": Colour.gold(),  # Event Color
+        "Music": 0xFF0000  # Color of song embeds.
     },
     "OwnerGuilds": [795588352387579914],  # List of guild IDs where owner related commands are enabled
     "Cogs": {
