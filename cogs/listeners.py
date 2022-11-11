@@ -1,6 +1,6 @@
 from sqlite3 import Cursor
 
-from discord import Guild, Member, Message, Embed, Bot, TextChannel
+from discord import Guild, Member, Message, Embed, Bot, TextChannel, Forbidden
 from discord.ext.commands import Cog
 
 from cogs.experience import ExperienceSystem
@@ -50,7 +50,17 @@ class Listeners(Cog):
             return
 
         channel: TextChannel = member.guild.system_channel
-        await channel.send(file=await generate_welcome_message(member))
+
+        try:
+            await channel.send(
+                content=f"👋 **Hello** {member.mention}! **Welcome** to **{member.guild.name}**.",
+                file=await generate_welcome_message(member)
+            )
+        except Forbidden:
+            cur.execute(
+                """UPDATE settings SET (WelcomeMessage) = (?) WHERE GuildID = ?""",
+                (0, member.guild.id)
+            )
 
     @Cog.listener()
     async def on_member_remove(self, member: Member):
