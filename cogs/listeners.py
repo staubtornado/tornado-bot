@@ -6,7 +6,7 @@ from discord.ext.commands import Cog
 from cogs.experience import ExperienceSystem
 from data.config.settings import SETTINGS
 from data.db.memory import database
-from lib.audit_log.welcome_message import generate_welcome_message
+from lib.logging.welcome_message import generate_welcome_message
 
 
 class Listeners(Cog):
@@ -34,17 +34,28 @@ class Listeners(Cog):
 
     @Cog.listener()
     async def on_member_join(self, member: Member):
+        cur: Cursor = database.cursor()
+        cur.execute(
+            """INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""",
+            (member.guild.id,)
+        )
+        cur.execute(
+            """SELECT WelcomeMessage FROM settings WHERE GuildID = ?""",
+            (member.guild.id,)
+        )
+
+        if not cur.fetchone()[0]:
+            return
+
         channel: TextChannel = member.guild.system_channel
-        await generate_welcome_message(member)
-
-
+        await channel.send(file=await generate_welcome_message(member))
 
     @Cog.listener()
     async def on_member_remove(self, member: Member):
         cur: Cursor = database.cursor()
 
         cur.execute(
-            """DELETE from experience where GuildID = ? and UserID = ?""",
+            """DELETE from experience WHERE GuildID = ? AND UserID = ?""",
             (member.guild.id, member.id)
         )
         database.commit()
