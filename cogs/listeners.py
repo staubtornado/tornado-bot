@@ -130,15 +130,15 @@ class Listeners(Cog):
         embed: Embed = Embed(timestamp=utcnow())
 
         if before.channel is None:
-            embed.description = f"⬆️️ {member.mention} **joined** {after.channel.mention}."
+            embed.description = f"⬆️️ {member.mention} **joined** {after.channel.mention}**.**"
             embed.colour = 0x57F287
 
         elif after.channel is None:
-            embed.description = f"⬇️️ {member.mention} **left** {before.channel.mention}."
+            embed.description = f"⬇️️ {member.mention} **left** {before.channel.mention}**.**"
             embed.colour = 0xED4245
         else:
             embed.description = (f"↕️️️ {member.mention} **switched from** {before.channel.mention} **to**"
-                                 f" {after.channel.mention}.")
+                                 f" {after.channel.mention}**.**")
             embed.colour = 0x5865F2
 
         try:
