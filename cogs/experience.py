@@ -71,7 +71,7 @@ class Experience(Cog):
                     "member": message.author,
                     "message_count": messages
                 })
-                await message.reply(file=await generate_lvl_up_card(stats))
+                await message.reply(file=await generate_lvl_up_card(stats), delete_after=60)
         finally:
             messages += 1
             cur.execute(
