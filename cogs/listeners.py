@@ -1,10 +1,9 @@
 from sqlite3 import Cursor
 
-from discord import Guild, Member, Message, Embed, Bot, TextChannel, Forbidden, VoiceState
+from discord import Guild, Member, Embed, Bot, TextChannel, Forbidden, VoiceState
 from discord.ext.commands import Cog
 from discord.utils import utcnow
 
-from cogs.experience import ExperienceSystem
 from data.config.settings import SETTINGS
 from data.db.memory import database
 from lib.logging.welcome_message import generate_welcome_message
@@ -107,10 +106,6 @@ class Listeners(Cog):
         except AttributeError:
             embed.set_author(name=member, icon_url=member.default_avatar)
         await self.send_audit_log(embed, data, member, cur)
-
-    @Cog.listener()
-    async def on_message(self, message: Message):
-        await ExperienceSystem(self.bot, message).start()
 
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
