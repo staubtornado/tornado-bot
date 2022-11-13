@@ -119,5 +119,4 @@ data/db/database.db
 *.db
 .idea/
 chromedriver.exe
-*.png
 /data/tracebacks/*.txt
