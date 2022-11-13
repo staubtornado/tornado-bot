@@ -41,6 +41,13 @@ class Experience(Cog):
             (message.guild.id, message.author.id)
         )
         cur.execute(
+            """SELECT ExpIsActivated FROM settings WHERE GuildID = ?""",
+            (message.guild.id, )
+        )
+        if not cur.fetchone()[0]:
+            return
+
+        cur.execute(
             """SELECT XP, Level, Messages FROM experience WHERE (GuildID, UserID) = (?, ?)""",
             (message.guild.id, message.author.id)
         )
