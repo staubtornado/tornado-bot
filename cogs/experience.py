@@ -16,7 +16,6 @@ from lib.experience.stats import ExperienceStats
 
 MIN: int = SETTINGS["Cogs"]["Experience"]["MinXP"]
 MAX: int = SETTINGS["Cogs"]["Experience"]["MaxXP"]
-MULTIPLIER: int = SETTINGS["Cogs"]["Experience"]["Multiplication"]
 
 
 class Experience(Cog):
@@ -41,11 +40,14 @@ class Experience(Cog):
             (message.guild.id, message.author.id)
         )
         cur.execute(
-            """SELECT ExpIsActivated FROM settings WHERE GuildID = ?""",
+            """SELECT ExpIsActivated, ExpMultiplication FROM settings WHERE GuildID = ?""",
             (message.guild.id, )
         )
-        if not cur.fetchone()[0]:
+
+        data: tuple[int, int] = cur.fetchone()
+        if not data[0]:
             return
+        multiplier: int = round(data[1])
 
         cur.execute(
             """SELECT XP, Level, Messages FROM experience WHERE (GuildID, UserID) = (?, ?)""",
@@ -58,7 +60,7 @@ class Experience(Cog):
         except BucketFullException:
             return
         else:
-            xp += randint(MIN, MAX) * MULTIPLIER
+            xp += randint(MIN, MAX) * multiplier
             while xp >= level_size(level):
                 level += 1
 

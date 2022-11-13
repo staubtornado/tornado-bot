@@ -19,7 +19,6 @@ SETTINGS: dict[str] = {
     "OwnerGuilds": [795588352387579914],  # List of guild IDs where owner related commands are enabled
     "Cogs": {
         "Experience": {
-            "Multiplication": 1,  # Multiplication factor for experience gained.
             "BaseLevel": 250,  # Required experience to level 1.
             "MinXP": 15,  # minimum experience per message
             "MaxXP": 25,   # maximum experience per message
