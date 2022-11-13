@@ -112,7 +112,7 @@ class YTDLSource(PCMVolumeTransformer):
         highest_match: list[Union[int, float]] = [None, 0]
         for i in range(len(music_results)):
             result: dict = music_results[i]
-            ratio: float = SequenceMatcher(None, search, f"{result['title']} {result['uploader']}").ratio()
+            ratio: float = SequenceMatcher(None, search, f"{result['title']} {result['channel']}").ratio()
 
             if (result.get("view_count") or -1) > highest_views[1]:
                 highest_views[0] = i
