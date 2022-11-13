@@ -122,6 +122,14 @@ class Experience(Cog):
                 "xp": row[1],
                 "level": row[2]
             }))
+
+        if not len(table):
+            response: str = "❌ **Nothing here** yet."
+
+            if ctx.author.guild_permissions.manage_guild:
+                response += "\n❔ **Enable leveling** with **/**`settings experience`."
+            await ctx.respond(response)
+            return
         await ctx.respond(files=await generate_leaderboard_card(result))
 
 
