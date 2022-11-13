@@ -120,3 +120,4 @@ data/db/database.db
 .idea/
 chromedriver.exe
 /data/tracebacks/*.txt
+/data/cache/*
