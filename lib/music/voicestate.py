@@ -218,6 +218,7 @@ class VoiceState:
                     else:
                         print(format_exc())
                         embed.description = f"❌ An **unexpected error** occurred: `{e}`"
+                    self.current = None
                     await self.send(embed=embed)
                     continue
                 self.current = Song(source)
