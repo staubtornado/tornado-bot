@@ -99,7 +99,7 @@ class Settings(Cog):
 
         options = {"enabled": """UPDATE settings SET ExpIsActivated = (?) WHERE GuildID = ?""",
                    "multiplier": """UPDATE settings SET ExpMultiplication = (?) WHERE GuildID = ?"""}
-        values = {"enabled": {"true": 1, "false": 0}}
+        values = {"enabled": {"True": 1, "False": 0}}
 
         try:
             values["multiplier"] = {value: float(value)}
