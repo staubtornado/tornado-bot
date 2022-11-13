@@ -1,213 +1,129 @@
-from asyncio import sleep
-from math import ceil
 from random import randint
 from sqlite3 import Cursor
+from typing import Optional
 
-from discord import slash_command, ApplicationContext, Message, Bot, Embed, Member
+from discord import Bot, Member, Message, slash_command, ApplicationContext
 from discord.ext.commands import Cog
+from pyrate_limiter import Limiter, RequestRate, Duration, BucketFullException
 
 from data.config.settings import SETTINGS
 from data.db.memory import database
-from lib.utils.utils import ordinal, progress_bar
+from lib.experience.gen_leaderboard import generate_leaderboard_card
+from lib.experience.gen_lvl_up_card import generate_lvl_up_card
+from lib.experience.gen_rank_card import generate_rank_card
+from lib.experience.level_size import level_size
+from lib.experience.stats import ExperienceStats
 
-on_cooldown: list = []
-
-
-class ExperienceSystem:
-    def __init__(self, bot: Bot, message: ApplicationContext or Message):
-        self.bot = bot
-        self.message = message
-
-        self.min_xp = SETTINGS["Cogs"]["Experience"]["MinXP"]
-        self.max_xp = SETTINGS["Cogs"]["Experience"]["MaxXP"]
-        self.multiplier = SETTINGS["Cogs"]["Experience"]["Multiplication"]
-        self.cooldown = SETTINGS["Cogs"]["Experience"]["Cooldown"]
-        self.base_level = SETTINGS["Cogs"]["Experience"]["BaseLevel"]
-
-        self.xp = None
-        self.level = None
-        self.messages = None
-
-        self._cur: Cursor = database.cursor()
-        self._valid = False
-
-        try:
-            self._cur.execute(f"""
-                SELECT XP, Level, Messages from experience where (GuildID, UserID) = (?, ?)
-            """, (self.message.guild.id, self.message.author.id))
-        except AttributeError:
-            return
-        self._valid = True
-
-        try:
-            self.xp, self.level, self.messages = self._cur.fetchone()
-        except TypeError:
-            if isinstance(message, Message):
-                self._cur.execute("""INSERT INTO experience (GuildID, UserID) VALUES (?, ?)""",
-                                  (self.message.guild.id, self.message.author.id))
-                self.xp = 0
-                self.level = 0
-                self.messages = 0
-                database.commit()
-
-    def get_xp(self) -> int:
-        return self.xp
-
-    def get_level(self) -> int:
-        return self.level
-
-    def get_messages(self) -> int:
-        return self.messages
-
-    async def start(self) -> bool:
-        if not self._valid:
-            return False
-        if self.message.author.bot or self.message.guild is None:
-            return False
-        await self.add_xp()
-        return True
-
-    async def add_xp(self) -> None:
-        self._cur.execute("""SELECT XP, Level from experience where (GuildID, UserID) = (?, ?)""",
-                          (self.message.guild.id, self.message.author.id))
-
-        self._cur.execute("""UPDATE experience SET Messages = Messages + 1 WHERE (GuildID, UserID) = (?, ?)""",
-                          (self.message.guild.id, self.message.author.id))
-        database.commit()
-
-        if not (self.message.guild.id, self.message.author.id) in on_cooldown:
-            self.xp += round(randint(self.min_xp, self.max_xp) * self.multiplier)
-            await self.check_for_level_up()
-            self._cur.execute("""UPDATE experience SET (XP, Level) = (?, ?) WHERE (GuildID, UserID) = (?, ?)""",
-                              (self.xp, self.level, self.message.guild.id, self.message.author.id))
-
-            database.commit()
-            on_cooldown.append((self.message.guild.id, self.message.author.id))
-            await sleep(self.cooldown)
-            on_cooldown.remove((self.message.guild.id, self.message.author.id))
-
-    def calc_xp(self, level=None) -> int:
-        if level is None:
-            level = self.level
-        return round(self.base_level * 1.1248 ** level)
-
-    def total_xp(self) -> int:
-        xp: int = 0
-
-        for i in range(self.level):
-            xp += self.calc_xp(level=i)
-        return xp + self.xp
-
-    async def check_for_level_up(self) -> None:
-        required: int = self.calc_xp()
-
-        level_up: bool = False
-        while self.xp >= required:
-            self.xp -= required
-            self.level += 1
-            level_up = True
-            required = self.calc_xp()
-        if level_up:
-            embed = Embed(title="Level Up!", description=f"GG, you are now level {self.level} on this server.",
-                          colour=SETTINGS["Colours"]["Default"])
-            embed.add_field(name=f"Progress ({self.xp}XP / {required}XP)",
-                            value=progress_bar(amount=self.xp, total=self.calc_xp()))
-            embed.set_author(name=self.message.author.name, icon_url=self.message.author.avatar.url)
-            await self.message.reply(embed=embed, delete_after=60)
+MIN: int = SETTINGS["Cogs"]["Experience"]["MinXP"]
+MAX: int = SETTINGS["Cogs"]["Experience"]["MaxXP"]
+MULTIPLIER: int = SETTINGS["Cogs"]["Experience"]["Multiplication"]
 
 
 class Experience(Cog):
-    """
-    Gain experience with every message you type and compete with other users.
-    """
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Bot) -> None:
         self.bot = bot
+        self.limiter = Limiter(
+            RequestRate(1, Duration.MINUTE)
+        )
 
-    @slash_command()
-    async def rank(self, ctx: ApplicationContext, user: Member = None):
-        """Information about your rank on this server."""
-        await ctx.defer()
+    @staticmethod
+    def get_stats(member: Member) -> ExperienceStats:
+        ...
 
-        if user is not None:
-            ctx.author = user
-        system: ExperienceSystem = ExperienceSystem(self.bot, ctx)
-
-        embed = Embed(colour=SETTINGS["Colours"]["Default"])
-
-        try:
-            embed.add_field(name="Level", value=f"`{system.get_level()}`")
-            embed.add_field(name="Total XP", value=f"`{system.total_xp()}`")
-            embed.add_field(name="Messages", value=f"`{system.get_messages()}`")
-            embed.add_field(name=f"{system.get_xp()} / {system.calc_xp()} XP",
-                            value=progress_bar(amount=system.xp, total=system.calc_xp()))
-        except TypeError:
-            await ctx.respond("❌ I **do not have** any **information about you or this user**.")
+    @Cog.listener()
+    async def on_message(self, message: Message) -> None:
+        if not message.guild or message.author.bot:
             return
 
+        cur: Cursor = database.cursor()
+        cur.execute(
+            """INSERT OR IGNORE INTO experience (GuildID, UserID) VALUES (?, ?)""",
+            (message.guild.id, message.author.id)
+        )
+        cur.execute(
+            """SELECT XP, Level, Messages FROM experience WHERE (GuildID, UserID) = (?, ?)""",
+            (message.guild.id, message.author.id)
+        )
+        xp, level, messages = cur.fetchone()
+
         try:
-            embed.set_author(name=ctx.author, icon_url=ctx.author.avatar.url)
-        except AttributeError:
-            embed.set_author(name=ctx.author, icon_url=ctx.author.default_avatar.url)
-        await ctx.respond(embed=embed)
+            self.limiter.try_acquire(str((message.guild.id, message.author.id)))
+        except BucketFullException:
+            return
+        else:
+            xp += randint(MIN, MAX) * MULTIPLIER
+            while xp >= level_size(level):
+                level += 1
+
+                stats: ExperienceStats = ExperienceStats({
+                    "xp": xp,
+                    "total": level_size(level),
+                    "level": level,
+                    "member": message.author,
+                    "message_count": messages
+                })
+                await message.reply(file=await generate_lvl_up_card(stats))
+        finally:
+            messages += 1
+            cur.execute(
+                """UPDATE experience SET (XP, Level, Messages) = (?, ?, ?) WHERE (GuildID, UserID) = (?, ?)""",
+                (xp, level, messages, message.guild.id, message.author.id)
+            )
+            database.commit()
 
     @slash_command()
-    async def leaderboard(self, ctx: ApplicationContext, *, page: int = 1):
-        """Leaderboard of the most active users on this server."""
+    async def rank(self, ctx: ApplicationContext, user: Optional[Member] = None) -> None:
+        await ctx.defer()
+
+        target: Member = user or ctx.author
+
+        if target.bot:
+            await ctx.respond("❌ **Bots are not available**.")
+            return
+
+        cur: Cursor = database.cursor()
+        cur.execute(
+            """INSERT OR IGNORE INTO experience (GuildID, UserID) VALUES (?, ?)""",
+            (target.guild.id, target.id)
+        )
+        cur.execute(
+            """SELECT XP, Level, Messages FROM experience WHERE (GuildID, UserID) = (?, ?)""",
+            (target.guild.id, target.id)
+        )
+        xp, level, messages = cur.fetchone()
+
+        stats: ExperienceStats = ExperienceStats({
+            "xp": xp,
+            "total": level_size(level),
+            "level": level,
+            "member": target,
+            "message_count": messages
+        })
+        await ctx.respond(file=await generate_rank_card(stats))
+
+    @slash_command()
+    async def leaderboard(self, ctx: ApplicationContext, page: int = 1) -> None:
         await ctx.defer()
 
         cur: Cursor = database.cursor()
-        cur.execute("""SELECT UserID, Level, XP from experience where GuildID = ?""", [ctx.guild.id])
+        cur.execute(
+            """SELECT UserID, XP, Level FROM experience WHERE GuildID = ?""",
+            (ctx.guild_id, )
+        )
+        table: list[tuple[int, int, int]] = cur.fetchall()
+        table.sort(key=lambda _row: level_size(_row[2]) + _row[1], reverse=True)
 
-        total_xps: list = []
-        data: list = []
-        user_list: list = []
-
-        system: ExperienceSystem = ExperienceSystem(self.bot, ctx)
-        for i, row in enumerate(cur.fetchall()):
-            system.level = row[1]
-            system.xp = row[2]
-            total_xp: int = system.total_xp()
-
-            if total_xp == 0:
-                continue
-            if row[0] == ctx.author.id:
-                ctx.position = i
-
-            total_xps.append(total_xp)
-            total_xps.sort()
-
-            index: int = total_xps.index(total_xp)
-            user_list.insert(index, row[0])
-            data.insert(index, (row[1], row[2]))
-        user_list.reverse()
-        data.reverse()
-
-        items_per_page = SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"]
-        pages: int = ceil(len(user_list) / items_per_page)
-
-        start: int = (page - 1) * items_per_page
-        end: int = start + items_per_page
-
-        if page > pages or page < 1:
-            await ctx.respond(f"❌ **Invalid** page.")
-            return
-
-        def get_author_position() -> str:
-            try:
-                position: int = ctx.position
-            except AttributeError:
-                return ""
-            return f"\n{ctx.author.mention} has the {ordinal(position + 1)} position in the leaderboard."
-
-        embed: Embed = Embed(title="Leaderboard", description="Most active users on this server. Use **/**`rank @user` "
-                                                              f"to get more information.{get_author_position()}",
-                             colour=SETTINGS["Colours"]["Default"])
-        for i, user_id in enumerate(user_list[start:end], start=start):
-            embed.add_field(name=f"{i + 1}. {self.bot.get_user(user_id)}",
-                            value=f"Level: `{data[i][0]}` XP: `{data[i][1]}`")
-        embed.set_footer(text=f"Page {page}/{pages}")
-        await ctx.respond(embed=embed)
+        result: list[ExperienceStats] = []
+        start: int = (page - 1) * SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"]
+        end: int = start + SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"]
+        for row in table[start:end]:
+            result.append(ExperienceStats({
+                "member": ctx.guild.get_member(row[0]),
+                "xp": row[1],
+                "level": row[2]
+            }))
+        await ctx.respond(files=await generate_leaderboard_card(result))
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
     bot.add_cog(Experience(bot))
