@@ -5,7 +5,7 @@ from PIL import Image
 from discord import File
 from easy_pil import Editor, Font, Text
 
-from lib.experience.level_size import level_size
+from lib.experience.calculation import level_size, total_xp
 from lib.experience.stats import ExperienceStats
 from lib.utils.utils import shortened
 
@@ -18,7 +18,7 @@ def _get_texts(stats: ExperienceStats) -> list[Text]:
             font=Font(path="./assets/font.ttf", size=27),
         ),
         Text(
-            text=str(shortened((level_size(stats.level - 1) if stats.level > 0 else 0) + stats.xp)),
+            text=str(shortened(stats.total)),
             color=(236, 246, 19),
             font=Font(path="./assets/font.ttf", size=27),
         ),

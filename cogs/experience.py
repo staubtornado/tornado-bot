@@ -11,7 +11,7 @@ from data.db.memory import database
 from lib.experience.gen_leaderboard import generate_leaderboard_card
 from lib.experience.gen_lvl_up_card import generate_lvl_up_card
 from lib.experience.gen_rank_card import generate_rank_card
-from lib.experience.level_size import level_size
+from lib.experience.calculation import level_size, total_xp
 from lib.experience.stats import ExperienceStats
 
 MIN: int = SETTINGS["Cogs"]["Experience"]["MinXP"]
@@ -62,16 +62,17 @@ class Experience(Cog):
         else:
             xp += randint(MIN, MAX) * multiplier
             while xp >= level_size(level):
+                xp -= level_size(level)
                 level += 1
 
-                stats: ExperienceStats = ExperienceStats({
-                    "xp": xp,
-                    "total": level_size(level),
-                    "level": level,
-                    "member": message.author,
-                    "message_count": messages
-                })
                 if not xp >= level_size(level):
+                    stats: ExperienceStats = ExperienceStats({
+                        "xp": xp,
+                        "total": level_size(level),
+                        "level": level,
+                        "member": message.author,
+                        "message_count": messages
+                    })
                     await message.reply(file=await generate_lvl_up_card(stats), delete_after=60)
         finally:
             messages += 1
@@ -104,7 +105,7 @@ class Experience(Cog):
 
         stats: ExperienceStats = ExperienceStats({
             "xp": xp,
-            "total": level_size(level),
+            "total": total_xp(xp, level),
             "level": level,
             "member": target,
             "message_count": messages
@@ -139,7 +140,8 @@ class Experience(Cog):
             result.append(ExperienceStats({
                 "member": member,
                 "xp": row[1],
-                "level": row[2]
+                "level": row[2],
+                "total": total_xp(row[1], row[2])
             }))
 
         if not len(table):

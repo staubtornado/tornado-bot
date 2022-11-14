@@ -5,7 +5,7 @@ from PIL import Image
 from discord import File
 from easy_pil import Editor, Font, Text
 
-from lib.experience.level_size import level_size
+from lib.experience.calculation import total_xp as collected_xp, level_size  # WHY PYTHON?!?!
 from lib.experience.stats import ExperienceStats
 from lib.utils.utils import shortened
 
@@ -34,7 +34,7 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
             font=Font(path="./assets/font.ttf", size=30)
         ),
         Text(
-            text=str(shortened((level_size(stats.level - 1) if stats.level > 0 else 0) + stats.xp)),
+            text=str(shortened(collected_xp(stats.xp, stats.level))),
             font=Font(path="./assets/font.ttf", size=30),
             color=(255, 122, 0)
         )
@@ -83,7 +83,7 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
 
     editor.text(
         position=(870, 178),
-        text=f"{stats.xp} / {stats.total} XP",
+        text=f"{stats.xp} / {level_size(stats.level)} XP",
         align="right",
         color=(255, 255, 255),
         font=Font(path="./assets/font.ttf", size=22)
@@ -102,7 +102,7 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
         position=(490, 200),
         max_width=bar_width,
         height=bar_height,
-        percentage=round((stats.xp / stats.total)*100),
+        percentage=round((stats.xp / level_size(stats.level))*100),
         radius=20,
         color=(81, 196, 108)
     )
