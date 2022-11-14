@@ -68,7 +68,7 @@ class Experience(Cog):
                 if not xp >= level_size(level):
                     stats: ExperienceStats = ExperienceStats({
                         "xp": xp,
-                        "total": level_size(level),
+                        "total": total_xp(xp, level),
                         "level": level,
                         "member": message.author,
                         "message_count": messages
@@ -122,7 +122,7 @@ class Experience(Cog):
             (ctx.guild_id, )
         )
         table: list[tuple[int, int, int]] = cur.fetchall()
-        table.sort(key=lambda _row: level_size(_row[2]) + _row[1], reverse=True)
+        table.sort(key=lambda _row: total_xp(_row[1], _row[2]), reverse=True)
 
         result: list[ExperienceStats] = []
         start: int = (page - 1) * SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"]
