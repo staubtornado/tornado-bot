@@ -127,8 +127,17 @@ class Experience(Cog):
         start: int = (page - 1) * SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"]
         end: int = start + SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"]
         for row in table[start:end]:
+            member: Optional[Member] = ctx.guild.get_member(row[0])
+
+            if member is None or member.bot:
+                cur.execute(
+                    """DELETE FROM experience WHERE (GuildID, UserID) = (?, ?)""",
+                    (ctx.guild_id, row[0])
+                )
+                continue
+
             result.append(ExperienceStats({
-                "member": ctx.guild.get_member(row[0]),
+                "member": member,
                 "xp": row[1],
                 "level": row[2]
             }))
