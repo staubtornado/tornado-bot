@@ -19,7 +19,7 @@ def _get_texts(stats: ExperienceStats) -> list[Text]:
         ),
         Text(
             text=str(shortened((level_size(stats.level - 1) if stats.level > 0 else 0) + stats.xp)),
-            color=(233, 11, 255),
+            color=(236, 246, 19),
             font=Font(path="./assets/font.ttf", size=27),
         ),
         Text(
@@ -29,7 +29,7 @@ def _get_texts(stats: ExperienceStats) -> list[Text]:
         ),
         Text(
             text=str(stats.level),
-            color=(233, 11, 255),
+            color=(236, 246, 19),
             font=Font(path="./assets/font.ttf", size=27),
         )
     ]
@@ -37,19 +37,11 @@ def _get_texts(stats: ExperienceStats) -> list[Text]:
 
 async def generate_leaderboard_card(stats: list[ExperienceStats]) -> list[File]:
     editor: Editor = Editor(Image.open("./assets/leaderboard.png"))
-
-    try:
-        guild_icon: bytes = await stats[0].member.guild.icon.read()
-    except AttributeError:
-        pass
-    else:
-        icon: Editor = Editor(Image.open(BytesIO(guild_icon)).resize((44, 44))).circle_image()
-        editor.paste(icon, (11, 60))
     editor.text(
         text=stats[0].member.guild.name,
-        position=(70, 70),
+        position=(42, 90),
         color=(255, 255, 255),
-        font=Font(path="./assets/font.ttf", size=30)
+        font=Font.poppins(variant="italic", size=25)
     )
 
     items_per_column: int = 7
