@@ -5,7 +5,6 @@ from PIL import Image
 from discord import File
 from easy_pil import Editor, Font, Text
 
-from lib.experience.calculation import level_size, total_xp
 from lib.experience.stats import ExperienceStats
 from lib.utils.utils import shortened
 

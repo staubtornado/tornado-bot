@@ -34,7 +34,7 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
             font=Font(path="./assets/font.ttf", size=30)
         ),
         Text(
-            text=str(shortened(collected_xp(stats.xp, stats.level))),
+            text=str(shortened(stats.total)),
             font=Font(path="./assets/font.ttf", size=30),
             color=(255, 122, 0)
         )
