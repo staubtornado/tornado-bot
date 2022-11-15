@@ -26,13 +26,13 @@ async def generate_lvl_up_card(stats: ExperienceStats) -> File:
 
     texts: list[Text] = [
         Text(
-            text="you are now level ",
+            text="you are now level",
             font=Font(path="./assets/font.ttf", size=35),
             color=(255, 255, 255)
         ),
         Text(
             text=str(stats.level),
-            font=Font(path="./assets/BACKTO1982.ttf", size=35),
+            font=Font(path="./assets/font.ttf", size=35),
             color=(0, 255, 255)
         ),
         Text(

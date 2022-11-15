@@ -38,7 +38,7 @@ async def generate_leaderboard_card(stats: list[ExperienceStats]) -> list[File]:
     editor: Editor = Editor(Image.open("./assets/leaderboard.png"))
     editor.text(
         text=stats[0].member.guild.name,
-        position=(42, 90),
+        position=(40, 75),
         color=(255, 255, 255),
         font=Font.poppins(variant="italic", size=25)
     )
