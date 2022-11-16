@@ -25,10 +25,6 @@ class Experience(Cog):
             RequestRate(1, Duration.MINUTE)
         )
 
-    @staticmethod
-    def get_stats(member: Member) -> ExperienceStats:
-        ...
-
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
         if not message.guild or message.author.bot:
@@ -87,12 +83,19 @@ class Experience(Cog):
         await ctx.defer()
 
         target: Member = user or ctx.author
-
         if target.bot:
-            await ctx.respond("❌ **Bots are not available**.")
+            await ctx.respond("❌ This **user is not available**.")
             return
 
         cur: Cursor = database.cursor()
+        cur.execute(
+            """SELECT ExpIsActivated FROM settings WHERE GuildID = ?""",
+            (ctx.guild_id, )
+        )
+        if not cur.fetchone()[0]:
+            await ctx.respond("❌ Level system is **not yet enabled on this server**.")
+            return
+
         cur.execute(
             """INSERT OR IGNORE INTO experience (GuildID, UserID) VALUES (?, ?)""",
             (target.guild.id, target.id)
@@ -117,6 +120,14 @@ class Experience(Cog):
         await ctx.defer()
 
         cur: Cursor = database.cursor()
+        cur.execute(
+            """SELECT ExpIsActivated FROM settings WHERE GuildID = ?""",
+            (ctx.guild_id, )
+        )
+        if not cur.fetchone()[0]:
+            await ctx.respond("❌ Level system is **not yet enabled on this server**.")
+            return
+
         cur.execute(
             """SELECT UserID, XP, Level FROM experience WHERE GuildID = ?""",
             (ctx.guild_id, )
@@ -144,12 +155,8 @@ class Experience(Cog):
                 "total": total_xp(row[1], row[2])
             }))
 
-        if not len(table):
-            response: str = "❌ **Nothing here** yet."
-
-            if ctx.author.guild_permissions.manage_guild:
-                response += "\n❔ **Enable leveling** with **/**`settings experience`."
-            await ctx.respond(response)
+        if not len(result):
+            await ctx.respond("❌ **Nothing here** yet.")
             return
         await ctx.respond(files=await generate_leaderboard_card(result))
 

@@ -38,7 +38,7 @@ async def generate_leaderboard_card(stats: list[ExperienceStats]) -> list[File]:
     editor: Editor = Editor(Image.open("./assets/leaderboard.png"))
     editor.text(
         text=stats[0].member.guild.name,
-        position=(40, 75),
+        position=(25, 75),
         color=(255, 255, 255),
         font=Font.poppins(variant="italic", size=25)
     )
@@ -98,13 +98,11 @@ async def generate_leaderboard_card(stats: list[ExperienceStats]) -> list[File]:
         )
         offset += 50
 
-    path: str = f"./data/cache/leaderboard{stats[0].member.guild.id}_{stats[0].member.id}.png"
+    path: str = f"./data/cache/leaderboard{stats[0].member.guild.id}.png"
     editor.save(path, format="PNG")
     with open(path, "rb") as f:
-        path = path.replace("./data/cache/", "")
-
         f: Any = f
-        picture = File(f, filename=path)
+        picture = File(f, filename=path.replace("./data/cache/", ""))
 
     if not len(stats) > 7:
         return [picture]
@@ -112,8 +110,6 @@ async def generate_leaderboard_card(stats: list[ExperienceStats]) -> list[File]:
     path = path.replace(".png", "2.png")
     editor2.save(path, format="PNG")
     with open(path, "rb") as f:
-        path = path.replace("./data/cache/", "")
-
         f: Any = f
-        picture2 = File(f, filename=path)
+        picture2 = File(f, filename=path.replace("./data/cache/", ""))
     return [picture, picture2]

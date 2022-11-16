@@ -24,7 +24,7 @@ SETTINGS: dict[str] = {
             "MaxXP": 25,   # maximum experience per message
             "Cooldown": 60,  # seconds
             "Leaderboard": {
-                "ItemsPerPage": 20  # Number of members to show on each page
+                "ItemsPerPage": 18  # Number of members to show on each page
             }
         },
         "Music": {
