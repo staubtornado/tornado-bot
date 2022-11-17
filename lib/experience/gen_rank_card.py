@@ -27,12 +27,24 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
         font=Font(path="./assets/font.ttf", size=28)
     )
 
-    editor.text(
-        text=f"#{stats.rank if stats.rank else '?'}",
-        font=Font(path="./assets/font.ttf", size=38),
-        color=(255, 122, 0),
-        position=(925, 13),
-        align="right"
+    rank: list[Text] = [
+        Text(
+            text="#",
+            color=(255, 255, 255),
+            font=Font(path="./assets/font.ttf", size=38)
+        ),
+        Text(
+            text=str(stats.rank if stats.rank else '?'),
+            font=Font(path="./assets/font.ttf", size=38),
+            color=(255, 122, 0)
+        )
+    ]
+
+    editor.multi_text(
+        texts=rank,
+        position=(925, 28),
+        align="right",
+        space_separated=False
     )
 
     center_information: list[Text] = [
