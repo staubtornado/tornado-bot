@@ -97,3 +97,15 @@ def all_equal(iterator) -> bool:
     except StopIteration:
         return True
     return all(first == x for x in iterator)
+
+
+def binary_search(arr: list[int], s: int, r: int, x: int) -> int:
+    if r >= s:
+        mid = s + (r - s) // 2
+
+        if arr[mid] == x:
+            return mid
+        if arr[mid] > x:
+            return binary_search(arr, s, mid - 1, x)
+        return binary_search(arr, mid + 1, r, x)
+    return -1

@@ -9,6 +9,7 @@ class ExperienceStats:
     level: int
     message_amount: Optional[int]
     member: Member
+    rank: Optional[int]
 
     def __init__(self, data: dict[str, Union[int, Member]]) -> None:
         self.xp = data.get("xp")
@@ -16,3 +17,4 @@ class ExperienceStats:
         self.level = data.get("level")
         self.message_amount = data.get("message_count")
         self.member = data.get("member")
+        self.rank = data.get("rank")

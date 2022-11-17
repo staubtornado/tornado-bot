@@ -5,7 +5,7 @@ from PIL import Image
 from discord import File
 from easy_pil import Editor, Font, Text
 
-from lib.experience.calculation import total_xp as collected_xp, level_size  # WHY PYTHON?!?!
+from lib.experience.calculation import level_size  # WHY PYTHON?!?!
 from lib.experience.stats import ExperienceStats
 from lib.utils.utils import shortened
 
@@ -27,25 +27,15 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
         font=Font(path="./assets/font.ttf", size=28)
     )
 
-    total_xp: list[Text] = [
-        Text(
-            text="Total XP",
-            color=(255, 255, 255),
-            font=Font(path="./assets/font.ttf", size=30)
-        ),
-        Text(
-            text=str(shortened(stats.total)),
-            font=Font(path="./assets/font.ttf", size=30),
-            color=(255, 122, 0)
-        )
-    ]
-    editor.multi_text(
-        texts=total_xp,
-        position=(915, 40),
+    editor.text(
+        text=f"#{stats.rank if stats.rank else '?'}",
+        font=Font(path="./assets/font.ttf", size=38),
+        color=(255, 122, 0),
+        position=(925, 13),
         align="right"
     )
 
-    message_amount: list[Text] = [
+    center_information: list[Text] = [
         Text(
             text="Messages",
             color=(255, 255, 255),
@@ -55,17 +45,9 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
             text=str(shortened(stats.message_amount)),
             font=Font(path="./assets/font.ttf", size=30),
             color=(255, 122, 0)
-        )
-    ]
-    editor.multi_text(
-        texts=message_amount,
-        position=(475, 120),
-        align="left"
-    )
-
-    level: list[Text] = [
+        ),
         Text(
-            text="Level",
+            text="      Level",
             color=(255, 255, 255),
             font=Font(path="./assets/font.ttf", size=30)
         ),
@@ -74,6 +56,15 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
             font=Font(path="./assets/font.ttf", size=30),
             color=(255, 122, 0)
         )
+    ]
+    editor.multi_text(
+        texts=center_information,
+        position=(670, 105),
+        align="center"
+    )
+
+    level: list[Text] = [
+
     ]
     editor.multi_text(
         texts=level,
@@ -111,8 +102,6 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
     editor.save(path, format="PNG")
 
     with open(path, "rb") as f:
-        path = path.replace("./data/cache/", "")
-
         f: Any = f
-        picture = File(f, filename=path)
+        picture = File(f, filename=path.replace("./data/cache/", ""))
     return picture
