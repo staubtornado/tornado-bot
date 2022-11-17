@@ -62,15 +62,8 @@ async def generate_leaderboard_card(stats: list[ExperienceStats]) -> list[File]:
 
         editor.multi_text(
             texts=_get_texts(user_stats),
-            position=(875, 225 + offset),
+            position=(875, 236 + offset),
             align="right"
-        )
-
-        editor.text(
-            text=f"{i}. {user_stats.member}",
-            color=(255, 255, 255),
-            font=Font(path="./assets/font.ttf", size=27),
-            position=(70, 225 + offset)
         )
         offset += 50
 
@@ -86,7 +79,7 @@ async def generate_leaderboard_card(stats: list[ExperienceStats]) -> list[File]:
 
         editor2.multi_text(
             texts=_get_texts(user_stats),
-            position=(875, 20 + offset),
+            position=(875, 31 + offset),
             align="right"
         )
 
