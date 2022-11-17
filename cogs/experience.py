@@ -97,14 +97,13 @@ class Experience(Cog):
             return
 
         cur.execute(
-            """INSERT OR IGNORE INTO experience (GuildID, UserID) VALUES (?, ?)""",
-            (target.guild.id, target.id)
-        )
-        cur.execute(
             """SELECT XP, Level, Messages FROM experience WHERE (GuildID, UserID) = (?, ?)""",
             (target.guild.id, target.id)
         )
-        xp, level, messages = cur.fetchone()
+        data: Optional[tuple[int, int, int]] = cur.fetchone()
+        if data is None:
+            data = 0, 0, 0
+        xp, level, messages = data
 
         stats: ExperienceStats = ExperienceStats({
             "xp": xp,
