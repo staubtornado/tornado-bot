@@ -6,7 +6,7 @@ from typing import Optional, Union
 
 from asyncspotify import FullTrack, SimpleTrack
 from discord import Bot, ApplicationContext, slash_command, VoiceChannel, StageChannel, ClientException, \
-    VoiceProtocol, Option, AutocompleteContext, Embed, ButtonStyle, Interaction, WebhookMessage, Forbidden
+    VoiceProtocol, Option, AutocompleteContext, Embed, ButtonStyle, Interaction, WebhookMessage, Forbidden, Member
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 from psutil import virtual_memory
@@ -77,6 +77,16 @@ class Music(Cog):
         cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id,))
         ctx.voice_state = self.get_voice_state(ctx)
         ctx.playnext = False
+
+    @Cog.listener()
+    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
+        if not member.id == self.bot.user.id:
+            return
+        if before.channel == after.channel:
+            return
+        if before.channel is None:
+            return
+        self.voice_states.get(member.guild.id).skip()  # Needed to prevent song hang-ups when bot changes voice.
 
     @slash_command()
     async def join(self, ctx: MusicApplicationContext, channel: Optional[VoiceChannel] = None) -> None:
