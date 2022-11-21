@@ -6,7 +6,8 @@ from typing import Optional, Union
 
 from asyncspotify import FullTrack, SimpleTrack
 from discord import Bot, ApplicationContext, slash_command, VoiceChannel, StageChannel, ClientException, \
-    VoiceProtocol, Option, AutocompleteContext, Embed, ButtonStyle, Interaction, WebhookMessage, Forbidden, Member
+    VoiceProtocol, Option, AutocompleteContext, Embed, ButtonStyle, Interaction, WebhookMessage, Forbidden, Member, \
+    VoiceClient
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 from psutil import virtual_memory
@@ -78,7 +79,7 @@ class Music(Cog):
         ctx.voice_state = self.get_voice_state(ctx)
         ctx.playnext = False
 
-    @Cog.listener()
+    @Cog.listener()  # Needed to prevent song hang-ups when bot changes voice.
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
         if not member.id == self.bot.user.id:
             return
@@ -86,7 +87,10 @@ class Music(Cog):
             return
         if before.channel is None:
             return
-        self.voice_states.get(member.guild.id).skip()  # Needed to prevent song hang-ups when bot changes voice.
+
+        voice: VoiceClient = self.voice_states.get(member.guild.id).voice
+        voice.pause()
+        voice.resume()
 
     @slash_command()
     async def join(self, ctx: MusicApplicationContext, channel: Optional[VoiceChannel] = None) -> None:
