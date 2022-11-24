@@ -9,8 +9,8 @@ tqdm~=4.64.0
 python-dotenv==0.21.0
 asyncspotify~=0.12.1
 aiohttp==3.8.3
-py-cord==2.2.2
-pyrate-limiter==2.8.3
+py-cord==2.3.0
+pyrate-limiter==2.8.4
 yt-dlp==2022.11.11
-numpy~=1.23.3
-easy-pil
+numpy==1.23.5
+easy-pil==0.1.9
