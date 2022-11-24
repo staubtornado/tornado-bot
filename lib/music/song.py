@@ -1,12 +1,12 @@
 from enum import IntEnum
 from random import random
-from typing import Union, Any, Optional
+from typing import Union, Any
 
 from discord import Member, Embed
 
+from lib.music.prepared_source import PreparedSource
 from lib.music.queue import SongQueue
 from lib.music.ytdl import YTDLSource
-from lib.music.prepared_source import PreparedSource
 from lib.utils.utils import time_to_string, shortened
 
 
@@ -71,10 +71,8 @@ class Song:
         if size == EmbedSize.SMALL:
             return self._add_advertisement(embed)
 
-        dislikes: Optional[int] = self.source.dislikes
         embed.add_field(name="Views", value=shortened(self.source.views))
-        embed.add_field(name="Likes / Dislikes",
-                        value=f"{shortened(self.source.likes)} **/** {shortened(dislikes) if dislikes else 'Error'}")
+        embed.add_field(name="Likes", value=shortened(self.source.likes))
         embed.add_field(name="Uploaded", value=f"<t:{str(self.source.upload_date.timestamp())[:-2]}:R>")
 
         if size == EmbedSize.NO_QUEUE:

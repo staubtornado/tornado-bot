@@ -3,12 +3,9 @@ from datetime import datetime
 from difflib import SequenceMatcher
 from functools import partial as functools_partial, partial
 from itertools import islice
-from json import loads
 from re import sub
-from typing import Union, Any, Optional
-from urllib.parse import urlparse
+from typing import Union, Any
 
-from aiohttp import ClientSession, ClientTimeout
 from discord import PCMVolumeTransformer, Member, TextChannel, FFmpegPCMAudio, ApplicationContext
 from yt_dlp import YoutubeDL
 
@@ -55,7 +52,6 @@ class YTDLSource(PCMVolumeTransformer):
     url: str
     views: int
     likes: int
-    dislikes: Optional[int]
     stream_url: str
 
     def __init__(self, ctx: ApplicationContext, source: FFmpegPCMAudio, *, data: dict, volume: float = 0.5):
@@ -80,7 +76,6 @@ class YTDLSource(PCMVolumeTransformer):
             int(data.get("upload_date")[4:6]),
             int(data.get("upload_date")[6:])
         )
-        self.dislikes = data.get("dislikes")
         self.elapsed = 0
 
     def __str__(self):
@@ -181,11 +176,6 @@ class YTDLSource(PCMVolumeTransformer):
         if int(info["duration"]) > SETTINGS["Cogs"]["Music"]["MaxDuration"]:
             duration: str = time_to_string(SETTINGS['Cogs']['Music']['MaxDuration'])
             raise YTDLError(f"❌ Songs cannot be longer than **{duration}**.")
-
-        if urlparse(info.get(webpage_url)).netloc == "youtube.com":
-            async with ClientSession(timeout=ClientTimeout(total=3)) as session:
-                async with session.get(f"https://returnyoutubedislikeapi.com/votes?videoId={info['id']}") as resp:
-                    info["dislikes"] = dict(loads(await resp.text()))["dislikes"]
         return cls(ctx, FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
     @classmethod
