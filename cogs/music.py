@@ -85,7 +85,7 @@ class Music(Cog):
             return
         if before.channel == after.channel:
             return
-        if before.channel is None:
+        if not all((before.channel, after.channel)):
             return
 
         voice: VoiceClient = self.voice_states.get(member.guild.id).voice
