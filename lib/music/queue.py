@@ -31,6 +31,9 @@ class SongQueue(Queue):
     def insert(self, index: int, item) -> None:
         self._queue.insert(index, item)
 
+    def __setitem__(self, index: int, item) -> None:
+        self._queue[index] = item
+
     def remove(self, index: int) -> None:
         del self._queue[index]
 
