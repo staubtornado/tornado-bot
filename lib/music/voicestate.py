@@ -36,6 +36,7 @@ class VoiceState:
     history: list[str]
     live: bool
     position: int
+    exception: Optional[Exception]
     _loop: Loop
 
     session: dict[int, tuple[str, bool]]
@@ -63,6 +64,7 @@ class VoiceState:
         self.history = []
         self.live = False
         self.position = 0
+        self.exception = None
         self._loop = Loop.NONE
 
         self.session: dict[int, tuple[str, bool]] = {}
@@ -208,17 +210,21 @@ class VoiceState:
 
             if isinstance(self.current.source, PreparedSource):  # Check if processing has to be done
                 try:
+                    if self.exception:
+                        raise self.exception
+
                     source: YTDLSource = await YTDLSource.create_source(
                         self.current.source.ctx, self.current.source.search, loop=self.bot.loop
                     )
                 except Exception as e:
-                    embed: Embed = Embed(color=0xFF0000).set_author(name="Error")
+                    embed: Embed = Embed(title="Error", color=0xFF0000)
                     if isinstance(e, ValueError) or isinstance(e, YTDLError):
                         embed.description = str(e)
                     else:
                         print(format_exc())
                         embed.description = f"❌ An **unexpected error** occurred: `{e}`"
                     self.current = None
+                    self.exception = None
                     await self.send(embed=embed)
                     continue
                 self.current = Song(source)
@@ -236,6 +242,16 @@ class VoiceState:
                     del self.history[-1]
 
                 self.voice.play(self.current.source, after=self.prepare_next_song)
+
+            if len(self.queue) and isinstance(self.queue[0].source, PreparedSource):
+                try:
+                    self.queue[0] = Song(await YTDLSource.create_source(
+                        self.queue[0].source.ctx,
+                        self.queue[0].source.search,
+                        loop=self.bot.loop
+                    ))
+                except Exception as e:
+                    self.exception = e
             await self._waiter.wait()
 
     def prepare_next_song(self, error=None) -> None:
