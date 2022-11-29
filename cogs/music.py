@@ -417,7 +417,7 @@ class Music(Cog):
             return
 
         embed: Embed = ctx.voice_state.current.create_embed(
-            EmbedSize(ctx.voice_state.embed_size), queue=ctx.voice_state.queue
+            EmbedSize(ctx.voice_state.embed_size), queue=ctx.voice_state.queue, loop=ctx.voice_state.loop
         )
 
         duration: int = int(ctx.voice_state.current.source.duration)

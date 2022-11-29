@@ -231,7 +231,7 @@ class VoiceState:
 
             await self.send(embed=self.current.create_embed(
                 (EmbedSize.SMALL, EmbedSize.NO_QUEUE, EmbedSize.DEFAULT)[self.embed_size],
-                queue=self.queue),
+                queue=self.queue, loop=self.loop),
                 delete_after=self.current.source.duration if self.update_embed else None
             )
             self.position = int(self.voice.timestamp / 1000 * 0.02)

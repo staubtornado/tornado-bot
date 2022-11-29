@@ -55,7 +55,7 @@ class Song:
             }
         )
 
-    def create_embed(self, size: EmbedSize, *, queue: SongQueue) -> Embed:
+    def create_embed(self, size: EmbedSize, *, queue: SongQueue, loop: int) -> Embed:
         """Song embed containing all important information related to the song."""
 
         description: str = (f"[Video]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) "
@@ -71,8 +71,12 @@ class Song:
         if size == EmbedSize.SMALL:
             return self._add_advertisement(embed)
 
-        embed.add_field(name="Views", value=shortened(self.source.views))
-        embed.add_field(name="Likes", value=shortened(self.source.likes))
+        stats_value: str = (
+            f"{shortened(self.source.views) if self.source.views is not None else 'Error'} **/** "
+            f"{shortened(self.source.likes) if self.source.likes is not None else 'Error'}"
+        )
+        embed.add_field(name="Views / Likes", value=stats_value)
+        embed.add_field(name="Loop", value={0: "None", 1: "Song", 2: "Queue"}.get(loop))
         embed.add_field(name="Uploaded", value=f"<t:{str(self.source.upload_date.timestamp())[:-2]}:R>")
 
         if size == EmbedSize.NO_QUEUE:
