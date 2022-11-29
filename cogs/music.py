@@ -81,11 +81,15 @@ class Music(Cog):
 
     @Cog.listener()  # Needed to prevent song hang-ups when bot changes voice.
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
-        if not member.id == self.bot.user.id:
+        if not member.id == self.bot.user.id or before.channel == after.channel:
             return
-        if before.channel == after.channel:
+        if not before.channel:
             return
-        if not all((before.channel, after.channel)):
+        voice_state: VoiceState = self.voice_states.get(member.guild.id)
+
+        if not after.channel:
+            if voice_state is not None and voice_state.is_valid:
+                await voice_state.stop()
             return
 
         voice: VoiceClient = self.voice_states.get(member.guild.id).voice
