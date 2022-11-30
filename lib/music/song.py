@@ -76,7 +76,7 @@ class Song:
             f"{shortened(self.source.likes) if self.source.likes is not None else 'Error'}"
         )
         embed.add_field(name="Views / Likes", value=stats_value)
-        embed.add_field(name="Loop", value={0: "None", 1: "Song", 2: "Queue"}.get(loop))
+        embed.add_field(name="Loop", value={0: "Disabled", 1: "Song", 2: "Queue"}.get(loop))
         embed.add_field(name="Uploaded", value=f"<t:{str(self.source.upload_date.timestamp())[:-2]}:R>")
 
         if size == EmbedSize.NO_QUEUE:
