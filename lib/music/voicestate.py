@@ -235,13 +235,13 @@ class VoiceState:
                     del self.history[-1]
 
                 self.voice.play(self.current.source, after=self.prepare_next_song)
+            self.position = int(self.voice.timestamp / 1000 * 0.02)
 
             await self.send(embed=self.current.create_embed(
                 (EmbedSize.SMALL, EmbedSize.NO_QUEUE, EmbedSize.DEFAULT)[self.embed_size],
                 queue=self.queue, loop=self.loop),
                 delete_after=self.current.source.duration if self.update_embed else None
             )
-            self.position = int(self.voice.timestamp / 1000 * 0.02)
 
             if len(self.queue) and isinstance(self.queue[0].source, PreparedSource):
                 try:
