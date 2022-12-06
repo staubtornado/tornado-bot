@@ -109,3 +109,10 @@ def binary_search(arr: list[int], s: int, r: int, x: int) -> int:
             return binary_search(arr, s, mid - 1, x)
         return binary_search(arr, mid + 1, r, x)
     return -1
+
+
+def linear_search(arr: list[int], x: int) -> int:
+    for i, e in enumerate(arr):
+        if e == x:
+            return i
+    return -1
