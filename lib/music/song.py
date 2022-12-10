@@ -17,6 +17,8 @@ class EmbedSize(IntEnum):
 
 
 class Song:
+    __slots__ = ("source", "requester")
+
     source: Union[YTDLSource, PreparedSource]
     requester: Union[Member, Any]  # Will always be Member
 
@@ -62,7 +64,7 @@ class Song:
                             f"**|** {time_to_string(self.source.duration)} **|** {self.requester.mention}")
 
         embed: Embed = Embed(
-            title=self.source.title,
+            title=self.source.title_embed,
             description=description,
             color=0xFF0000
         )

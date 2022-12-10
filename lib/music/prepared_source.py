@@ -4,8 +4,12 @@ from typing import Union, Any
 from asyncspotify import FullTrack, SimpleTrack
 from discord import Member, ApplicationContext, TextChannel
 
+from lib.utils.utils import truncate
+
 
 class PreparedSource:
+    __slots__ = ("ctx", "requester", "channel", "name", "artists", "duration", "url", "_v_url")
+
     ctx: ApplicationContext
     requester: Union[Member, Any]  # Will always be Member
     channel: Union[TextChannel, Any]  # Will always be TextChannel
@@ -40,4 +44,4 @@ class PreparedSource:
         return self._v_url or f"{self.name} " + sub(r"[\[\]]", "", f"{[artist for artist in self.artists]}")
 
     def __str__(self) -> str:
-        return f"{self.name} by {self.artists[0]}"[:73]
+        return truncate(f"{self.name} by {self.artists[0]}", 73)

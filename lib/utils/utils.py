@@ -21,6 +21,10 @@ def shortened(n: Union[int, float], precision: int = 2) -> str:
     return millify(n, precision=precision, drop_nulls=True)
 
 
+def truncate(string: str, limit: int, end: str = "...") -> str:
+    return string[:limit] + end if len(string) > limit else string
+
+
 def extract_int(string: str) -> list[int]:
     return [int(s) for s in string.split() if s.isdigit()]
 
