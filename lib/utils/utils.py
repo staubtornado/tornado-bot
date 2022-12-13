@@ -21,6 +21,10 @@ def shortened(n: Union[int, float], precision: int = 2) -> str:
     return millify(n, precision=precision, drop_nulls=True)
 
 
+def truncate(string: str, limit: int, end: str = "...") -> str:
+    return string[:limit] + end if len(string) > limit else string
+
+
 def extract_int(string: str) -> list[int]:
     return [int(s) for s in string.split() if s.isdigit()]
 
@@ -108,4 +112,11 @@ def binary_search(arr: list[int], s: int, r: int, x: int) -> int:
         if arr[mid] > x:
             return binary_search(arr, s, mid - 1, x)
         return binary_search(arr, mid + 1, r, x)
+    return -1
+
+
+def linear_search(arr: list[int], x: int) -> int:
+    for i, e in enumerate(arr):
+        if e == x:
+            return i
     return -1

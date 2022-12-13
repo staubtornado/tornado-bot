@@ -17,6 +17,8 @@ class EmbedSize(IntEnum):
 
 
 class Song:
+    __slots__ = ("source", "requester")
+
     source: Union[YTDLSource, PreparedSource]
     requester: Union[Member, Any]  # Will always be Member
 
@@ -62,7 +64,7 @@ class Song:
                             f"**|** {time_to_string(self.source.duration)} **|** {self.requester.mention}")
 
         embed: Embed = Embed(
-            title=self.source.title,
+            title=self.source.title_embed,
             description=description,
             color=0xFF0000
         )
@@ -76,7 +78,7 @@ class Song:
             f"{shortened(self.source.likes) if self.source.likes is not None else 'Error'}"
         )
         embed.add_field(name="Views / Likes", value=stats_value)
-        embed.add_field(name="Loop", value={0: "None", 1: "Song", 2: "Queue"}.get(loop))
+        embed.add_field(name="Loop", value={0: "Disabled", 1: "Song", 2: "Queue"}.get(loop))
         embed.add_field(name="Uploaded", value=f"<t:{str(self.source.upload_date.timestamp())[:-2]}:R>")
 
         if size == EmbedSize.NO_QUEUE:

@@ -11,7 +11,7 @@ from yt_dlp import YoutubeDL
 
 from data.config.settings import SETTINGS
 from lib.music.exceptions import YTDLError
-from lib.utils.utils import time_to_string, all_equal, url_is_valid
+from lib.utils.utils import time_to_string, all_equal, url_is_valid, truncate
 
 
 class YTDLSource(PCMVolumeTransformer):
@@ -63,8 +63,8 @@ class YTDLSource(PCMVolumeTransformer):
 
         self.uploader = sub(r" - Topic$", "", str(data.get("uploader")))
         self.uploader_url = str(data.get("uploader_url"))
-        self.title = str(data.get("title")).replace("||", "")[:73]
-        self.title_embed = sub(r"[\[\]|]", "", str(data.get("title")))[:43]
+        self.title = truncate(str(data.get("title")).replace("||", ""), 73)
+        self.title_embed = truncate(sub(r"[\[\]|]", "", str(data.get("title"))), 43)
         self.thumbnail_url = str(data.get("thumbnail"))
         self.duration = data.get("duration")
         self.url = str(data.get("webpage_url"))
