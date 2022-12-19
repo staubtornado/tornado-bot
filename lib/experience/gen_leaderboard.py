@@ -5,7 +5,7 @@ from PIL import Image
 from discord import File
 from easy_pil import Editor, Font, Text
 
-from lib.experience.stats import ExperienceStats
+from lib.db.data_objects import ExperienceStats
 from lib.utils.utils import shortened
 
 

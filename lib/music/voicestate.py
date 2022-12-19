@@ -6,12 +6,13 @@ from typing import Optional, Any, Union
 
 from discord import Bot, VoiceClient, Guild, Embed, FFmpegPCMAudio, TextChannel, ApplicationContext
 
+from bot import CustomBot
 from data.config.settings import SETTINGS
-from data.db.memory import database
+from lib.db.data_objects import GuildSettings, EmbedSize
 from lib.music.exceptions import YTDLError
 from lib.music.prepared_source import PreparedSource
 from lib.music.queue import SongQueue
-from lib.music.song import Song, EmbedSize
+from lib.music.song import Song
 from lib.music.ytdl import YTDLSource
 
 
@@ -49,7 +50,7 @@ class VoiceState:
     embed_size: int
     update_embed: bool
 
-    def __init__(self, bot: Bot, ctx: ApplicationContext) -> None:
+    def __init__(self, bot: CustomBot, settings: GuildSettings, ctx: ApplicationContext) -> None:
         self.bot = bot
         self.guild = ctx.guild
         self._channel = ctx.channel
@@ -75,15 +76,17 @@ class VoiceState:
         self._checker = bot.loop.create_task(self._inactivity_check())
         self._default_volume = 0.5
 
-        row: tuple = database.cursor().execute(
-            """SELECT MusicEmbedSize, MusicDeleteEmbedAfterSong FROM settings WHERE GuildID = ?""", (self.guild.id, )
-        ).fetchone()
-        self.embed_size = row[0]
-        self.update_embed = bool(row[1])
+        self.embed_size = settings.music_embed_size
+        self.update_embed = settings.refresh_music_embed
 
     def __del__(self) -> None:
         self._player.cancel()
         self._checker.cancel()
+
+    @classmethod
+    async def create(cls, bot: CustomBot, ctx: ApplicationContext) -> "VoiceState":
+        settings: GuildSettings = await bot.database.get_guild_settings(ctx.guild)
+        return cls(bot, settings, ctx)
 
     @property
     def channel(self) -> Optional[Union[TextChannel, Any]]:
@@ -261,8 +264,6 @@ class VoiceState:
         self._waiter.set()
 
     def skip(self) -> None:
-        self.skip_votes.clear()
-
         if self.loop == Loop.SONG:
             self.loop = Loop.NONE
 

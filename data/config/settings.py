@@ -36,15 +36,11 @@ SETTINGS: dict[str] = {
             "History": {
                 "MaxHistoryLength": 5
             }
-        },
-        "Economy": {
-            "WallstreetFee": 0.003,
-            "Companies": ["Puffus", "Foodiest", "QuickPacked", "MobileCRATE", "Cygner"]
         }
     },
-    "Version": "0.1.4b",  # Bot version
+    "Version": "0.2b",  # Bot version
     "Production": False,  # If the bot is running in production or not
-    "ServiceSyncInSeconds": 1800,  # How often the bot should sync with the service
+    "ServiceSyncInSeconds": 20,  # How often the bot should sync with the service
     "ExternalIP": get('https://api.ipify.org').content.decode('utf8'),
     "BetterMusicControlListenOnIP": "127.0.0.1",  # May need to be configured.
     "BetterMusicControlListenOnPort": 65432

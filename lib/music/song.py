@@ -1,19 +1,13 @@
-from enum import IntEnum
 from random import random
 from typing import Union, Any
 
 from discord import Member, Embed
 
+from lib.db.data_objects import EmbedSize
 from lib.music.prepared_source import PreparedSource
 from lib.music.queue import SongQueue
 from lib.music.ytdl import YTDLSource
 from lib.utils.utils import time_to_string, shortened
-
-
-class EmbedSize(IntEnum):
-    SMALL = 0  # Only contains description with source, duration Aso...
-    NO_QUEUE = 1  # Everything except the queue
-    DEFAULT = 2  # Dynamic queue, contains all essential information
 
 
 class Song:

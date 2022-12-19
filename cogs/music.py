@@ -1,7 +1,6 @@
 from http.client import HTTPException
 from math import ceil
 from random import randint, shuffle
-from sqlite3 import Cursor
 from typing import Optional, Union
 
 from asyncspotify import FullTrack, SimpleTrack
@@ -13,8 +12,9 @@ from discord.utils import basic_autocomplete
 from psutil import virtual_memory
 from spotipy import SpotifyException
 
+from bot import CustomBot
 from data.config.settings import SETTINGS
-from data.db.memory import database
+from lib.db.data_objects import EmbedSize
 from lib.music.api import search_on_spotify, get_lyrics
 from lib.music.betterMusicControl import BetterMusicControlReceiver
 from lib.music.exceptions import YTDLError
@@ -23,7 +23,7 @@ from lib.music.other import ensure_voice_state
 from lib.music.prepared_source import PreparedSource
 from lib.music.presets import PRESETS
 from lib.music.process import process, AdditionalInputRequiredError
-from lib.music.song import Song, EmbedSize
+from lib.music.song import Song
 from lib.music.views import LoopDecision, PlaylistParts, VariableButton
 from lib.music.voicestate import VoiceState, Loop
 from lib.utils.utils import ordinal, time_to_string, progress_bar
@@ -51,19 +51,19 @@ class Music(Cog):
     YouTube and Spotify playlists are supported, too.
     """
 
-    bot: Bot
+    bot: CustomBot
     voice_states: dict[int, VoiceState]
     _bmc: BetterMusicControlReceiver
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: CustomBot) -> None:
         self.bot = bot
         self.voice_states = {}
         self._bmc = BetterMusicControlReceiver(bot)
 
-    def get_voice_state(self, ctx: ApplicationContext) -> VoiceState:
+    async def get_voice_state(self, ctx: ApplicationContext) -> VoiceState:
         state: Optional[VoiceState] = self.voice_states.get(ctx.guild_id)
         if not state or not state.is_valid:
-            state = VoiceState(self.bot, ctx)
+            state = await VoiceState.create(self.bot, ctx)
             self.voice_states[ctx.guild_id] = state
         return state
 
@@ -72,11 +72,7 @@ class Music(Cog):
             self.bot.loop.create_task(state.stop())
 
     async def cog_before_invoke(self, ctx: ApplicationContext) -> None:
-        cur: Cursor = database.cursor()
-
-        cur.execute("""INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""", (ctx.guild.id,))
-        cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id,))
-        ctx.voice_state = self.get_voice_state(ctx)
+        ctx.voice_state = await self.get_voice_state(ctx)
         ctx.playnext = False
 
     @Cog.listener()  # Needed to prevent song hang-ups when bot changes voice.
@@ -154,7 +150,6 @@ class Music(Cog):
                    search: Option(str, "Name or URL of song, playlist URL, or preset.",
                                   autocomplete=basic_autocomplete(auto_complete), required=True)) -> None:
         """Play music in a voice channel."""
-
         await ctx.defer()
 
         try:
@@ -540,5 +535,5 @@ class Music(Cog):
         await ctx.respond("📨 **Sent** the **__secret__ ID** for the current session **to your DMs**.")
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: CustomBot) -> None:
     bot.add_cog(Music(bot))

@@ -5,8 +5,8 @@ from PIL import Image
 from discord import File
 from easy_pil import Editor, Font, Text
 
+from lib.db.data_objects import ExperienceStats
 from lib.experience.calculation import level_size  # WHY PYTHON?!?!
-from lib.experience.stats import ExperienceStats
 from lib.utils.utils import shortened
 
 

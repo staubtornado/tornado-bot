@@ -1,15 +1,14 @@
 from re import sub
-from sqlite3 import Cursor
 from typing import Optional
 
-from discord import Bot, Guild, TextChannel, SelectOption, Interaction
+from discord import Guild, TextChannel, SelectOption, Interaction
 from discord.ui import Select, View
 
-from data.db.memory import database
+from bot import CustomBot
 
 
 class TextChannelDropdown(Select):
-    def __init__(self, bot: Bot, guild: Guild):
+    def __init__(self, bot: CustomBot, guild: Guild):
         self.bot = bot
         self.guild = guild
 
@@ -37,15 +36,9 @@ class TextChannelDropdown(Select):
                 continue
             channel = _channel
 
-            cur: Cursor = database.cursor()
-            cur.execute(
-                """INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""",
-                (interaction.guild_id,)
-            )
-            cur.execute(
-                """UPDATE settings SET (GenerateAuditLog, AuditLogChannel) = (?, ?) WHERE GuildID = ?""",
-                (1, _channel.id, interaction.guild_id)
-            )
+            settings = await self.bot.database.get_guild_settings(interaction.guild)
+            settings.audit_log_channel = channel.id
+            await self.bot.database.update_guild_settings(settings)
             break
 
         if not channel:
@@ -62,7 +55,7 @@ class TextChannelDropdown(Select):
 
 
 class DropdownView(View):
-    def __init__(self, bot: Bot, guild: Guild):
+    def __init__(self, bot: CustomBot, guild: Guild):
         self.bot = bot
         super().__init__()
 

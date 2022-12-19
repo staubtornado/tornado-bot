@@ -164,7 +164,7 @@ class Utilities(Cog):
 
     @slash_command()
     async def feedback(self, ctx: ApplicationContext, message: str):
-        """Send feedback to the bot's owners."""
+        """Send short feedback to the bot developers."""
         embed: Embed = Embed(title="New Feedback", colour=SETTINGS["Colours"]["Default"])
         embed.add_field(name="By", value=str(ctx.author.id), inline=True)
         embed.add_field(name="On", value=str(ctx.guild_id), inline=True)
@@ -175,6 +175,7 @@ class Utilities(Cog):
 
     @slash_command()
     async def whois(self, ctx: ApplicationContext, ip: str):
+        """Get information about an IP address."""
         await ctx.defer()
 
         response = get(f'https://ipapi.co/{ip}/json/').json()
@@ -183,7 +184,7 @@ class Utilities(Cog):
         if all(content):
             await ctx.respond("**🗺️ {}**".format(sub(r"[\[\]']", "", str(content).replace(', ', '** in **'))))
             return
-        await ctx.respond("❌ Given input is **not a is_valid IP**.")
+        await ctx.respond("❌ Given input is **not a valid IP**.")
 
 
 def setup(bot: Bot):

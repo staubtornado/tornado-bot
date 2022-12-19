@@ -1,280 +1,108 @@
-from sqlite3 import Cursor
+from typing import Union, Any
 
-from discord import Bot, SlashCommandGroup, ApplicationContext, Option, Permissions, Embed
+from discord import SlashCommandGroup, Permissions, ApplicationContext, Option
+from discord.abc import GuildChannel
 from discord.ext.commands import Cog
 
-from data.config.settings import SETTINGS
-from data.db.memory import database
-from lib.economy.views import ConfirmTransaction
-from lib.logging.select_channel import DropdownView
-
-
-def values_valid(option: str, value: str) -> bool:
-    if " - " in option:  # True if options are an area of integers
-        values = option.split(": ")[1].replace("[", "").replace("]", "").split(" - ")
-        try:
-            value = float(value)
-            if value > int(values[1]) or value < int(values[0]):
-                raise ValueError
-        except ValueError:
-            return False
-        return True
-
-    values = option.split(": ")[1].replace("[", "").replace("]", "").lower().split(" | ")
-    if value in values:
-        return True
-    return False
+from bot import CustomBot
+from cogs.music import Music
+from lib.db.data_objects import GuildSettings, EmbedSize
 
 
 class Settings(Cog):
-    """
-    Configure the bot. Every option has its is_valid values in the brackets. Require manage guild permission.
-    """
+    settings: SlashCommandGroup = SlashCommandGroup(
+        name="settings",
+        description="Change the bots settings on this server.",
+        default_member_permissions=Permissions(manage_guild=True)
+    )
+    music: SlashCommandGroup = settings.create_subgroup(
+        name="music",
+        description="Change the music settings on this server."
+    )
+    moderation: SlashCommandGroup = settings.create_subgroup(
+        name="moderation",
+        description="Change the moderation settings on this server."
+    )
+    other: SlashCommandGroup = settings.create_subgroup(
+        name="other",
+        description="Change the other settings on this server."
+    )
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: CustomBot) -> None:
         self.bot = bot
 
-    @staticmethod
-    async def has_premium(ctx: ApplicationContext) -> bool:
-        cur = database.cursor()
-        cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id,))
-        return bool(cur.execute("""SELECT HasPremium FROM guilds where GuildID = ?""", [ctx.guild_id]).fetchone()[0])
+    @settings.command(name="experience")
+    async def experience_settings(self, ctx: ApplicationContext, enabled: bool, multiplier: int) -> None:
+        """Change the experience settings on this server."""
 
-    @staticmethod
-    async def has_beta(ctx: ApplicationContext) -> bool:
-        cur = database.cursor()
-        cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id,))
-        return bool(cur.execute("""SELECT HasBeta FROM guilds WHERE GuildID = ?""", [ctx.guild_id]).fetchone()[0])
-
-    async def cog_before_invoke(self, ctx: ApplicationContext):
-        cur = database.cursor()
-        cur.execute("""INSERT OR IGNORE INTO guilds (GuildID) VALUES (?)""", (ctx.guild.id,))
-        cur.execute("""INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""", (ctx.guild.id,))
-        self.bot.get_cog("Economy").save_get_wallet(ctx.guild.owner)
-
-    settings = SlashCommandGroup(name="settings", description="Change the bots settings on this server.",
-                                 default_member_permissions=Permissions(manage_guild=True))
-
-    ticket_settings = settings.create_subgroup("tickets_setup", "Ticket settings.")
-
-    @settings.command()
-    async def music(self, ctx: ApplicationContext,
-                    option: Option(str, "Select an option.", choices=["embed size: [Small | Medium | Large]",
-                                                                      "update embed: [True | False]"],
-                                   required=True), value: Option(str, "Set a value.", required=True)):
-        """Configure the music player."""
-        await ctx.defer(ephemeral=True)
-
-        if not values_valid(option, value.lower()):
-            await ctx.respond(f"❌ **{value} is not is_valid** for {option.split(': ')[0]}.\n"
-                              "👉 **Valid options are** shown **in the brackets** behind the option.", ephemeral=True)
+        multiplier = int(multiplier)
+        if not 1 <= multiplier <= 5:
+            await ctx.respond("❌ **The multiplier must be between 1 and 5**")
             return
-
-        options = {"embed size": """UPDATE settings SET MusicEmbedSize = (?) WHERE GuildID = ?""",
-                   "update embed": """UPDATE settings SET MusicDeleteEmbedAfterSong = (?) 
-                                                    WHERE GuildID = ?"""}
-        values = {"embed size": {"large": 2, "medium": 1, "small": 0},
-                  "update embed": {"true": 1, "false": 0}}
-        value = value.lower()
-        option = option.split(": ")[0]
-
-        cur = database.cursor()
-        cur.execute(options[option], (values[option][value], ctx.guild_id))
-        self.bot.get_cog("Music").get_voice_state(ctx).__setattr__(options[option].replace(" ", "_"),
-                                                                   (values[option][value]))
-        await ctx.respond(f"✅ **{option}** has been **set to {value}**.", ephemeral=True)
-
-    @settings.command()
-    async def experience(self, ctx: ApplicationContext,
-                         option: Option(str, "Select an option.", choices=["enabled: [True | False]",
-                                                                           "multiplier: [1 - 5]"],
-                                        required=True), value: Option(str, "Set a value.", required=True)):
-        """Configure the leveling."""
-        await ctx.defer(ephemeral=True)
-
-        if not values_valid(option, value.lower()):
-            await ctx.respond(f"❌ **{value} is not is_valid** for {option.split(': ')[0]}.\n"
-                              "👉 **Valid options are** shown **in the brackets** behind the option.", ephemeral=True)
-            return
-
-        options = {"enabled": """UPDATE settings SET ExpIsActivated = (?) WHERE GuildID = ?""",
-                   "multiplier": """UPDATE settings SET ExpMultiplication = (?) WHERE GuildID = ?"""}
-        values = {"enabled": {"True": 1, "False": 0}}
-
-        try:
-            values["multiplier"] = {value: float(value)}
-        except ValueError:
-            pass
-        option = option.split(": ")[0]
-
-        cur = database.cursor()
-        cur.execute(options[option], (values[option][value], ctx.guild_id))
-        await ctx.respond(f"✅ **{option}** has been **set to {value}**.", ephemeral=True)
-
-    @settings.command()
-    async def bank(self, ctx: ApplicationContext,
-                   option: Option(str, "Select an option.", choices=["transaction fee: [0 - 100]"], required=True),
-                   value: Option(str, "Set a value.", required=True)):
-        """Configure the bank."""
-        await ctx.defer(ephemeral=True)
-
-        if not values_valid(option, value.lower()):
-            await ctx.respond(f"❌ **{value} is not is_valid** for {option.split(': ')[0]}.\n"
-                              "👉 **Valid options are** shown **in the brackets** behind the option.", ephemeral=True)
-            return
-
-        options = {"transaction fee": """UPDATE wallets SET Fee = ? WHERE UserID = ?"""}
-        values = {"transaction fee": {value: float(value)}}
-        option = option.split(": ")[0]
-
-        cur = database.cursor()
-        cur.execute(options[option], (values[option][value] / 100, ctx.guild.owner_id))
-        self.bot.get_cog("Economy").wallets[ctx.guild.owner_id].fee = values[option][value] / 100
-        await ctx.respond(f"✅ **{option}** has been **set to {value}%**.", ephemeral=True)
-
-    @settings.command()
-    async def logging(self, ctx: ApplicationContext,
-                      option: Option(str, "Select an option.",
-                                     choices=["welcome message: [True | False]", "activity log: [True | False]"],
-                                     required=True),
-                      value: Option(str, "Set a value.", required=True)):
-        """Configure Audit-Log (Channel) and welcome message."""
-
-        if not values_valid(option, value.lower()):
-            await ctx.respond(f"❌ **{value} is not is_valid** for {option.split(': ')[0]}.\n"
-                              "👉 **Valid options are** shown **in the brackets** behind the option.", ephemeral=True)
-            return
-        option = option.split(": ")[0]
-
-        cur: Cursor = database.cursor()
-        cur.execute(
-            """INSERT OR IGNORE INTO settings (GuildID) VALUES (?)""",
-            (ctx.guild_id,)
-        )
-
-        if option == "activity log":
-            if value == "True":
-                view: DropdownView = DropdownView(self.bot, ctx.guild)
-                await ctx.respond(view=view, ephemeral=True)
-                return
-            cur.execute(
-                """UPDATE settings SET (GenerateAuditLog, AuditLogChannel) = (?, ?) WHERE GuildID = ?""",
-                (0, None, ctx.guild_id)
-            )
-        else:
-            cur.execute(
-                """UPDATE settings SET (WelcomeMessage) = (?) WHERE GuildID = ?""",
-                ({"True": 1, "False": 0}[value], ctx.guild_id)
-            )
-        await ctx.respond(f"✅ **{option}** has been **set to {value}**.", ephemeral=True)
-
-    # @settings.command()
-    # async def tickets(self, ctx: ApplicationContext,
-    #                   option: Option(str, "Select an option.", choices=["voice channel: [True | False]"],
-    #                                  required=True), value: Option(str, "Set a value.", required=True)):
-    #     """Configure the ticket system."""
-    #     await ctx.defer(ephemeral=True)
-    #     cur = database.cursor()
-    #
-    #     for db_value in cur.execute("""SELECT TicketsCreateVoiceChannel, TicketsSupportRoleID, TicketsCategoryID
-    #                                    FROM settings WHERE GuildID = ?""", (ctx.guild_id,)).fetchone():
-    #         if db_value is None:
-    #             view = ConfirmTransaction()
-    #
-    #             await ctx.respond("The **tickets are not ready** yet. Would you like to **set them up?**",
-    #                               view=view, ephemeral=True)
-    #
-    #             await view.wait()
-    #             if view.value:
-    #                 # SETUP
-    #                 pass
-    #             return
-    #
-    #     if not values_valid(option, value.lower()):
-    #         await ctx.respond(f"❌ **{value} is not is_valid** for {option.split(': ')[0]}.\n"
-    #                           "👉 **Valid options are** shown **in the brackets** behind the option.", ephemeral=True)
-    #         return
-    #
-    #     options = {"voice channel": """UPDATE settings SET TicketsCreateVoiceChannel = ? WHERE GuildID = ?"""}
-    #     values = {"voice channel": {"true": 1, "false": 0}}
-    #     option = option.split(": ")[0]
-    #
-    #     cur.execute(options[option], (values[option][value], ctx.guild_id))
-    #     await ctx.respond(f"✅ **{option}** has been **set to {value}**.", ephemeral=True)
-
-    @settings.command()
-    async def activate(self, ctx: ApplicationContext, key: str) -> None:
-        """Activate premium with a premium key."""
         await ctx.defer()
 
-        cur = database.cursor()
-        cur.execute("SELECT HasPremium FROM guilds WHERE GuildID = ?", [ctx.guild.id])
-        row = cur.fetchone()
+        settings: GuildSettings = await self.bot.database.get_guild_settings(ctx.guild)
+        settings.xp_is_activated = enabled
+        settings.xp_multiplier = multiplier
+        await self.bot.database.update_guild_settings(settings)
+        await ctx.respond("✅ **Successfully updated the experience settings**")
 
-        if row[0] == 1:
-            await ctx.respond("❌ **You** already **have premium**.")
-            return
+    @music.command(name="embed")
+    async def music_embed(
+            self, ctx: ApplicationContext,
+            size: Option(
+                input_type=str,
+                description="Select the size of the song embed.",
+                choices=["small", "no queue", "default"],
+                required=True),
+            refresh: Option(
+                input_type=bool,
+                description="Refresh the embed after each song.",
+                required=True)
+    ) -> None:
+        """Change the music embed settings on this server."""
+        await ctx.defer()
 
-        key = cur.execute("""SELECT KeyString, EnablesPremium FROM keys WHERE KeyString = ?""", [key]).fetchone()
-        if key is None or key[1] == 0:
-            await ctx.respond("❌ **Invalid key**.")
-            return
+        settings: GuildSettings = await self.bot.database.get_guild_settings(ctx.guild)
+        settings.music_embed_size = EmbedSize({"small": 0, "no queue": 1, "default": 1}[size])
+        settings.refresh_music_embed = refresh
+        await self.bot.database.update_guild_settings(settings)
 
-        cur.execute("""UPDATE guilds SET HasPremium = 1 WHERE GuildID = ?""", (ctx.guild_id,))
-        cur.execute("""DELETE FROM keys WHERE KeyString = ?""", [key])
+        music: Union[Music, Any] = self.bot.get_cog("Music")
+        voice_state = music.voice_states.get(ctx.guild.id)
 
-        await ctx.respond(f"🌟 **Thanks for buying** TornadoBot **Premium**! **{ctx.guild.name} has** now all "
-                          f"**premium benefits**!")
+        if voice_state and voice_state.is_valid:
+            voice_state.embed_size = EmbedSize({"small": 0, "no queue": 1, "default": 1}[size])
+            voice_state.update_embed = refresh
+        await ctx.respond(f"✅ **Music embed settings updated** on this server.")
 
-    @settings.command()
-    async def beta(self, ctx: ApplicationContext, key: str) -> None:
-        """Activate beta features on this server with a key."""
-        await ctx.defer(ephemeral=True)
+    @moderation.command(name="audit-log")
+    async def moderation_audit_log(self, ctx: ApplicationContext, enabled: bool, channel: GuildChannel) -> None:
+        """Change the audit log settings on this server."""
+        await ctx.defer()
 
-        cur = database.cursor()
-        cur.execute("SELECT HasBeta FROM guilds WHERE GuildID = ?", [ctx.guild.id])
-        row = cur.fetchone()
+        settings: GuildSettings = await self.bot.database.get_guild_settings(ctx.guild)
+        settings.generate_audit_log = enabled
+        settings.audit_log_channel_id = channel.id
+        await self.bot.database.update_guild_settings(settings)
+        await ctx.respond(f"✅ **Audit log settings updated** on this server.")
 
-        if row[0] == 1:
-            await ctx.respond("❌ **You** already **have beta features enabled**.")
-            return
+    @other.command(name="welcome-message")
+    async def other_welcome_message(
+            self, ctx: ApplicationContext,
+            enabled: Option(
+                input_type=bool,
+                description="Enable or disable the welcome message.",
+                required=True)
+    ) -> None:
+        """Enable or disable the custom welcome message on this server."""
+        await ctx.defer()
 
-        key_old = f"{key}"
-        key = cur.execute("""SELECT KeyString, EnablesBeta FROM keys WHERE KeyString = ?""", [key]).fetchone()
-        if key is None or key[1] == 0:
-            if ctx.author.id == self.bot.owner_ids[0]:
-                cur.execute("""INSERT OR IGNORE INTO keys (KeyString, EnablesPremium ,EnablesBeta) VALUES (?, ?, ?)""",
-                            (key_old, 0, 1))
-
-            await ctx.respond("❌ **Invalid key**.")
-            return
-
-        view = ConfirmTransaction()
-        await ctx.respond(embed=Embed(title="Are you sure?",
-                                      description="Beta features might not work as expected or lack with content. This "
-                                                  "process cannot currently be reverted.",
-                                      colour=SETTINGS["Colours"]["Error"]), view=view, ephemeral=True)
-        await view.wait()
-        if view.value:
-            cur.execute("""UPDATE guilds SET HasBeta = 1 WHERE GuildID = ?""", (ctx.guild_id,))
-            cur.execute("""DELETE FROM keys WHERE KeyString = ?""", (key_old,))
-            await ctx.respond(f"🐞 **Beta features** are now **enabled on** this **server**.")
-
-    # @ticket_settings.command()
-    # async def category(self, ctx: ApplicationContext, category: CategoryChannel):
-    #     """Select a category where new tickets should be created."""
-    #     await ctx.defer(ephemeral=True)
-    #
-    #     cur = database.cursor()
-    #     if cur.execute("""SELECT TicketsCreateVoiceChannel FROM settings WHERE GuildID = ?""",
-    #                    (ctx.guild.id,)).fetchone() is None:
-    #         cur.execute("""INSERT INTO settings (GuildID, TicketsCreateVoiceChannel) VALUES (?, ?)""",
-    #                     (ctx.guild.id, category.id))
-    #     else:
-    #         cur.execute("""UPDATE settings SET TicketsCreateVoiceChannel = ? WHERE GuildID = ?""",
-    #                     (category.id, ctx.guild.id))
-    #     await ctx.respond(f"✅ New **tickets are now created in** `{category}`.")
+        settings: GuildSettings = await self.bot.database.get_guild_settings(ctx.guild)
+        settings.welcome_message = enabled
+        await self.bot.database.update_guild_settings(settings)
+        await ctx.respond(f"✅ **Welcome message settings updated** on this server.")
 
 
-def setup(bot: Bot):
+def setup(bot: CustomBot) -> None:
     bot.add_cog(Settings(bot))

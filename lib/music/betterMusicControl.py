@@ -54,10 +54,12 @@ class BetterMusicControlReceiver:
         self.bot = bot
         bot.loop.create_task(self.run_server())
 
-        self._limiter = Limiter(RequestRate(3, Duration.SECOND * 5),  # 3 requests per 5 seconds
-                                RequestRate(20, Duration.MINUTE),  # 20 requests per minute
-                                RequestRate(1000, Duration.HOUR),  # 1000 requests per hour
-                                RequestRate(20000, Duration.DAY))  # 20000 requests per day
+        self._limiter = Limiter(
+            RequestRate(3, Duration.SECOND * 5),  # 3 requests per 5 seconds
+            RequestRate(20, Duration.MINUTE),  # 20 requests per minute
+            RequestRate(1000, Duration.HOUR),  # 1000 requests per hour
+            RequestRate(20000, Duration.DAY)  # 20000 requests per day
+        )
 
     async def handle_data(self, reader: StreamReader, writer: StreamWriter) -> None:
         """Called everytime a connection is established."""

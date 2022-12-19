@@ -48,12 +48,8 @@ def get_permissions(permissions: Permissions) -> list[str]:
 
 
 def save_traceback(exception):
-    with open(f"./data/tracebacks/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.txt", "w") as file:
-        try:
-            tb = exception.original.__traceback__
-        except AttributeError:
-            tb = exception.__traceback__
-        file.write("".join(format_tb(tb)))
+    with open(f"./data/tracebacks/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.txt", "w") as f:
+        f.write("".join(format_tb(exception.__traceback__)))
 
 
 def create_graph(y: list[int], title: str = None) -> tuple[str, File]:

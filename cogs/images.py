@@ -1,131 +1,51 @@
-from json import loads
-from os import listdir
-from os.path import exists
-from random import choice, random
-from urllib.parse import urlparse
-
-from discord import Bot, ApplicationContext, Embed, Option, AutocompleteContext, SlashCommandGroup
+from aiohttp import ClientSession
+from discord import slash_command, ApplicationContext, Embed
 from discord.ext.commands import Cog
-from requests import get, Response
-from tqdm import tqdm
 
+from bot import CustomBot
 from data.config.settings import SETTINGS
-from lib.images.processing import ping
-
-
-async def get_categories(ctx: AutocompleteContext = None) -> list:
-    rtrn = []
-
-    if ctx is None or ctx.bot.get_channel(ctx.interaction.channel_id).is_nsfw():
-        rtrn.extend(["porn", "ass", "asian", "masturbation", "shaved", "close-up", "pussy", "boobs", "milf"])
-    rtrn.extend(["meme"])
-
-    if len([x for x in rtrn if x.lower().startswith(ctx.value.lower())]) == 0:
-        rtrn.clear()
-        rtrn = [ctx.value]
-    return rtrn
 
 
 class Images(Cog):
-    """
-    View images from the most popular subreddits on Reddit. Image editing following soon.
-    """
-
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: CustomBot) -> None:
         self.bot = bot
 
-        self.categories = {"porn": "porn", "ass": "ass", "asian": "AsiansGoneWild",
-                           "masturbation": "Fingering", "shaved": "shavedpussies", "close-up": "closeup",
-                           "pussy": "pussy", "cat": "cats", "boobs": "tits", "milf": "milf", "meme": "dankmemes"}
-        self.gallery = {}
-        for category in tqdm(self.categories, "[SYSTEM] Scraping image urls"):
-            d = self.request(subreddit=self.categories[category]).text
-            for response in dict(loads(d))["memes"]:
-                try:
-                    self.gallery[category]
-                except KeyError:
-                    self.gallery[category] = []
-                self.gallery[category].append(response)
-
-    @staticmethod
-    def request(subreddit: str = "dankmemes", count: int = 50) -> Response:
-        return get(f"https://meme-api.herokuapp.com/gimme/{subreddit}/{count}")
-
-    async def send(self, ctx: ApplicationContext, category: str, nsfw: bool = True):
-        if nsfw and not ctx.channel.is_nsfw():
-            await ctx.respond("🔞 This command **requires** an **NSFW** channel.", ephemeral=True)
-            return
+    @slash_command(name="image", description="Get a random image from a subreddit.")
+    async def image(self, ctx: ApplicationContext, subreddit: str) -> None:
+        """Get a random image from a subreddit."""
         await ctx.defer()
 
-        try:
-            content = choice(self.gallery[category])
-        except KeyError:
-            content = self.request(subreddit=category, count=1)
+        async with ClientSession() as session:
+            async with session.get(f"https://meme-api.com/gimme/{subreddit}/") as r:
+                data = await r.json()
+        if data["nsfw"] and not ctx.channel.is_nsfw():
+            await ctx.respond("🔞 This **subreddit contains NSFW** content, which is **not allowed in this channel**.")
+            return
 
-        try:
-            title = content["title"]
-        except TypeError:
-            content = loads(content.text)
-            try:
-                content = content["memes"][0]
-            except KeyError:
-                await ctx.respond(f"❌ {content['message']}")
-                return
-
-            try:
-                title = content["title"]
-            except KeyError:
-                await ctx.respond("❌ **Cannot find** specified **subreddit**.")
-                return
-        source = content["postLink"]
-        url = content["url"]
-        votes = content["ups"]
-        embed: Embed = Embed(title=title, colour=SETTINGS["Colours"]["Default"],
-                             description=f"[Source]({source}) | {votes} votes")
-        embed.set_image(url=url)
-        embed.set_footer(text=f"Provided by {urlparse(url).netloc}")
+        embed: Embed = Embed(title=data["title"], description=data["postLink"], colour=SETTINGS["Colours"]["Default"])
+        embed.set_image(url=data["url"])
         await ctx.respond(embed=embed)
 
-    image: SlashCommandGroup = SlashCommandGroup(name="image", description="Create or get images from the web.")
-
-    @image.command()
-    async def random(self, ctx: ApplicationContext,
-                     category: Option(str, "Choose a category from which the bot selects an image.",
-                                      autocomplete=get_categories)):
-        """Random image from a given category."""
-
-        categories = {"porn": True, "ass": True, "asian": True, "masturbation": True, "shaved": True, "close-up": True,
-                      "pussy": True, "cat": True, "boobs": True, "milf": True, "meme": False}
-
-        if category == "pussy":
-            if not random() > 0.3:
-                category = "cat"
-        try:
-            await self.send(ctx, category, nsfw=categories[category])
-        except KeyError:
-            await self.send(ctx, category, nsfw=False)
-
-    @image.command()
-    async def ping(self, ctx: ApplicationContext):
-        """Fool everyone by adding a ping to your guild icon."""
+    @slash_command()
+    async def meme(self, ctx: ApplicationContext) -> None:
+        """Get a random meme."""
         await ctx.defer()
 
-        if f"{ctx.guild.id}.png" not in listdir("./data/cache"):
-            try:
-                if not exists(f"./data/cache/{ctx.guild_id}"):
-                    if ctx.guild is None:
-                        await ctx.author.avatar.save(f"./data/cache/{ctx.author.id}")
-                    else:
-                        await ctx.guild.icon.save(f"./data/cache/{ctx.guild.id}.png")
-            except AttributeError:
-                await ctx.respond("❌ This **guild / user has no icon**.")
-                return
-        path, file = ping(f"./data/cache/{ctx.guild.id}.png")
+        for i in range(3):
+            async with ClientSession() as session:
+                async with session.get("https://meme-api.com/gimme/") as r:
+                    data = await r.json()
+            if data["nsfw"] and not ctx.channel.is_nsfw():
+                continue
+            break
+        else:
+            await ctx.respond("❌ Failed to get a meme. Try again later.")
+            return
 
-        embed: Embed = Embed(title="@everyone", colour=SETTINGS["Colours"]["Default"])
-        embed.set_image(url=path)
-        await ctx.respond(embed=embed, file=file)
+        embed: Embed = Embed(title=data["title"], description=data["postLink"], colour=SETTINGS["Colours"]["Default"])
+        embed.set_image(url=data["url"])
+        await ctx.respond(embed=embed)
 
 
-def setup(bot: Bot):
+def setup(bot: CustomBot) -> None:
     bot.add_cog(Images(bot))

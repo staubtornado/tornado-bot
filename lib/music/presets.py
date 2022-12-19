@@ -9,5 +9,7 @@ PRESETS: dict[str, str] = {
     "Rock": "https://open.spotify.com/playlist/37i9dQZF1DWZJhOVGWqUKF",
     "TDTT": "https://open.spotify.com/playlist/669nUqEjX1ozcx2Uika2fR",
     "ESC22": "https://open.spotify.com/playlist/37i9dQZF1DWVCKO3xAlT1Q",
-    "Daily Random": "https://open.spotify.com/playlist/6p21dRudS9FmcyGvKWPq2R"
+    "Daily Random": "https://open.spotify.com/playlist/6p21dRudS9FmcyGvKWPq2R",
+    #     https://open.spotify.com/playlist/0JFnA3srCSgYdT8rz4BCMY?si=703937a0883d43b0
+    "Christmas": "https://open.spotify.com/playlist/37i9dQZF1DX0Yxoavh5qJV"
 }
