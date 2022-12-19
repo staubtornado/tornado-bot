@@ -38,7 +38,7 @@ class Images(Cog):
             if data["nsfw"] and not ctx.channel.is_nsfw():
                 continue
             break
-        else:
+        else:  # no break
             await ctx.respond("❌ Failed to get a meme. Try again later.")
             return
 
