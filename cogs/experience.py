@@ -43,7 +43,8 @@ class Experience(Cog):
             if xp_to_level(stats.total)[0] > stats.level:
                 stats.level += 1
                 await message.channel.send(
-                    file=await generate_lvl_up_card(stats)
+                    file=await generate_lvl_up_card(stats),
+                    delete_after=60
                 )
         finally:
             stats.message_amount += 1
