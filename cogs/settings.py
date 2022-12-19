@@ -37,15 +37,15 @@ class Settings(Cog):
 
         multiplier = int(multiplier)
         if not 1 <= multiplier <= 5:
-            await ctx.respond("❌ **The multiplier must be between 1 and 5**")
+            await ctx.respond("❌ **The multiplier must be between 1 and 5**", ephemeral=True)
             return
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         settings: GuildSettings = await self.bot.database.get_guild_settings(ctx.guild)
         settings.xp_is_activated = enabled
         settings.xp_multiplier = multiplier
         await self.bot.database.update_guild_settings(settings)
-        await ctx.respond("✅ **Successfully updated the experience settings**")
+        await ctx.respond("✅ **Successfully updated the experience settings**", ephemeral=True)
 
     @music.command(name="embed")
     async def music_embed(
@@ -61,7 +61,7 @@ class Settings(Cog):
                 required=True)
     ) -> None:
         """Change the music embed settings on this server."""
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         settings: GuildSettings = await self.bot.database.get_guild_settings(ctx.guild)
         settings.music_embed_size = EmbedSize({"small": 0, "no queue": 1, "default": 1}[size])
@@ -74,18 +74,18 @@ class Settings(Cog):
         if voice_state and voice_state.is_valid:
             voice_state.embed_size = EmbedSize({"small": 0, "no queue": 1, "default": 1}[size])
             voice_state.update_embed = refresh
-        await ctx.respond(f"✅ **Music embed settings updated** on this server.")
+        await ctx.respond(f"✅ **Music embed settings updated** on this server.", ephemeral=True)
 
     @moderation.command(name="audit-log")
     async def moderation_audit_log(self, ctx: ApplicationContext, enabled: bool, channel: GuildChannel) -> None:
         """Change the audit log settings on this server."""
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         settings: GuildSettings = await self.bot.database.get_guild_settings(ctx.guild)
         settings.generate_audit_log = enabled
         settings.audit_log_channel_id = channel.id
         await self.bot.database.update_guild_settings(settings)
-        await ctx.respond(f"✅ **Audit log settings updated** on this server.")
+        await ctx.respond(f"✅ **Audit log settings updated** on this server.", ephemeral=True)
 
     @other.command(name="welcome-message")
     async def other_welcome_message(
@@ -96,12 +96,12 @@ class Settings(Cog):
                 required=True)
     ) -> None:
         """Enable or disable the custom welcome message on this server."""
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         settings: GuildSettings = await self.bot.database.get_guild_settings(ctx.guild)
         settings.welcome_message = enabled
         await self.bot.database.update_guild_settings(settings)
-        await ctx.respond(f"✅ **Welcome message settings updated** on this server.")
+        await ctx.respond(f"✅ **Welcome message settings updated** on this server.", ephemeral=True)
 
 
 def setup(bot: CustomBot) -> None:
