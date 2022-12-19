@@ -25,8 +25,8 @@ class Database:
 
     async def get_member_stats(self, member: Member) -> ExperienceStats:
         async with self._database.execute(
-            """SELECT XP, Messages FROM experience WHERE UserID = ?""",
-            (member.id,)
+            """SELECT XP, Messages FROM experience WHERE GuildID = ? AND UserID = ?""",
+            (member.guild.id, member.id,)
         ) as cur:
             result: tuple[int, int] = await cur.fetchone()
 
@@ -55,7 +55,7 @@ class Database:
         )
         await self._database.execute(
             """UPDATE experience SET XP = ?, Messages = ? WHERE (GuildID, UserID) = (?, ?)""",
-            (stats.xp, stats.message_amount, stats.member.guild.id, stats.member.id)
+            (stats.total, stats.message_amount, stats.member.guild.id, stats.member.id)
         )
         await self._database.commit()
 
