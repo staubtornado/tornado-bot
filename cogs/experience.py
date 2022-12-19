@@ -39,8 +39,8 @@ class Experience(Cog):
         except BucketFullException:
             return
         else:
-            stats.xp += randint(MIN, MAX) * settings.xp_multiplier
-            if xp_to_level(stats.xp)[0] > stats.level:
+            stats.total += randint(MIN, MAX) * settings.xp_multiplier
+            if xp_to_level(stats.total)[0] > stats.level:
                 stats.level += 1
                 await message.channel.send(
                     file=await generate_lvl_up_card(stats)
