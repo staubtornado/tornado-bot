@@ -4,7 +4,7 @@ from difflib import SequenceMatcher
 from functools import partial as functools_partial, partial
 from itertools import islice
 from re import sub
-from typing import Union, Any
+from typing import Union, Any, Self
 
 from discord import PCMVolumeTransformer, Member, TextChannel, FFmpegPCMAudio, ApplicationContext
 from yt_dlp import YoutubeDL
@@ -123,7 +123,7 @@ class YTDLSource(PCMVolumeTransformer):
         return music_results[max(ranking, key=ranking.get)]
 
     @classmethod
-    async def create_source(cls, ctx: ApplicationContext, search: str, *, loop=None):
+    async def create_source(cls, ctx: ApplicationContext, search: str, *, loop=None) -> Self:
         loop = loop or get_event_loop()
 
         if not url_is_valid(search)[0]:

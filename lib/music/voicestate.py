@@ -2,7 +2,7 @@ from asyncio import Event, Task, sleep, wait_for, TimeoutError, QueueFull
 from enum import IntEnum
 from random import randrange
 from traceback import format_exc
-from typing import Optional, Any, Union
+from typing import Optional, Any, Union, Self
 
 from discord import Bot, VoiceClient, Guild, Embed, FFmpegPCMAudio, TextChannel, ApplicationContext
 
@@ -84,7 +84,7 @@ class VoiceState:
         self._checker.cancel()
 
     @classmethod
-    async def create(cls, bot: CustomBot, ctx: ApplicationContext) -> "VoiceState":
+    async def create(cls, bot: CustomBot, ctx: ApplicationContext) -> Self:
         settings: GuildSettings = await bot.database.get_guild_settings(ctx.guild)
         return cls(bot, settings, ctx)
 

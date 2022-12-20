@@ -1,4 +1,5 @@
 from asyncio import sleep
+from typing import Self
 
 from aiosqlite import Connection, connect
 from discord import Guild, Member
@@ -19,7 +20,7 @@ class Database:
         loop.create_task(self._sync_task())
 
     @classmethod
-    async def create(cls, loop) -> "Database":
+    async def create(cls, loop) -> Self:
         db = await connect(':memory:')
         return cls(db, loop)
 
