@@ -42,7 +42,7 @@ class Experience(Cog):
             stats.total += randint(MIN, MAX) * settings.xp_multiplier
             if xp_to_level(stats.total)[0] > stats.level:
                 stats.level += 1
-                await message.channel.send(
+                await message.reply(
                     file=await generate_lvl_up_card(stats),
                     delete_after=60
                 )
