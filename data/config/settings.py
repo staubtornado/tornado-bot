@@ -1,3 +1,5 @@
+from typing import Any
+
 from discord import Intents, Colour
 from requests import get
 
@@ -6,7 +8,7 @@ intents.__setattr__("members", True)
 intents.__setattr__("messages", True)
 
 # Bot settings, apply to all servers. Server specific settings are saved in the database.
-SETTINGS: dict[str] = {
+SETTINGS: dict[str, Any] = {
     "OwnerIDs": [272446903940153345],  # List of owner IDs
     "Description": "A feature-rich bot based on Python 3.10 and Pycord.",  # Bot description
     "Intents": intents,  # Bot intents | DO NOT TOUCH UNLESS YOU KNOW WHAT YOU'RE DOING
@@ -19,10 +21,8 @@ SETTINGS: dict[str] = {
     "OwnerGuilds": [795588352387579914],  # List of guild IDs where owner related commands are enabled
     "Cogs": {
         "Experience": {
-            "BaseLevel": 250,  # Required experience to level 1.
             "MinXP": 15,  # minimum experience per message
             "MaxXP": 25,   # maximum experience per message
-            "Cooldown": 60,  # seconds
             "Leaderboard": {
                 "ItemsPerPage": 18  # Number of members to show on each page
             }
