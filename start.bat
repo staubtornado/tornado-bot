@@ -1,7 +1,7 @@
 @echo off
-if not exist "%~dp0\venv\Scripts\activate.bat" (
+if not exist "%~dp0venv\" (
     echo Creating virtual environment...+
-    C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311\python.exe -m install virtualenv
+    C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311\python.exe -m pip install virtualenv
     C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311\python.exe -m virtualenv venv
 )
 
