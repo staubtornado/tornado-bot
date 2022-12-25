@@ -6,6 +6,7 @@ from requests import get
 intents: Intents = Intents.default()
 intents.__setattr__("members", True)
 intents.__setattr__("messages", True)
+intents.__setattr__("message_content", True)
 
 # Bot settings, apply to all servers. Server specific settings are saved in the database.
 SETTINGS: dict[str, Any] = {

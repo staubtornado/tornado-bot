@@ -12,7 +12,9 @@ CREATE TABLE IF NOT EXISTS guilds (
 --  Audit-Log
     GenerateAuditLog INTEGER DEFAULT 0,
     AuditLogChannel INTEGER DEFAULT NULL,
-    WelcomeMessage INTEGER DEFAULT 0
+    WelcomeMessage INTEGER DEFAULT 0,
+--  AutoMod
+    AutoModLevel INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS experience (

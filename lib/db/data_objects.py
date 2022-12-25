@@ -10,6 +10,11 @@ class EmbedSize(IntEnum):
     DEFAULT = 2  # Dynamic queue, contains all essential information
 
 
+class AutoModLevel(IntEnum):
+    NONE = 0
+    MEDIUM = 1
+
+
 class GuildSettings:
     guild: Guild
 
@@ -26,6 +31,8 @@ class GuildSettings:
     audit_log_channel_id: Optional[int]
     welcome_message: bool
 
+    auto_mod_level: AutoModLevel
+
     def __init__(self, guild: Guild, data: tuple[Optional[int]]):
         self.guild = guild
 
@@ -38,6 +45,7 @@ class GuildSettings:
         self.generate_audit_log = bool(data[7])
         self.audit_log_channel_id = data[8]
         self.welcome_message = bool(data[9])
+        self.auto_mod_level = AutoModLevel(data[10])
 
 
 class ExperienceStats:
