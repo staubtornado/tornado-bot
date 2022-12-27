@@ -5,6 +5,7 @@ from typing import Optional, AnyStr
 
 from discord import Message, Embed, Color
 from discord.ext.commands import Cog
+from emoji import emoji_count
 from pyrate_limiter import Limiter, RequestRate, Duration, BucketFullException
 
 from bot import CustomBot
@@ -29,9 +30,6 @@ class AutoMod(Cog):
             RequestRate(2, Duration.MINUTE * 30)
         )
 
-        self._regex_standard_emojis = re_compile(
-            r"(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])"
-        )
         self._regex_custom_emojis = re_compile(r"<a?:\w+:\d+>")
         self._regex_discord_invite = re_compile(r"(https://)?discord\.gg/[A-Za-z\d]+")
         self._regex_mentions = re_compile(r"<@!?(\d+)>")
@@ -53,7 +51,7 @@ class AutoMod(Cog):
             return f"**Deleted message** from %s **for mentioning too many people.**"
 
     def _check_emojis(self, message: Message) -> Optional[str]:
-        standard_emojis: int = len(self._regex_standard_emojis.findall(message.content))
+        standard_emojis: int = emoji_count(message.content)
         custom_emojis: int = len(self._regex_custom_emojis.findall(message.content))
 
         if standard_emojis + custom_emojis > 5:
