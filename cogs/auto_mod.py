@@ -1,5 +1,4 @@
 from datetime import timedelta, datetime
-from inspect import iscoroutinefunction
 from re import compile as re_compile, Pattern
 from typing import Optional, AnyStr
 
@@ -16,7 +15,6 @@ class AutoMod(Cog):
     _limiter: Limiter
     _action_limiter: Limiter
 
-    _regex_standard_emojis: Pattern[AnyStr]
     _regex_custom_emojis: Pattern[AnyStr]
     _regex_discord_invite: Pattern[AnyStr]
     _regex_mentions: Pattern[AnyStr]
@@ -35,35 +33,35 @@ class AutoMod(Cog):
         self._regex_mentions = re_compile(r"<@!?(\d+)>")
 
     @staticmethod
-    def _check_uppercase(message: Message) -> Optional[str]:
+    def _check_uppercase(message: Message) -> None:
         """Checks if >=70% of the message is written in uppercase."""
         if len(message.content) < 6:
             return
         if sum(1 for c in message.content if c.isupper()) / len(message.content) >= 0.7:
-            return f"**Deleted message** from %s **for spamming.**"
+            raise Exception(f"**Deleted message** from %s **for spamming.**")
 
-    def _check_invite(self, message: Message) -> Optional[str]:
+    def _check_invite(self, message: Message) -> None:
         if self._regex_discord_invite.match(message.content.strip()):
-            return f"**Deleted message** from %s **for sending an invite.**"
+            raise Exception(f"**Deleted message** from %s **for sending an invite.**")
 
-    def _check_mentions(self, message: Message) -> Optional[str]:
+    def _check_mentions(self, message: Message) -> None:
         if len(self._regex_mentions.findall(message.content)) > 5:
-            return f"**Deleted message** from %s **for mentioning too many people.**"
+            raise Exception(f"**Deleted message** from %s **for mentioning too many people.**")
 
-    def _check_emojis(self, message: Message) -> Optional[str]:
+    def _check_emojis(self, message: Message) -> None:
         standard_emojis: int = emoji_count(message.content)
         custom_emojis: int = len(self._regex_custom_emojis.findall(message.content))
 
         if standard_emojis + custom_emojis > 5:
-            return f"**Deleted message** from %s **for spamming emojis.**"
+            raise Exception(f"**Deleted message** from %s **for spamming emojis.**")
 
     @staticmethod
-    async def _check_repeated_message(message: Message) -> Optional[str]:
+    async def _check_repeated_message(message: Message) -> None:
         if len(message.content) < 6:
             return
         async for msg in message.channel.history(limit=5):
             if msg.content == message.content and message.id != msg.id:
-                return f"**Deleted message** from %s **for spamming.**"
+                raise Exception(f"**Deleted message** from %s **for spamming.**")
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
@@ -76,32 +74,28 @@ class AutoMod(Cog):
         if message.author.guild_permissions.manage_guild:
             return
 
-        reason: Optional[str] = None
+        reason: Optional[Exception] = None
         try:
-            self._limiter.try_acquire(str(message.author.id))
-        except BucketFullException:
-            reason = f"**Deleted message** from %s **for spamming.**"
+            try:  # Check if the user is on cooldown
+                self._limiter.try_acquire(str(message.author.id))
+            except BucketFullException:
+                raise Exception(f"**Deleted message** from %s **for spamming.**")
 
-        for check in (
-                self._check_uppercase,
-                self._check_invite,
-                self._check_mentions,
-                self._check_emojis,
-                self._check_repeated_message
-        ):
-            if reason is not None:
-                break
-            if iscoroutinefunction(check):
-                reason = await check(message)
-            else:
-                reason = check(message)
-
-        if not reason:
+            # Perform other checks
+            self._check_uppercase(message)
+            self._check_mentions(message)
+            self._check_emojis(message)
+            self._check_invite(message)
+            await self._check_repeated_message(message)
+        except Exception as e:
+            reason = e
+        else:
             return
+
         try:
             self._action_limiter.try_acquire(str(message.author.id))
         except BucketFullException:
-            reason = "**Timed out** %s due to **3 violations within 30 minutes.**"
+            reason = Exception("**Timed out** %s due to **3 violations within 30 minutes.**")
             await message.author.timeout(datetime.utcnow() + timedelta(minutes=30))
         await message.delete()
         if not settings.generate_audit_log:
@@ -110,7 +104,7 @@ class AutoMod(Cog):
         if channel := self.bot.get_channel(settings.audit_log_channel_id):
             embed: Embed = Embed(
                 title="AutoMod",
-                description=reason % message.author.mention,
+                description=str(reason) % message.author.mention,
                 color=Color.orange(),
                 timestamp=message.created_at
             )
