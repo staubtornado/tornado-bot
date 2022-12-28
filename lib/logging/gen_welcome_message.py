@@ -12,8 +12,7 @@ from lib.utils.utils import read_file, ordinal
 async def generate_welcome_message(member: Member, banner: Optional[Asset]) -> File:
     _banner: Optional[bytes] = None
     if banner is not None:
-        if not banner.is_animated():
-            _banner = await banner.read()
+        _banner = await banner.read()
     try:
         _avatar: bytes = await member.avatar.read()
     except AttributeError:
