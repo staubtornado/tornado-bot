@@ -1,12 +1,12 @@
 from io import BytesIO
-from typing import Any
+from typing import Optional
 
 from PIL import Image
 from discord import File
 from easy_pil import Editor, Font, Text
 
 from lib.db.data_objects import ExperienceStats
-from lib.utils.utils import shortened
+from lib.utils.utils import shortened, read_file
 
 
 def _add_row(editor: Editor, index: int, start_px: int, offset_px: int, stats: ExperienceStats) -> None:
@@ -50,7 +50,8 @@ def _add_row(editor: Editor, index: int, start_px: int, offset_px: int, stats: E
 
 
 async def generate_leaderboard_card(stats: list[ExperienceStats]) -> list[File]:
-    editor: Editor = Editor(Image.open("./assets/leaderboard.png"))
+    """Generates up to two leaderboard cards."""
+    editor: Editor = Editor(BytesIO(await read_file("./assets/leaderboard.png")))
     editor.text(
         text=stats[0].member.guild.name,
         position=(25, 75),
@@ -68,7 +69,12 @@ async def generate_leaderboard_card(stats: list[ExperienceStats]) -> list[File]:
         editor.paste(avatar, position=(20, 220 + 50 * (i - 1)))
         _add_row(editor, i, 225, 50, user_stats)
 
-    editor2: Editor = Editor(Image.open("./assets/leaderboard2.png"))
+    page1: File = File(editor.image_bytes, filename="leaderboard.png")
+    if not len(stats) > items_per_column:
+        del editor
+        return [page1]
+
+    editor2: Editor = Editor(BytesIO(await read_file("./assets/leaderboard2.png")))
     for i, user_stats in enumerate(stats[items_per_column:], start=items_per_column + 1):
         try:
             _avatar: bytes = await user_stats.member.avatar.read()
@@ -77,19 +83,4 @@ async def generate_leaderboard_card(stats: list[ExperienceStats]) -> list[File]:
         avatar: Editor = Editor(Image.open(BytesIO(_avatar)).resize((30, 30))).circle_image()
         editor2.paste(avatar, position=(20, 15 + 50 * (i - items_per_column - 1)))
         _add_row(editor2, i, 20, 50, user_stats)
-
-    path: str = f"./data/cache/leaderboard{stats[0].member.guild.id}.png"
-    editor.save(path, format="PNG")
-    with open(path, "rb") as f:
-        f: Any = f
-        picture = File(f, filename=path.replace("./data/cache/", ""))
-
-    if not len(stats) > 7:
-        return [picture]
-
-    path = path.replace(".png", "2.png")
-    editor2.save(path, format="PNG")
-    with open(path, "rb") as f:
-        f: Any = f
-        picture2 = File(f, filename=path.replace("./data/cache/", ""))
-    return [picture, picture2]
+    return [page1, File(editor2.image_bytes, filename="leaderboard2.png")]

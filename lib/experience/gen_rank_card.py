@@ -1,5 +1,4 @@
 from io import BytesIO
-from typing import Any
 
 from PIL import Image
 from discord import File
@@ -7,17 +6,18 @@ from easy_pil import Editor, Font, Text
 
 from lib.db.data_objects import ExperienceStats
 from lib.experience.calculation import level_size  # WHY PYTHON?!?!
-from lib.utils.utils import shortened
+from lib.utils.utils import shortened, read_file
 
 
 async def generate_rank_card(stats: ExperienceStats) -> File:
-    editor: Editor = Editor(Image.open("./assets/lvl_stats.png"))
+    editor: Editor = Editor(BytesIO(await read_file("./assets/lvl_stats.png")))
     try:
         _avatar: bytes = await stats.member.avatar.read()
     except AttributeError:
         _avatar: bytes = await stats.member.default_avatar.read()
-    avatar: Editor = Editor(Image.open(BytesIO(_avatar)).resize(size=(141, 141))).circle_image()
+    avatar: Editor = Editor(BytesIO(_avatar)).circle_image().resize(size=(141, 141))
     editor.paste(avatar, (145, 30))
+    del _avatar, avatar
 
     editor.text(
         position=(225, 200),
@@ -74,16 +74,6 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
         position=(670, 105),
         align="center"
     )
-
-    level: list[Text] = [
-
-    ]
-    editor.multi_text(
-        texts=level,
-        position=(725, 120),
-        align="left"
-    )
-
     editor.text(
         position=(870, 178),
         text=f"{stats.xp} / {level_size(stats.level)} XP",
@@ -109,11 +99,4 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
         radius=20,
         color=(81, 196, 108)
     )
-
-    path: str = f"./data/cache/rank_card{stats.member.guild.id}_{stats.member.id}.png"
-    editor.save(path, format="PNG")
-
-    with open(path, "rb") as f:
-        f: Any = f
-        picture = File(f, filename=path.replace("./data/cache/", ""))
-    return picture
+    return File(editor.image_bytes, filename="rank_card.png")

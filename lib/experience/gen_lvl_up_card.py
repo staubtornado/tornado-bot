@@ -1,21 +1,22 @@
 from io import BytesIO
-from typing import Any
 
-from PIL import Image
 from discord import File
 from easy_pil import Editor, Font, Text
 
 from lib.db.data_objects import ExperienceStats
+from lib.utils.utils import read_file
 
 
 async def generate_lvl_up_card(stats: ExperienceStats) -> File:
-    editor: Editor = Editor(Image.open("./assets/lvl_up_card.png"))
+    editor: Editor = Editor(BytesIO(await read_file("./assets/lvl_up_card.png")))
+
     try:
         _avatar: bytes = await stats.member.avatar.read()
     except AttributeError:
         _avatar: bytes = await stats.member.default_avatar.read()
-    avatar: Editor = Editor(Image.open(BytesIO(_avatar)).resize(size=(141, 141))).circle_image()
+    avatar: Editor = Editor(BytesIO(_avatar)).circle_image().resize(size=(141, 141))
     editor.paste(avatar, (105, 105))
+    del _avatar, avatar
 
     editor.text(
         position=(350, 125),
@@ -42,13 +43,4 @@ async def generate_lvl_up_card(stats: ExperienceStats) -> File:
         )
     ]
     editor.multi_text(position=(350, 200), texts=texts)
-
-    path: str = f"./data/cache/lvl_up{stats.member.guild.id}_{stats.member.id}.png"
-    editor.save(path, format="PNG")
-
-    with open(path, "rb") as f:
-        path = path.replace("./data/cache/", "")
-
-        f: Any = f
-        picture = File(f, filename=path)
-    return picture
+    return File(editor.image_bytes, filename="lvl_up_card.png")

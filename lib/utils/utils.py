@@ -5,6 +5,7 @@ from traceback import format_tb
 from typing import Union, Any
 from urllib.parse import ParseResult, urlparse
 
+from aiofiles import open as aio_open
 import matplotlib.pyplot as plt
 from discord import Permissions, File
 from matplotlib import use
@@ -116,3 +117,8 @@ def linear_search(arr: list[int], x: int) -> int:
         if e == x:
             return i
     return -1
+
+
+async def read_file(filepath: str) -> bytes:
+    async with aio_open(filepath, "rb") as f:
+        return await f.read()
