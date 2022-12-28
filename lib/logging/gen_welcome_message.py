@@ -2,18 +2,18 @@ from io import BytesIO
 from typing import Optional
 
 from PIL import Image
-from discord import Member, File
+from discord import Member, File, Asset
 from easy_pil import Editor, Font
 from numpy import average
 
 from lib.utils.utils import read_file, ordinal
 
 
-async def generate_welcome_message(member: Member) -> File:
+async def generate_welcome_message(member: Member, banner: Optional[Asset]) -> File:
     _banner: Optional[bytes] = None
-    if member.banner is not None:
-        if not member.banner.is_animated():
-            _banner = await member.banner.read()
+    if banner is not None:
+        if not banner.is_animated():
+            _banner = await banner.read()
     try:
         _avatar: bytes = await member.avatar.read()
     except AttributeError:

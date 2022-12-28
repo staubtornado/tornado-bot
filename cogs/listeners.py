@@ -1,4 +1,6 @@
-from discord import Guild, Member, Embed, TextChannel, Forbidden, VoiceState
+from typing import Optional
+
+from discord import Guild, Member, Embed, TextChannel, Forbidden, VoiceState, Asset
 from discord.ext.commands import Cog
 from discord.utils import utcnow
 
@@ -47,11 +49,11 @@ class Listeners(Cog):
         if not settings.welcome_message:
             return
         channel: TextChannel = member.guild.system_channel
-
+        banner: Optional[Asset] = (await self.bot.fetch_user(member.id)).banner
         try:
             await channel.send(
                 content=f"👋 **Hello** {member.mention}! **Welcome** to **{member.guild.name}**.",
-                file=await generate_welcome_message(member)
+                file=await generate_welcome_message(member, banner)
             )
         except Forbidden:
             settings.welcome_message = False
