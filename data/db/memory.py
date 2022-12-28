@@ -26,8 +26,8 @@ class Database:
 
     async def get_member_stats(self, member: Member) -> ExperienceStats:
         async with self._database.execute(
-            """SELECT XP, Messages FROM experience WHERE GuildID = ? AND UserID = ?""",
-            (member.guild.id, member.id,)
+                """SELECT XP, Messages FROM experience WHERE GuildID = ? AND UserID = ?""",
+                (member.guild.id, member.id,)
         ) as cur:
             result: tuple[int, int] = await cur.fetchone()
 
@@ -35,8 +35,8 @@ class Database:
             result = (0, 0)
 
         async with self._database.execute(
-            """SELECT COUNT(*) FROM experience WHERE XP > ? AND GuildID = ? AND UserID != ?""",
-            (result[0], member.guild.id, member.id)
+                """SELECT COUNT(*) FROM experience WHERE XP > ? AND GuildID = ? AND UserID != ?""",
+                (result[0], member.guild.id, member.id)
         ) as cur2:
             rank: int = (await cur2.fetchone())[0] + 1
 
@@ -62,8 +62,8 @@ class Database:
 
     async def get_leaderboard(self, guild: Guild) -> list[ExperienceStats]:
         async with self._database.execute(
-            """SELECT XP, Messages, UserID FROM experience WHERE GuildID = ? ORDER BY XP DESC""",
-            (guild.id,)
+                """SELECT XP, Messages, UserID FROM experience WHERE GuildID = ? ORDER BY XP DESC""",
+                (guild.id,)
         ) as cur:
             rtrn: list[ExperienceStats] = []
 
@@ -117,8 +117,8 @@ class Database:
         )
         await self._database.commit()
         async with self._database.execute(
-            """SELECT * FROM guilds WHERE GuildID = ?""",
-            (guild.id,)
+                """SELECT * FROM guilds WHERE GuildID = ?""",
+                (guild.id,)
         ) as cur:
             return GuildSettings(guild, await cur.fetchone())
 
@@ -129,7 +129,7 @@ class Database:
         )
         await self._database.execute(
             """UPDATE guilds SET XPIsActivated = ?, XPMultiplier = ?, MusicEmbedSize = ?, RefreshMusicEmbed = ?, 
-            GenerateAuditLog = ?, AuditLogChannel = ? WHERE GuildID = ?""",
+            GenerateAuditLog = ?, AuditLogChannel = ?, WelcomeMessage = ?, AutoModLevel = ? WHERE GuildID = ?""",
             (
                 settings.xp_is_activated,
                 settings.xp_multiplier,
@@ -137,6 +137,8 @@ class Database:
                 settings.refresh_music_embed,
                 settings.generate_audit_log,
                 settings.audit_log_channel_id,
+                settings.welcome_message,
+                settings.auto_mod_level,
                 settings.guild.id
             )
         )
@@ -151,8 +153,8 @@ class Database:
 
     async def validate_key(self, key: str, premium: bool, beta: bool) -> None:
         async with self._database.execute(
-            """SELECT * FROM keys WHERE KeyString = ?""",
-            (key,)
+                """SELECT * FROM keys WHERE KeyString = ?""",
+                (key,)
         ) as cur:
             result: tuple[str, int, int] = await cur.fetchone()
 

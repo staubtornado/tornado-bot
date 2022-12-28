@@ -88,13 +88,7 @@ class Settings(Cog):
         await ctx.respond(f"✅ **Audit log settings updated** on this server.", ephemeral=True)
 
     @other.command(name="welcome-message")
-    async def other_welcome_message(
-            self, ctx: ApplicationContext,
-            enabled: Option(
-                input_type=bool,
-                description="Enable or disable the welcome message.",
-                required=True)
-    ) -> None:
+    async def other_welcome_message(self, ctx: ApplicationContext, enabled: bool) -> None:
         """Enable or disable the custom welcome message on this server."""
         await ctx.defer(ephemeral=True)
 

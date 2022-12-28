@@ -18,8 +18,8 @@ class AutoModLevel(IntEnum):
 class GuildSettings:
     guild: Guild
 
-    has_premium: bool
     has_beta_features: bool
+    has_premium: bool
 
     xp_is_activated: bool
     xp_multiplier: int
@@ -36,8 +36,8 @@ class GuildSettings:
     def __init__(self, guild: Guild, data: tuple[Optional[int]]):
         self.guild = guild
 
-        self.has_premium = bool(data[2])
         self.has_beta_features = bool(data[1])
+        self.has_premium = bool(data[2])
         self.xp_is_activated = bool(data[3])
         self.xp_multiplier = data[4]
         self.music_embed_size = EmbedSize(data[5])
