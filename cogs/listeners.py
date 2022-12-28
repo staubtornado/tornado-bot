@@ -5,7 +5,7 @@ from discord.utils import utcnow
 from bot import CustomBot
 from data.config.settings import SETTINGS
 from lib.db.data_objects import GuildSettings
-from lib.logging.welcome_message import generate_welcome_message
+from lib.logging.gen_welcome_message import generate_welcome_message
 
 
 class Listeners(Cog):
