@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime
 from re import compile as re_compile, Pattern
-from typing import Optional, AnyStr
+from typing import AnyStr
 
 from discord import Message, Embed, Color
 from discord.ext.commands import Cog
@@ -74,7 +74,6 @@ class AutoMod(Cog):
         if message.author.guild_permissions.manage_guild:
             return
 
-        reason: Optional[Exception] = None
         try:
             try:  # Check if the user is on cooldown
                 self._limiter.try_acquire(str(message.author.id))
@@ -88,7 +87,7 @@ class AutoMod(Cog):
             self._check_invite(message)
             await self._check_repeated_message(message)
         except Exception as e:
-            reason = e
+            reason: Exception = e
         else:
             return
 
@@ -97,6 +96,8 @@ class AutoMod(Cog):
         except BucketFullException:
             reason = Exception("**Timed out** %s due to **3 violations within 30 minutes.**")
             await message.author.timeout(datetime.utcnow() + timedelta(minutes=30))
+        else:
+            await message.reply(content=reason.args[0] % message.author.mention, delete_after=10)
         await message.delete()
         if not settings.generate_audit_log:
             return
@@ -104,7 +105,7 @@ class AutoMod(Cog):
         if channel := self.bot.get_channel(settings.audit_log_channel_id):
             embed: Embed = Embed(
                 title="AutoMod",
-                description=str(reason) % message.author.mention,
+                description=reason.args[0] % message.author.mention,
                 color=Color.orange(),
                 timestamp=message.created_at
             )

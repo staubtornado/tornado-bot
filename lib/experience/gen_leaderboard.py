@@ -1,5 +1,4 @@
 from io import BytesIO
-from typing import Optional
 
 from PIL import Image
 from discord import File
@@ -70,8 +69,8 @@ async def generate_leaderboard_card(stats: list[ExperienceStats]) -> list[File]:
         _add_row(editor, i, 225, 50, user_stats)
 
     page1: File = File(editor.image_bytes, filename="leaderboard.png")
+    del editor
     if not len(stats) > items_per_column:
-        del editor
         return [page1]
 
     editor2: Editor = Editor(BytesIO(await read_file("./assets/leaderboard2.png")))
