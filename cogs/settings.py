@@ -56,12 +56,14 @@ class Settings(Cog):
                 choices=["small", "no queue", "default"],
                 required=True),
             refresh: Option(
-                input_type=bool,
+                input_type=str,
                 description="Refresh the embed after each song.",
+                choices=["True", "False"],
                 required=True)
     ) -> None:
         """Change the music embed settings on this server."""
         await ctx.defer(ephemeral=True)
+        refresh = refresh == "True"
 
         settings: GuildSettings = await self.bot.database.get_guild_settings(ctx.guild)
         settings.music_embed_size = EmbedSize({"small": 0, "no queue": 1, "default": 1}[size])
@@ -87,10 +89,28 @@ class Settings(Cog):
         await self.bot.database.update_guild_settings(settings)
         await ctx.respond(f"✅ **Audit log settings updated** on this server.", ephemeral=True)
 
+    @moderation.command(name="auto-mod")
+    async def moderation_auto_mute(self, ctx: ApplicationContext, enabled: bool) -> None:
+        """Change the auto mute settings on this server."""
+        await ctx.defer(ephemeral=True)
+
+        settings: GuildSettings = await self.bot.database.get_guild_settings(ctx.guild)
+        settings.auto_mod_level = 1 if enabled else 0
+        await self.bot.database.update_guild_settings(settings)
+        await ctx.respond(f"✅ **Auto mute settings updated** on this server.", ephemeral=True)
+
     @other.command(name="welcome-message")
-    async def other_welcome_message(self, ctx: ApplicationContext, enabled: bool) -> None:
+    async def other_welcome_message(
+            self, ctx: ApplicationContext,
+            enabled: Option(
+                input_type=str,
+                description="Enable or disable the welcome message.",
+                choices=["True", "False"],
+                required=True)
+    ) -> None:
         """Enable or disable the custom welcome message on this server."""
         await ctx.defer(ephemeral=True)
+        enabled = enabled == "True"
 
         settings: GuildSettings = await self.bot.database.get_guild_settings(ctx.guild)
         settings.welcome_message = enabled
