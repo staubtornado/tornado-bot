@@ -21,9 +21,10 @@ bot. Features will be added frequently, and the bot will be updated frequently.
 ## How do I install TornadoBot?
  1. [Download the latest release](https://github.com/staubtornado/tornado-bot/releases) or clone the repository if you 
     want to use the development version.
- 2. Make sure the directory is not a zip file. If it is, extract it.
- 3. Install the newest version of [Python 3.11](https://www.python.org/downloads/).
- 4. Create a new file called `.env` in `/data/config/` and paste in the following lines:
+ 2. Make sure **git** is installed on your system.
+ 3. Make sure the directory is not a zip file. If it is, extract it.
+ 4. Install the newest version of [Python 3.11](https://www.python.org/downloads/).
+ 5. Create a new file called `.env` in `/data/config/` and paste in the following lines:
 
     ####
         DISCORD_BOT_TOKEN = your token from the discord developer portal
@@ -31,12 +32,12 @@ bot. Features will be added frequently, and the bot will be updated frequently.
         SPOTIFY_CLIENT_SECRET = client secret from the Spotify developer portal
         LYRICS_FIND_ACCESS_TOKEN = token for the lyricsfind API
 
- 5. Create an application in the [Discord Developer Portal](https://discord.com/developers/applications) and paste in 
+ 6. Create an application in the [Discord Developer Portal](https://discord.com/developers/applications) and paste in 
 the token.
- 6. Create an application in the [Spotify Developer Portal](https://developer.spotify.com/dashboard/) and paste in the 
+ 7. Create an application in the [Spotify Developer Portal](https://developer.spotify.com/dashboard/) and paste in the 
 client id and client secret.
-7. Create an account on the [LyricsFind API](https://lyricsfind.com/) and paste in the access token.
-8. Save the `.env` file.
+ 8. Create an account on the [LyricsFind API](https://lyricsfind.com/) and paste in the access token.
+ 9. Save the `.env` file.
 
 #### Windows:
 1. Run start.bat.
