@@ -83,12 +83,17 @@ class Experience(Cog):
 
         start: int = (page - 1) * SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"]
         end: int = start + SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"]
-        leaderboard: list[ExperienceStats] = (await self.bot.database.get_leaderboard(ctx.guild))[start:end]
-
+        leaderboard: list[ExperienceStats] = (await self.bot.database.get_leaderboard(ctx.guild))
         if not leaderboard:
+            await ctx.respond("❌ The **leaderboard** is **empty**.")
+            return
+        if not start < len(leaderboard) < end:
             await ctx.respond("❌ **Invalid page**.")
             return
-        await ctx.respond(files=await generate_leaderboard_card(leaderboard))
+        await ctx.respond(files=await generate_leaderboard_card(
+            leaderboard[start:end],
+            (page, len(leaderboard) // SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"] + 1)
+        ))
 
 
 def setup(bot: CustomBot) -> None:

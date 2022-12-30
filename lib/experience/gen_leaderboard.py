@@ -48,7 +48,7 @@ def _add_row(editor: Editor, index: int, start_px: int, offset_px: int, stats: E
     )
 
 
-async def generate_leaderboard_card(stats: list[ExperienceStats]) -> list[File]:
+async def generate_leaderboard_card(stats: list[ExperienceStats], pages: tuple[int, int]) -> list[File]:
     """Generates up to two leaderboard cards."""
     editor: Editor = Editor(BytesIO(await read_file("./assets/leaderboard.png")))
     editor.text(
@@ -56,6 +56,13 @@ async def generate_leaderboard_card(stats: list[ExperienceStats]) -> list[File]:
         position=(25, 75),
         color=(255, 255, 255),
         font=Font.poppins(variant="italic", size=25)
+    )
+    editor.text(
+        text=f"Page {pages[0]} / {pages[1]}",
+        position=(925, 25),
+        color=(255, 255, 255),
+        font=Font(path="./assets/font.ttf", size=18),
+        align="right"
     )
 
     items_per_column: int = 7
