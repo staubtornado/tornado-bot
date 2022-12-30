@@ -1,8 +1,9 @@
-from asyncio import sleep
+from asyncio import sleep, get_event_loop
 from typing import Self
 
 from aiosqlite import Connection, connect
 from discord import Guild, Member
+from numpy import array, ndarray
 
 from data.config.settings import SETTINGS
 from lib.db.data_objects import ExperienceStats, GuildSettings
@@ -62,27 +63,36 @@ class Database:
 
     async def get_leaderboard(self, guild: Guild) -> list[ExperienceStats]:
         async with self._database.execute(
-                """SELECT XP, Messages, UserID FROM experience WHERE GuildID = ? ORDER BY XP DESC""",
+                """SELECT XP, Messages, UserID FROM experience WHERE GuildID = ?""",
                 (guild.id,)
         ) as cur:
-            rtrn: list[ExperienceStats] = []
+            rows: ndarray[tuple] = array(await cur.fetchall())
 
-            async for xp, messages, user_id in cur:
-                if user := guild.get_member(user_id):
-                    rtrn.append(ExperienceStats({
-                        "xp": xp_to_level(xp)[1],
-                        "total": xp,
-                        "level": xp_to_level(xp)[0],
-                        "member": user,
-                        "message_count": messages
-                    }))
-                    continue
+        if rows.size == 0:
+            return []
 
-                await self._database.execute(
-                    """DELETE FROM experience WHERE (GuildID, UserID) = (?, ?)""",
-                    (guild.id, user_id)
-                )
-                await self._database.commit()
+        loop = get_event_loop()
+        results = await loop.run_in_executor(None, lambda: rows[rows[:, 0].argsort()][::-1])
+        del rows
+
+        rtrn: list[ExperienceStats] = []
+        for result in results:
+            await sleep(0)
+            if user := guild.get_member(result[2]):
+                rtrn.append(ExperienceStats({
+                    "xp": xp_to_level(result[0])[1],
+                    "total": result[0],
+                    "level": xp_to_level(result[0])[0],
+                    "member": user,
+                    "message_count": result[1],
+                }))
+                continue
+
+            await self._database.execute(
+                """DELETE FROM experience WHERE (GuildID, UserID) = (?, ?)""",
+                (guild.id, result[2])
+            )
+            await self._database.commit()
         return rtrn
 
     async def create_guild(self, guild: Guild) -> None:
