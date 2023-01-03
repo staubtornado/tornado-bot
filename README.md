@@ -47,14 +47,20 @@ client id and client secret.
 #### Linux:
 1. Install or update to the newest version of Python 3.11.
 2. Run `python3.11 -m pip install -r requirements.txt` in the root directory.
-3. Run `python3.11 main.py` in the root directory.
-
+3. Run `python3.11 -m pip install git+https://github.com/shahriyardx/easy-pil@3.11` in the root directory.
+4. Run `python3.11 main.py` in the root directory.
+5. That's it! If you encounter any errors, please take a look at the start.bat file and try to fix it yourself. If you 
+   can't, please open an issue on GitHub.
+    #### Note: 
+    If you have truble running the script in the background, you can use [tmux](https://tldr.ostera.io/tmux) 
+    or [screen](https://tldr.ostera.io/screen).
 ---
 
 ## What features does the bot have?
 - Music (Spotify, YouTube, SoundCloud, and more)
 - Moderation
-- Auto-moderation
+- Leveling
+- Auto-Moderation
 - Fun commands
 - Utility commands
 - And more!
@@ -95,7 +101,8 @@ Feel free to contribute to the bots' development. This would help the project a 
 ######
 
 Requirements:
-   - Understanding of Python 3.11
-   - Understanding of SQL
-   - Understanding of Py-Cord
-   - Understanding of asynchronous programming
+- Good knowledge of Python 3.11.
+- Understanding of the Py-Cord library.
+- You should be comfortable using Git and GitHub.
+- Syntax knowledge of SQL.
+- Experience using Linux and Windows.
