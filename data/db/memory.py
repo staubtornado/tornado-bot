@@ -195,7 +195,6 @@ class Database:
 
     async def _sync_task(self) -> None:
         while True:
-            print()
             try:
                 await self.sync()
             except Exception as e:
