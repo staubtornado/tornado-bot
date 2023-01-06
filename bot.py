@@ -41,18 +41,10 @@ class CustomBot(Bot, ABC):
         if not SETTINGS["Production"]:
             await ctx.respond(f"❌ An **error occurred**: `{error}`.")
             raise error
-        save_traceback(error)
+        await save_traceback(error)
         print(
             f"[ERROR] [{strftime('%d.%m.%y %H:%M', localtime())}] {ctx.user} executed {ctx.command.name} in {ctx.guild}"
         )
-
-        if isinstance(error, CheckFailure):
-            if ctx.command.name == "play":
-                await ctx.respond("❌ This **command** is **restricted to beta** guilds.\n"
-                                  "👉 Use **/**`settings beta` to **enter the closed beta**.")
-                return
-            await ctx.respond("❌ This guild is **not permitted to use** that **command**.")
-            return
 
         if isinstance(error, ApplicationCommandInvokeError):
             await ctx.respond(f"❌ An **error occurred**: `{error}`.")

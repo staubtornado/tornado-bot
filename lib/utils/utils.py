@@ -5,9 +5,9 @@ from traceback import format_tb
 from typing import Union, Any
 from urllib.parse import ParseResult, urlparse
 
-from aiofiles import open as aio_open
 import matplotlib.pyplot as plt
-from discord import Permissions, File
+from aiofiles import open as aio_open
+from discord import Permissions, File, ApplicationCommandInvokeError
 from matplotlib import use
 from millify import millify
 
@@ -48,9 +48,11 @@ def get_permissions(permissions: Permissions) -> list[str]:
     return rtrn
 
 
-def save_traceback(exception):
-    with open(f"./data/tracebacks/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.txt", "w") as f:
-        f.write("".join(format_tb(exception.__traceback__)))
+async def save_traceback(exception: Union[ApplicationCommandInvokeError, Exception]) -> None:
+    if isinstance(exception, ApplicationCommandInvokeError):
+        exception = exception.original
+    async with aio_open(f"./data/tracebacks/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.txt", "w") as f:
+        await f.write("".join(format_tb(exception.__traceback__)))
 
 
 def create_graph(y: list[int], title: str = None) -> tuple[str, File]:

@@ -14,6 +14,7 @@ from lib.music.prepared_source import PreparedSource
 from lib.music.queue import SongQueue
 from lib.music.song import Song
 from lib.music.ytdl import YTDLSource
+from lib.utils.utils import save_traceback
 
 
 class Loop(IntEnum):
@@ -224,8 +225,9 @@ class VoiceState:
                     if isinstance(e, ValueError) or isinstance(e, YTDLError):
                         embed.description = str(e)
                     else:
-                        print(format_exc())
-                        embed.description = f"❌ An **unexpected error** occurred: `{e}`"
+                        await save_traceback(e)
+                        embed.description = f"❌ **Error** while **processing** the **song**:\n```{e}```"
+                        embed.set_footer(text="An error report has been sent to the developer.")
                     self.current = None
                     self.exception = None
                     await self.send(embed=embed)
