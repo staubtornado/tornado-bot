@@ -11,7 +11,7 @@ intents.__setattr__("message_content", True)
 # Bot settings, apply to all servers. Server specific settings are saved in the database.
 SETTINGS: dict[str, Any] = {
     "OwnerIDs": [272446903940153345],  # List of owner IDs
-    "Description": "A feature-rich bot based on Python 3.10 and Pycord.",  # Bot description
+    "Description": "A feature-rich bot based on Python 3.11 and Pycord.",  # Bot description
     "Intents": intents,  # Bot intents | DO NOT TOUCH UNLESS YOU KNOW WHAT YOU'RE DOING
     "Colours": {
         "Default": Colour.blue(),  # Default Color
