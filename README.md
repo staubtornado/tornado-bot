@@ -40,19 +40,17 @@ client id and client secret.
  9. Save the `.env` file.
 
 #### Windows:
-1. Run start.bat.
+1. Run `./start.bat` in the root directory of the bot.
 2. Wait for the script to check the dependencies.
 3. That's it!
 
 #### Linux:
-1. Install or update to the newest version of Python 3.11.
-2. Run `python3.11 -m pip install -r requirements.txt` in the root directory.
-3. Run `python3.11 -m pip install git+https://github.com/shahriyardx/easy-pil@3.11` in the root directory.
-4. Run `python3.11 main.py` in the root directory.
-5. That's it! If you encounter any errors, please take a look at the start.bat file and try to fix it yourself. If you 
-   can't, please open an issue on GitHub.
+1. Run `chmod +x start.sh` in the root directory.
+2. Run `./start.sh` in the root directory.
+3. Wait for the script to check the dependencies.
+4. That's it!
     #### Note: 
-    If you have truble running the script in the background, you can use [tmux](https://tldr.ostera.io/tmux) 
+    If you have trouble running the script in the background, you can use [tmux](https://tldr.ostera.io/tmux) 
     or [screen](https://tldr.ostera.io/screen).
 ---
 
