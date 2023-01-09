@@ -40,21 +40,21 @@ async def generate_welcome_message(member: Member, banner: Optional[Asset]) -> F
     )
 
     banner.text(
-        position=(550, 250),
+        position=(550, 240),
         text=str(member),
         align="center",
         color=modes[not white_mode],
         font=Font(path="./assets/font.ttf", size=35)
     )
     banner.text(
-        position=(550, 300),
+        position=(550, 290),
         text=f"{ordinal(member.guild.member_count)} Member",
         align="center",
         color=modes[not white_mode],
         font=Font(path="./assets/font.ttf", size=27)
     )
     banner.text(
-        position=(550, 330),
+        position=(550, 320),
         text=f"On Discord since {member.created_at.strftime('%B %Y')}",
         align="center",
         color=modes[not white_mode],
