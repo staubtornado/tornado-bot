@@ -11,7 +11,7 @@ from lib.logging.gen_welcome_message import generate_welcome_message
 
 
 class Listeners(Cog):
-    def __init__(self, bot: CustomBot):
+    def __init__(self, bot: CustomBot) -> None:
         self.bot = bot
         self.public = False
 
@@ -62,7 +62,7 @@ class Listeners(Cog):
             await self.bot.database.update_guild_settings(settings)
 
     @Cog.listener()
-    async def on_member_remove(self, member: Member):
+    async def on_member_remove(self, member: Member) -> None:
         await self.bot.database.remove_user(member)
         settings: GuildSettings = await self.bot.database.get_guild_settings(member.guild)
         if not settings.generate_audit_log:
@@ -79,7 +79,7 @@ class Listeners(Cog):
         await self.send_audit_log(embed, member)
 
     @Cog.listener()
-    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
+    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
         if before.channel == after.channel:
             return
 
