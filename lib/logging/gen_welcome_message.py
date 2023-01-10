@@ -26,13 +26,12 @@ async def generate_welcome_message(member: Member, banner: Optional[Asset]) -> F
     white_mode: bool = color[0] * 0.299 + color[1] * 0.587 + color[2] * 0.114 > 186
     modes: dict[bool, str] = {True: "white", False: "black"}
 
-    if _banner is None:
-        banner: Editor = Editor(Image.new("RGBA", (1100, 500), color=(*color[:3], 255)))
-        banner.paste(
-            Editor(BytesIO(_avatar)).resize(size=(1100, 200), crop=True).blur(amount=80), (0, 300)
-        )
-    else:
-        banner: Editor = Editor(BytesIO(_banner)).resize(size=(1100, 500))
+    banner: Editor = Editor(Image.new("RGBA", (1100, 500), color=(*color[:3], 255)))
+    banner.paste(
+        Editor(BytesIO(_banner or _avatar)).resize(size=(1100, 200), crop=True).blur(
+            amount=3 if _banner is not None else 80
+        ), (0, 300)
+    )
     banner.paste(
         Editor(BytesIO(await read_file(f"./assets/welcome_message_{modes[not white_mode]}.png"))),
         (0, 0)
