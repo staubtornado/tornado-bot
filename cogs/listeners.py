@@ -31,7 +31,7 @@ class Listeners(Cog):
             await self.bot.database.update_guild_settings(settings)
 
     @Cog.listener()
-    async def on_guild_join(self, guild: Guild):
+    async def on_guild_join(self, guild: Guild) -> None:
         await self.bot.database.create_guild(guild)
         await guild.owner.send(embed=Embed(
             title="Welcome!",
@@ -40,16 +40,18 @@ class Listeners(Cog):
         )
 
     @Cog.listener()
-    async def on_guild_remove(self, guild: Guild):
+    async def on_guild_remove(self, guild: Guild) -> None:
         await self.bot.database.remove_guild(guild)
 
     @Cog.listener()
-    async def on_member_join(self, member: Member):
+    async def on_member_join(self, member: Member) -> None:
         settings: GuildSettings = await self.bot.database.get_guild_settings(member.guild)
         if not settings.welcome_message:
             return
         channel: TextChannel = member.guild.system_channel
-        banner: Optional[Asset] = (await self.bot.fetch_user(member.id)).banner
+        banner: Optional[Asset] = None
+        if settings.has_premium:
+            banner = (await self.bot.fetch_user(member.id)).banner
         try:
             await channel.send(
                 content=f"👋 **Hello** {member.mention}! **Welcome** to **{member.guild.name}**.",
