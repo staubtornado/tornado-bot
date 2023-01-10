@@ -24,40 +24,40 @@ async def generate_welcome_message(member: Member, banner: Optional[Asset]) -> F
 
     # https://stackoverflow.com/a/3943023
     white_mode: bool = color[0] * 0.299 + color[1] * 0.587 + color[2] * 0.114 > 186
-    modes: dict[bool, str] = {True: "black", False: "white"}
+    modes: dict[bool, str] = {True: "white", False: "black"}
 
     if _banner is None:
-        banner: Editor = Editor(Image.new(
-            mode="RGBA",
-            size=(1100, 500),
-            color=(*color[:3], 255)
-        ))
+        banner: Editor = Editor(Image.new("RGBA", (1100, 500), color=(*color[:3], 255)))
+        banner.paste(
+            Editor(BytesIO(_avatar)).resize(size=(1100, 200), crop=True).blur(amount=80), (0, 300)
+        )
     else:
         banner: Editor = Editor(BytesIO(_banner)).resize(size=(1100, 500))
     banner.paste(
-        Editor(BytesIO(await read_file(f"./assets/welcome_message_{modes[white_mode]}.png"))),
+        Editor(BytesIO(await read_file(f"./assets/welcome_message_{modes[not white_mode]}.png"))),
         (0, 0)
     )
+    del color, _avatar, _banner
 
     banner.text(
         position=(550, 240),
         text=str(member),
         align="center",
-        color=modes[not white_mode],
+        color=modes[white_mode],
         font=Font(path="./assets/font.ttf", size=35)
     )
     banner.text(
         position=(550, 290),
         text=f"{ordinal(member.guild.member_count)} Member",
         align="center",
-        color=modes[not white_mode],
+        color=modes[white_mode],
         font=Font(path="./assets/font.ttf", size=27)
     )
     banner.text(
         position=(550, 320),
         text=f"On Discord since {member.created_at.strftime('%B %Y')}",
         align="center",
-        color=modes[not white_mode],
+        color=modes[white_mode],
         font=Font(path="./assets/font.ttf", size=27)
     )
     banner.paste(avatar, (450, 25))
