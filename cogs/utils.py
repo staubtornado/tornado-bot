@@ -14,9 +14,9 @@ from lib.utils.utils import time_to_string, get_permissions, create_graph
 
 
 def get_releases() -> list[str]:
-    rtrn: list = []
-    rtrn.extend([tag["name"] for tag in loads(get("https://api.github.com/repos/staubtornado/tornado-bot/tags").text)])
-    return rtrn
+    tags = [tag["name"] for tag in loads(get("https://api.github.com/repos/staubtornado/tornado-bot/tags").text)]
+    reversed(tags)
+    return tags[:25]
 
 
 async def get_cogs(ctx: AutocompleteContext) -> list[str]:
