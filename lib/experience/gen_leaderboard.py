@@ -8,9 +8,9 @@ from lib.db.data_objects import ExperienceStats
 from lib.utils.utils import shortened, read_file
 
 
-def _add_row(editor: Editor, index: int, start_px: int, offset_px: int, stats: ExperienceStats) -> None:
+def _add_row(editor: Editor, index: int, page: int, start_px: int, offset_px: int, stats: ExperienceStats) -> None:
     editor.text(
-        text=f"{index}. {stats.member}",
+        text=f"{index + (page - 1) * 18}. {stats.member}",
         color=(255, 255, 255),
         font=Font(path="./assets/font.ttf", size=27),
         position=(70, start_px + offset_px * (index - (8 if index > 7 else 1)))
@@ -73,7 +73,7 @@ async def generate_leaderboard_card(stats: list[ExperienceStats], pages: tuple[i
             _avatar: bytes = await user_stats.member.default_avatar.read()
         avatar: Editor = Editor(Image.open(BytesIO(_avatar)).resize((30, 30))).circle_image()
         editor.paste(avatar, position=(20, 220 + 50 * (i - 1)))
-        _add_row(editor, i, 225, 50, user_stats)
+        _add_row(editor,  i, pages[0], 225, 50, user_stats)
 
     page1: File = File(editor.image_bytes, filename="leaderboard.png")
     del editor
@@ -81,12 +81,12 @@ async def generate_leaderboard_card(stats: list[ExperienceStats], pages: tuple[i
         return [page1]
 
     editor2: Editor = Editor(BytesIO(await read_file("./assets/leaderboard2.png")))
-    for i, user_stats in enumerate(stats[items_per_column:], start=items_per_column + 1):
+    for i, user_stats in enumerate(stats[items_per_column:], start=items_per_column + 1 + (pages[0] - 1) * 18):
         try:
             _avatar: bytes = await user_stats.member.avatar.read()
         except AttributeError:
             _avatar: bytes = await user_stats.member.default_avatar.read()
         avatar: Editor = Editor(Image.open(BytesIO(_avatar)).resize((30, 30))).circle_image()
         editor2.paste(avatar, position=(20, 15 + 50 * (i - items_per_column - 1)))
-        _add_row(editor2, i, 20, 50, user_stats)
+        _add_row(editor2, i, pages[0], 20, 50, user_stats)
     return [page1, File(editor2.image_bytes, filename="leaderboard2.png")]
