@@ -1,3 +1,4 @@
+from asyncio import TimeoutError
 from http.client import HTTPException
 from math import ceil
 from random import randint, shuffle
@@ -79,18 +80,30 @@ class Music(Cog):
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
         if not member.id == self.bot.user.id or before.channel == after.channel:
             return
-        if not before.channel:
-            return
+        restart: bool = False
         voice_state: VoiceState = self.voice_states.get(member.guild.id)
 
-        if not after.channel:
-            if voice_state is not None and voice_state.is_valid:
-                await voice_state.stop()
-            return
+        if before.channel is None and after.channel is not None:
+            if self.voice_states.get(after.channel.guild.id).is_valid:
+                restart = bool(voice_state.voice)
+        elif before.channel is not None and after.channel is None:
 
-        voice: VoiceClient = self.voice_states.get(member.guild.id).voice
-        voice.pause()
-        voice.resume()
+            #  Wait several seconds and check if the disconnect was intentional.
+            def check(m: Member, b: VoiceState, a: VoiceState) -> bool:
+                return m.id == self.bot.user.id and b.channel is not None and a.channel is None
+            try:
+                await self.bot.wait_for("voice_state_update", check=check, timeout=3)
+            except TimeoutError:
+                if voice_state is not None and voice_state.is_valid:
+                    await voice_state.stop()
+            return
+        elif before.channel is not None and after.channel is not None:
+            if before.channel.id != after.channel.id:
+                restart = True
+
+        if restart:
+            voice_state.voice.pause()
+            voice_state.voice.resume()
 
     @slash_command()
     async def join(self, ctx: MusicApplicationContext, channel: Optional[VoiceChannel] = None) -> None:
