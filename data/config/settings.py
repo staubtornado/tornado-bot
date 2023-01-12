@@ -39,7 +39,7 @@ SETTINGS: dict[str, Any] = {
             }
         }
     },
-    "Version": "0.3.2b",  # Bot version
+    "Version": "0.3.3b",  # Bot version
     "Production": False,  # If the bot is running in production or not
     "ServiceSyncInSeconds": 1800,  # How often the bot should sync with the service
     "ExternalIP": get('https://api.ipify.org').content.decode('utf8'),
