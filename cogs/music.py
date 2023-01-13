@@ -5,9 +5,8 @@ from random import randint, shuffle
 from typing import Optional, Union
 
 from asyncspotify import FullTrack, SimpleTrack
-from discord import Bot, ApplicationContext, slash_command, VoiceChannel, StageChannel, ClientException, \
-    VoiceProtocol, Option, AutocompleteContext, Embed, ButtonStyle, Interaction, WebhookMessage, Forbidden, Member, \
-    VoiceClient
+from discord import ApplicationContext, slash_command, VoiceChannel, StageChannel, ClientException, \
+    VoiceProtocol, Option, AutocompleteContext, Embed, ButtonStyle, Interaction, WebhookMessage, Forbidden, Member
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 from psutil import virtual_memory
@@ -27,7 +26,6 @@ from lib.music.process import process, AdditionalInputRequiredError
 from lib.music.song import Song
 from lib.music.views import LoopDecision, PlaylistParts, VariableButton
 from lib.music.voicestate import VoiceState, Loop
-from lib.music.ytdl import YTDLSource
 from lib.utils.utils import ordinal, time_to_string, progress_bar
 
 
