@@ -27,6 +27,7 @@ from lib.music.process import process, AdditionalInputRequiredError
 from lib.music.song import Song
 from lib.music.views import LoopDecision, PlaylistParts, VariableButton
 from lib.music.voicestate import VoiceState, Loop
+from lib.music.ytdl import YTDLSource
 from lib.utils.utils import ordinal, time_to_string, progress_bar
 
 
@@ -90,7 +91,7 @@ class Music(Cog):
 
             #  Wait several seconds and check if the disconnect was intentional.
             def check(m: Member, b: VoiceState, a: VoiceState) -> bool:
-                return m.id == self.bot.user.id and b.channel is not None and a.channel is None
+                return m.id == self.bot.user.id and b.channel is None and a.channel is not None
             try:
                 await self.bot.wait_for("voice_state_update", check=check, timeout=3)
             except TimeoutError:
@@ -176,7 +177,16 @@ class Music(Cog):
             return
 
         if not ctx.guild.voice_client:
-            await self.join(ctx, None)
+            await self.join(ctx, None)  # Overwrite voice state channel.
+        else:
+            if ctx.voice_state.voice is not None:
+                if ctx.voice_state.voice.channel.id != ctx.guild.voice_client.channel.id:
+                    await ctx.voice_client.disconnect(force=False)  # If bot is in a different channel.
+                    await self.join(ctx, None)
+                else:
+                    if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
+                        ctx.voice_state.voice.pause()
+                        ctx.voice_state.voice.resume()
 
         search = PRESETS.get(search) or search
         ctx.voice_state.processing = True

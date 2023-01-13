@@ -278,6 +278,7 @@ class VoiceState:
         self.loop = Loop.NONE
         self.is_valid = False
 
-        if self.voice is not None and self.voice.is_connected():
-            await self.voice.disconnect()
+        if self.voice is not None:
+            if self.voice.is_connected():
+                await self.voice.disconnect()
             self.voice = None
