@@ -253,6 +253,13 @@ class Music(Cog):
         end: int = start + SETTINGS["Cogs"]["Music"]["Queue"]["ItemsPerPage"]
         duration: int = ctx.voice_state.queue.duration
 
+        if not 0 < page <= ceil(size / SETTINGS["Cogs"]["Music"]["Queue"]["ItemsPerPage"]):
+            await ctx.respond(
+                (f"❌ **Invalid page**. Must be **between 1 and "
+                 f"{ceil(size / SETTINGS['Cogs']['Music']['Queue']['ItemsPerPage'])}**.")
+            )
+            return
+
         description = (
             f"**Size**: `{size}`\n"
             f"**Duration**: `{time_to_string(duration)}`\n"
