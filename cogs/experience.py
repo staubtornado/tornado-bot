@@ -87,8 +87,9 @@ class Experience(Cog):
         if not leaderboard:
             await ctx.respond("❌ The **leaderboard** is **empty**.")
             return
-        if not 0 < page <= len(leaderboard) // SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"] + 1:
-            await ctx.respond("❌ **Invalid page**.")
+        _max_pages: int = len(leaderboard) // SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"] + 1
+        if not 0 < page <= _max_pages:
+            await ctx.respond(f"❌ **Invalid page**. Must be **between 1 and {_max_pages}**.")
             return
         await ctx.respond(files=await generate_leaderboard_card(
             leaderboard[start:end],
