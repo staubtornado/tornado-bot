@@ -1,4 +1,4 @@
-from asyncio import TimeoutError
+from asyncio import sleep
 from http.client import HTTPException
 from math import ceil
 from random import randint, shuffle
@@ -75,34 +75,33 @@ class Music(Cog):
         ctx.voice_state = await self.get_voice_state(ctx)
         ctx.playnext = False
 
-    @Cog.listener()  # Needed to prevent song hang-ups when bot changes voice.
+    @Cog.listener()  # Allows the bot to move to another channel or to prevent voice errors
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
-        if not member.id == self.bot.user.id or before.channel == after.channel:
+        if member.id != self.bot.user.id:
             return
-        restart: bool = False
+        if before.channel == after.channel:
+            return
+
         voice_state: VoiceState = self.voice_states.get(member.guild.id)
-
-        if before.channel is None and after.channel is not None:
-            if self.voice_states.get(after.channel.guild.id).is_valid:
-                restart = bool(voice_state.voice)
-        elif before.channel is not None and after.channel is None:
-
-            #  Wait several seconds and check if the disconnect was intentional.
-            def check(m: Member, b: VoiceState, a: VoiceState) -> bool:
-                return m.id == self.bot.user.id and b.channel is None and a.channel is not None
-            try:
-                await self.bot.wait_for("voice_state_update", check=check, timeout=3)
-            except TimeoutError:
-                if voice_state is not None and voice_state.is_valid:
-                    await voice_state.stop()
+        if not voice_state or not voice_state.is_valid:
             return
-        elif before.channel is not None and after.channel is not None:
-            if before.channel.id != after.channel.id:
-                restart = True
+        if voice_state.voice is None:
+            return
 
-        if restart:
+        if before.channel is not None and after.channel is not None:
             voice_state.voice.pause()
             voice_state.voice.resume()
+            return
+        if before.channel is None and after.channel is not None:
+            voice_state.voice = self.bot.get_guild(member.guild.id).voice_client
+            voice_state.skip()
+            return
+
+        if before.channel is not None and after.channel is None:
+            await sleep(5)
+            if self.bot.get_guild(member.guild.id).voice_client is not None:
+                return
+            await voice_state.stop()
 
     @slash_command()
     async def join(self, ctx: MusicApplicationContext, channel: Optional[VoiceChannel] = None) -> None:
