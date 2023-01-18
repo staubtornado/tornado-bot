@@ -9,7 +9,7 @@ from bot import CustomBot
 from data.config.settings import SETTINGS
 from lib.db.data_objects import GuildSettings, ExperienceStats
 from lib.experience.calculation import xp_to_level
-from lib.experience.gen_leaderboard import generate_leaderboard_card
+from lib.experience.gen_leaderboard import generate_leaderboard_cards
 from lib.experience.gen_lvl_up_card import generate_lvl_up_card
 from lib.experience.gen_rank_card import generate_rank_card
 
@@ -91,7 +91,7 @@ class Experience(Cog):
         if not 0 < page <= _max_pages:
             await ctx.respond(f"❌ **Invalid page**. Must be **between 1 and {_max_pages}**.")
             return
-        await ctx.respond(files=await generate_leaderboard_card(
+        await ctx.respond(files=await generate_leaderboard_cards(
             leaderboard[start:end],
             (page, len(leaderboard) // SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"] + 1)
         ))

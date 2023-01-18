@@ -1,92 +1,127 @@
 from io import BytesIO
 
-from PIL import Image
-from discord import File
+from discord import File, Member
 from easy_pil import Editor, Font, Text
 
 from lib.db.data_objects import ExperienceStats
-from lib.utils.utils import shortened, read_file
+from lib.utils.utils import read_file, shortened
 
 
-def _add_row(editor: Editor, index: int, page: int, start_px: int, offset_px: int, stats: ExperienceStats) -> None:
-    editor.text(
-        text=f"{index + (page - 1) * 18}. {stats.member}",
-        color=(255, 255, 255),
-        font=Font(path="./assets/font.ttf", size=27),
-        position=(70, start_px + offset_px * (index - (8 if index > 7 else 1)))
-    )
+async def generate_leaderboard_cards(stats: list[ExperienceStats], page: tuple[int, int]) -> list[File]:
+    """
+    Generates up to two leaderboard cards.
 
-    editor.multi_text(
-        texts=[
-            Text(
-                text="Total XP",
-                color=(255, 255, 255),
-                font=Font(path="./assets/font.ttf", size=27),
-            ),
-            Text(
-                text=str(shortened(stats.total)),
-                color=(236, 246, 19),
-                font=Font(path="./assets/font.ttf", size=27),
-            )],
-        position=(562, start_px + offset_px * (index - (8 if index > 7 else 1))),
-        align="left"
-    )
-    editor.multi_text(
-        texts=[
-            Text(
-                text="Level",
-                color=(255, 255, 255),
-                font=Font(path="./assets/font.ttf", size=27),
-            ),
-            Text(
-                text=str(stats.level),
-                color=(236, 246, 19),
-                font=Font(path="./assets/font.ttf", size=27),
-            )],
-        position=(796, start_px + offset_px * (index - (8 if index > 7 else 1))),
-        align="left"
-    )
+    Parameters
+    ----------
+    stats : list[ExperienceStats]
+        The stats of the members. The list must be sorted by the total xp. The first element is the first place. Length
+        is specified in the settings of the bot.
+    page : tuple[int, int]
+        First element is the current page, second element is the max page.
 
+    Returns
+    -------
+    list[File]
+        :class:`discord.File` objects of the generated cards.
+    """
 
-async def generate_leaderboard_card(stats: list[ExperienceStats], pages: tuple[int, int]) -> list[File]:
-    """Generates up to two leaderboard cards."""
-    editor: Editor = Editor(BytesIO(await read_file("./assets/leaderboard.png")))
+    editor: Editor = Editor(BytesIO(await read_file('./assets/leaderboard.png')))
     editor.text(
         text=stats[0].member.guild.name,
         position=(25, 75),
         color=(255, 255, 255),
-        font=Font.poppins(variant="italic", size=25)
+        font=Font('./assets/fonts/Roboto-Italic.ttf', 25)
     )
     editor.text(
-        text=f"Page {pages[0]} / {pages[1]}",
+        text=f'Page {page[0]} / {page[1]}',
         position=(925, 25),
         color=(255, 255, 255),
-        font=Font(path="./assets/font.ttf", size=18),
-        align="right"
+        font=Font('./assets/fonts/Roboto-Italic.ttf', 19),
+        align='right'
     )
 
-    items_per_column: int = 7
-    for i, user_stats in enumerate(stats[:items_per_column], start=1):
+    async def _fetch_avatar(member: Member) -> bytes:
         try:
-            _avatar: bytes = await user_stats.member.avatar.read()
+            return await member.avatar.read()
         except AttributeError:
-            _avatar: bytes = await user_stats.member.default_avatar.read()
-        avatar: Editor = Editor(Image.open(BytesIO(_avatar)).resize((30, 30))).circle_image()
-        editor.paste(avatar, position=(20, 220 + 50 * (i - 1)))
-        _add_row(editor,  i, pages[0], 225, 50, user_stats)
+            return await member.default_avatar.read()
 
-    page1: File = File(editor.image_bytes, filename="leaderboard.png")
+    def _get_stats_for_row(s: ExperienceStats) -> list[Text]:
+        return [
+            Text(
+                text=f'Total XP',
+                color=(255, 255, 255),
+                font=Font('./assets/fonts/Roboto-Regular.ttf', 27)
+            ),
+            Text(
+                text=shortened(s.total),
+                color=(236, 246, 19),
+                font=Font('./assets/fonts/Roboto-Regular.ttf', 27)
+            ),
+            Text(
+                text=f'Level',
+                color=(255, 255, 255),
+                font=Font('./assets/fonts/Roboto-Regular.ttf', 27)
+            ),
+            Text(
+                text=str(s.level),
+                color=(236, 246, 19),
+                font=Font('./assets/fonts/Roboto-Regular.ttf', 27)
+            )
+        ]
+
+    items_on_first_editor: int = 8
+
+    for i, stat in enumerate(stats[:items_on_first_editor]):
+        editor.paste(
+            image=Editor(BytesIO(await _fetch_avatar(stat.member))).resize((30, 30)).circle_image(),
+            position=(20, 180 + 50 * i)
+        )
+        editor.text(
+            text=f'{i + 1 + len(stats) * (page[0] - 1)}. {stat.member}',
+            color=(255, 255, 255),
+            position=(70, 185 + 50 * i),
+            font=Font('./assets/fonts/Roboto-Regular.ttf', 27)
+        )
+
+        texts: list[Text] = _get_stats_for_row(stat)
+        editor.multi_text(
+            texts=texts[:2],
+            position=(562, 195 + 50 * i)
+        )
+        editor.multi_text(
+            texts=texts[2:],
+            position=(796, 195 + 50 * i)
+        )
+    page_1: File = File(editor.image_bytes, filename='leaderboard.png')
     del editor
-    if not len(stats) > items_per_column:
-        return [page1]
 
-    editor2: Editor = Editor(BytesIO(await read_file("./assets/leaderboard2.png")))
-    for i, user_stats in enumerate(stats[items_per_column:], start=items_per_column + 1 + (pages[0] - 1) * 18):
-        try:
-            _avatar: bytes = await user_stats.member.avatar.read()
-        except AttributeError:
-            _avatar: bytes = await user_stats.member.default_avatar.read()
-        avatar: Editor = Editor(Image.open(BytesIO(_avatar)).resize((30, 30))).circle_image()
-        editor2.paste(avatar, position=(20, 15 + 50 * (i - items_per_column - 1)))
-        _add_row(editor2, i, pages[0], 20, 50, user_stats)
-    return [page1, File(editor2.image_bytes, filename="leaderboard2.png")]
+    if not len(stats) > items_on_first_editor:
+        return [page_1]
+
+    editor = Editor(BytesIO(await read_file('./assets/leaderboard2.png')))
+    for i, stat in enumerate(stats[items_on_first_editor:]):
+        editor.paste(
+            image=Editor(BytesIO(await _fetch_avatar(stat.member))).resize((30, 30)).circle_image(),
+            position=(20, 10 + 50 * i)
+        )
+        editor.text(
+            text=f'{i + 1 + items_on_first_editor + len(stats) * (page[0] - 1)}. {stat.member}',
+            color=(255, 255, 255),
+            position=(70, 15 + 50 * i),
+            font=Font('./assets/fonts/Roboto-Regular.ttf', 27)
+        )
+
+        texts: list[Text] = _get_stats_for_row(stat)
+        editor.multi_text(
+            texts=texts[:2],
+            position=(562, 25 + 50 * i)
+        )
+        editor.multi_text(
+            texts=texts[2:],
+            position=(796, 25 + 50 * i)
+        )
+
+    page_2: File = File(editor.image_bytes, filename='leaderboard.png')
+    del editor
+    return [page_1, page_2]
