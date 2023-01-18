@@ -25,7 +25,7 @@ SETTINGS: dict[str, Any] = {
             "MinXP": 15,  # minimum experience per message
             "MaxXP": 25,   # maximum experience per message
             "Leaderboard": {
-                "ItemsPerPage": 18  # Number of members to show on each page
+                "ItemsPerPage": 19  # Number of members to show on each page
             }
         },
         "Music": {
@@ -39,7 +39,7 @@ SETTINGS: dict[str, Any] = {
             }
         }
     },
-    "Version": "0.3.6b",  # Bot version
+    "Version": "0.3.7b",  # Bot version
     "Production": False,  # If the bot is running in production or not
     "ServiceSyncInSeconds": 1800,  # How often the bot should sync with the service
     "ExternalIP": get('https://api.ipify.org').content.decode('utf8'),
