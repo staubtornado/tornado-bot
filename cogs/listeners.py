@@ -33,11 +33,15 @@ class Listeners(Cog):
     @Cog.listener()
     async def on_guild_join(self, guild: Guild) -> None:
         await self.bot.database.create_guild(guild)
-        await guild.owner.send(embed=Embed(
-            title="Welcome!",
-            description=f"Thanks for adding TornadoBot to `{guild.name}`.",
-            colour=SETTINGS["Colours"]["Default"])
-        )
+
+        try:
+            await guild.owner.send(embed=Embed(
+                title="Welcome!",
+                description=f"Thanks for adding {self.bot.user.name} to `{guild.name}`.",
+                colour=SETTINGS["Colours"]["Default"])
+            )
+        except Forbidden:
+            pass
 
     @Cog.listener()
     async def on_guild_remove(self, guild: Guild) -> None:
