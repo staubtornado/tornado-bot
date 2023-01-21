@@ -2,11 +2,12 @@ from asyncio import sleep
 from http.client import HTTPException
 from math import ceil
 from random import randint, shuffle
-from typing import Optional, Union
+from typing import Optional, Union, Any
 
 from asyncspotify import FullTrack, SimpleTrack
 from discord import ApplicationContext, slash_command, VoiceChannel, StageChannel, ClientException, \
-    VoiceProtocol, Option, AutocompleteContext, Embed, ButtonStyle, Interaction, WebhookMessage, Forbidden, Member
+    VoiceProtocol, Option, AutocompleteContext, Embed, ButtonStyle, Interaction, WebhookMessage, Forbidden, Member, \
+    Permissions, VoiceClient
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 from psutil import virtual_memory
@@ -89,6 +90,21 @@ class Music(Cog):
             return
 
         if before.channel is not None and after.channel is not None:
+            for i in range(180):
+                await sleep(1)
+                if voice_state.voice is None:
+                    continue
+
+                channel: Union[VoiceChannel, Any] = self.bot.get_channel(voice_state.voice.channel.id)
+                if channel is None or channel.id != after.channel.id:
+                    return
+
+                if len(channel.members) > 1:
+                    break
+            else:  # No break
+                return
+            await sleep(2)
+
             voice_state.voice.pause()
             voice_state.voice.resume()
             return
@@ -118,10 +134,15 @@ class Music(Cog):
             return
         destination: Union[VoiceChannel, StageChannel] = channel or ctx.author.voice.channel
 
+        permissions: Permissions = destination.permissions_for(ctx.me)
+        if not all((permissions.connect, permissions.speak)):
+            await ctx.respond(f"🔒 I **need** the **permission** to join and speak in {destination.mention}.")
+            raise PermissionError
+
         try:
             ctx.voice_state.voice = await destination.connect()
         except ClientException:
-            await ctx.guild.voice_client.disconnect(force=True)
+            await ctx.guild.voice_client.disconnect(force=False)
             ctx.voice_state.voice = await destination.connect()
         ctx.voice_state.skip()
         await ctx.guild.change_voice_state(channel=destination, self_mute=False, self_deaf=True)
@@ -173,17 +194,20 @@ class Music(Cog):
             await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please **try again later**.")
             return
 
-        if not ctx.guild.voice_client:
-            await self.join(ctx, None)  # Overwrite voice state channel.
-        else:
-            if ctx.voice_state.voice is not None:
-                if ctx.voice_state.voice.channel.id != ctx.guild.voice_client.channel.id:
-                    await ctx.voice_client.disconnect(force=False)  # If bot is in a different channel.
-                    await self.join(ctx, None)
-                else:
-                    if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
-                        ctx.voice_state.voice.pause()
-                        ctx.voice_state.voice.resume()
+        try:
+            if not ctx.guild.voice_client:
+                await self.join(ctx, None)  # Overwrite voice state channel.
+            else:
+                if ctx.voice_state.voice is not None:
+                    if ctx.voice_state.voice.channel.id != ctx.guild.voice_client.channel.id:
+                        await ctx.voice_client.disconnect(force=False)  # If bot is in a different channel.
+                        await self.join(ctx, None)  # Overwrite voice state channel.
+                    else:
+                        if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
+                            ctx.voice_state.voice.pause()
+                            ctx.voice_state.voice.resume()
+        except PermissionError:
+            return
 
         search = PRESETS.get(search) or search
         ctx.voice_state.processing = True
