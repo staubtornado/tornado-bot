@@ -3,6 +3,7 @@ from io import BytesIO
 from discord import File, Member
 from easy_pil import Editor, Font, Text
 
+from data.config.settings import SETTINGS
 from lib.db.data_objects import ExperienceStats
 from lib.utils.utils import read_file, shortened
 
@@ -71,6 +72,7 @@ async def generate_leaderboard_cards(stats: list[ExperienceStats], page: tuple[i
         ]
 
     items_on_first_editor: int = 8
+    items_on_each_page: int = SETTINGS['Cogs']['Experience']["Leaderboard"]["ItemsPerPage"]
 
     for i, stat in enumerate(stats[:items_on_first_editor]):
         editor.paste(
@@ -78,7 +80,7 @@ async def generate_leaderboard_cards(stats: list[ExperienceStats], page: tuple[i
             position=(20, 180 + 50 * i)
         )
         editor.text(
-            text=f'{i + 1 + len(stats) * (page[0] - 1)}. {stat.member}',
+            text=f'{i + 1 + items_on_each_page * (page[0] - 1)}. {stat.member}',
             color=(255, 255, 255),
             position=(70, 185 + 50 * i),
             font=Font('./assets/fonts/Roboto-Regular.ttf', 27)
@@ -106,7 +108,7 @@ async def generate_leaderboard_cards(stats: list[ExperienceStats], page: tuple[i
             position=(20, 10 + 50 * i)
         )
         editor.text(
-            text=f'{i + 1 + items_on_first_editor + len(stats) * (page[0] - 1)}. {stat.member}',
+            text=f'{i + 1 + items_on_first_editor + items_on_each_page * (page[0] - 1)}. {stat.member}',
             color=(255, 255, 255),
             position=(70, 15 + 50 * i),
             font=Font('./assets/fonts/Roboto-Regular.ttf', 27)
