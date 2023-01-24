@@ -1,7 +1,7 @@
 from random import randint
 from typing import Optional
 
-from discord import Member, Message, slash_command, ApplicationContext
+from discord import Member, Message, slash_command, ApplicationContext, Forbidden
 from discord.ext.commands import Cog
 from pyrate_limiter import Limiter, RequestRate, Duration, BucketFullException
 
@@ -42,10 +42,14 @@ class Experience(Cog):
             stats.total += randint(MIN, MAX) * settings.xp_multiplier
             if xp_to_level(stats.total)[0] > stats.level:
                 stats.level += 1
-                await message.reply(
-                    file=await generate_lvl_up_card(stats),
-                    delete_after=60
-                )
+
+                try:
+                    await message.reply(
+                        file=await generate_lvl_up_card(stats),
+                        delete_after=60
+                    )
+                except Forbidden:
+                    pass
         finally:
             stats.message_amount += 1
             await self.bot.database.update_leaderboard(stats)
