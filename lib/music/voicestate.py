@@ -1,10 +1,9 @@
 from asyncio import Event, Task, sleep, wait_for, TimeoutError, QueueFull
 from enum import IntEnum
 from random import randrange
-from traceback import format_exc
 from typing import Optional, Any, Union, Self
 
-from discord import Bot, VoiceClient, Guild, Embed, FFmpegPCMAudio, TextChannel, ApplicationContext
+from discord import Bot, VoiceClient, Guild, Embed, FFmpegPCMAudio, TextChannel, ApplicationContext, Forbidden
 
 from bot import CustomBot
 from data.config.settings import SETTINGS
@@ -152,7 +151,7 @@ class VoiceState:
         self.bot.loop.create_task(self.stop())
         try:
             await self.send(f"💤 **Bye**. Left {self.voice.channel.mention} due to **inactivity**.")
-        except AttributeError:
+        except (AttributeError, Forbidden):
             pass
 
     async def _inactivity_check(self) -> None:
