@@ -9,7 +9,7 @@ from lib.music.music_application_context import MusicApplicationContext
 from lib.music.prepared_source import PreparedSource
 from lib.music.song import Song
 from lib.music.ytdl import YTDLSource
-from lib.utils.utils import url_is_valid, split_list
+from lib.utils.utils import url_is_valid, split_list, save_traceback
 
 
 class AdditionalInputRequiredError(Exception):
@@ -34,6 +34,9 @@ async def process(search: str, ctx: MusicApplicationContext) -> Union[list[Song]
             res = await extractors.get(url[1].path.split("/")[1])(uri)
         except (KeyError, BadRequest, IndexError):
             raise ValueError("❌ **Invalid** Spotify **link**.")
+        except AttributeError as e:
+            await save_traceback(e, additional_info=f"Link: {search}")
+            raise ValueError("❌ **Failed to read from** this Spotify **link**.")
 
     # Support for YouTube Music and standard YouTube
     if url[0] and "youtube.com" in url[1].netloc and "playlist" in url[1].path:

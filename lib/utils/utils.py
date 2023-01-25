@@ -48,11 +48,17 @@ def get_permissions(permissions: Permissions) -> list[str]:
     return rtrn
 
 
-async def save_traceback(exception: Union[ApplicationCommandInvokeError, Exception]) -> None:
+async def save_traceback(
+        exception: Union[ApplicationCommandInvokeError, Exception],
+        additional_info: str = None
+) -> None:
     if isinstance(exception, ApplicationCommandInvokeError):
         exception = exception.original
     async with aio_open(f"./data/tracebacks/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.txt", "w") as f:
         await f.write("".join(format_tb(exception.__traceback__)))
+        await f.write(f"Exception: {exception}\n")
+        if additional_info is not None:
+            await f.write(f"Additional info: {additional_info}")
 
 
 def create_graph(y: list[int], title: str = None) -> tuple[str, File]:
