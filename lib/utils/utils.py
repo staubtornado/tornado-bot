@@ -1,14 +1,16 @@
 from datetime import datetime
+from io import BytesIO
 from math import floor, ceil
 from time import strftime, gmtime
 from traceback import format_tb
-from typing import Union, Any
+from typing import Union, Optional
 from urllib.parse import ParseResult, urlparse
 
-import matplotlib.pyplot as plt
 from aiofiles import open as aio_open
 from discord import Permissions, File, ApplicationCommandInvokeError
-from matplotlib import use
+from matplotlib import pyplot as plt, use
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from millify import millify
 
 
@@ -61,25 +63,46 @@ async def save_traceback(
             await f.write(f"Additional info: {additional_info}")
 
 
-def create_graph(y: list[int], title: str = None) -> tuple[str, File]:
+def create_graph(
+        coordinates: list[tuple[int, int]],
+        title: Optional[str] = None,
+        x_label: Optional[str] = None,
+        y_label: Optional[str] = None
+) -> File:
     use("Agg")
 
-    with plt.rc_context({"axes.edgecolor": "#838383", "xtick.color": "#838383", "ytick.color": "#838383"}):
-        plt.plot([i for i in range(len(y))], y)
+    fig: Figure
+    ax: Axes
+    fig, ax = plt.subplots()
+
+    ax.plot(*zip(*coordinates))
 
     if title is not None:
-        plt.title(title)
+        ax.set_title(title)
+    if x_label is not None:
+        ax.set_xlabel(x_label)
+    if y_label is not None:
+        ax.set_ylabel(y_label)
 
-    path = f"./data/cache/{datetime.now().strftime('%d_%m_%Y__%H_%M_%S_%f')}.png"
-    plt.savefig(path, format="png", transparent=True)
-    plt.close()
+    plt.tight_layout()
+    fig.patch.set_alpha(0)
+    ax.patch.set_alpha(0)
+    ax.set_facecolor((88 / 255, 101 / 255, 242 / 255))
+    ax.spines["bottom"].set_color("#969890")
+    ax.spines["top"].set_color("#969890")
+    ax.spines["right"].set_color("#969890")
+    ax.spines["left"].set_color("#969890")
+    ax.tick_params(axis="x", colors="#969890")
+    ax.tick_params(axis="y", colors="#969890")
+    ax.xaxis.label.set_color("#969890")
+    ax.yaxis.label.set_color("#969890")
+    ax.title.set_color("#969890")
 
-    with open(path, "rb") as f:
-        path = path.replace("./data/cache/", "")
-
-        f: Any = f
-        picture = File(f, filename=path)
-    return f"attachment://{path}", picture
+    imgdata = BytesIO()
+    fig.savefig(imgdata, format="png")
+    imgdata.seek(0)
+    plt.close(fig)
+    return File(imgdata, filename="graph.png")
 
 
 def url_is_valid(url: str) -> tuple[bool, ParseResult]:
