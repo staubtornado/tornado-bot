@@ -2,6 +2,7 @@ from os import getenv, listdir, remove
 from os.path import join
 from traceback import format_exc
 
+from discord import LoginFailure
 from dotenv import load_dotenv
 from tqdm import tqdm
 
@@ -32,7 +33,12 @@ def main():
                 bot.load_extension(f'cogs.{filename[:-3]}')
             except Exception as e:
                 print(f"[FATAL ERROR] Failed to load {filename}: {e} \n{format_exc()}")
-    bot.run(getenv("DISCORD_BOT_TOKEN"))
+
+    try:
+        bot.run(getenv("DISCORD_BOT_TOKEN"))
+    except LoginFailure:
+        print("[FATAL ERROR] Invalid token. Please check your .env file and visit "
+              "https://discord.com/developers/applications to create a new token.")
 
 
 if __name__ == "__main__":
