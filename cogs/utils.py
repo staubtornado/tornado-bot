@@ -39,22 +39,31 @@ class Utilities(Cog):
     """
     Useful commands and information about the bot.
     """
+
     def __init__(self, bot: Bot):
         self.bot = bot
 
     @slash_command()
-    async def ping(self, ctx: ApplicationContext):
-        """Check the bot's ping to the Discord API."""
+    async def ping(self, ctx: ApplicationContext) -> None:
+        """Check the bots ping to the Discord API."""
         await ctx.defer()
+        ping: int = round(self.bot.latency * 1000)
+        self.bot.latencies.append(ping)
 
-        self.bot.latencies.append(round(self.bot.latency * 1000))
+        embed = Embed(
+            title="Pong!",
+            description="The bots ping to the Discord API.",
+            colour=SETTINGS["Colours"]["Default"]
+        )
+        embed.add_field(name="Ping", value=f"`{ping}`ms")
 
-        embed = Embed(title="Ping", description="The bot's ping to the Discord API.",
-                      colour=SETTINGS["Colours"]["Default"])
-        embed.add_field(name="Ping", value=f"`{round(self.bot.latency * 1000)}`**ms**")
+        pings: list[tuple[int, int]] = []
+        for i, latency in enumerate(self.bot.latencies):
+            pings.append((i, latency))
 
-        image, file = create_graph(self.bot.latencies)
-        embed.set_image(url=image)
+        # Create graph in separate thread
+        file = await self.bot.loop.run_in_executor(None, create_graph, pings)
+        embed.set_image(url=f"attachment://{file.filename}")
         await ctx.respond(embed=embed, file=file)
 
     @slash_command()
@@ -67,17 +76,20 @@ class Utilities(Cog):
                    extension: Option(str, description="Select an extension for which you want to receive precise "
                                                       "information.", autocomplete=get_cogs, required=False) = None):
         """Get a list of features and information about the bot."""
-        embed = Embed(title="Help", colour=SETTINGS["Colours"]["Default"],
-                      description=f"[<:member_join:980085600227065906> Add Me!]"
-                                  f"(https://discord.com/api/oauth2/authorize?client_id={self.bot.user.id}"
-                                  "&permissions=1394047577334&scope=bot%20applications.commands)⠀**|**⠀"
-                                  f"[<:rooBless:980086267360468992> Support Server](https://discord.gg/C3Wz6fRZbV)⠀"
-                                  f"**|**⠀<a:rooLove:980087863477669918> Vote on Top.gg⠀**|**⠀"
-                                  f"<:rooSellout:980086802834681906> Donate\n{'-'*82}\n"
-                                  f"**Ping**: `{round(self.bot.latency * 1000)}ms` | "
-                                  f"**Uptime**: `{time_to_string(time() - self.bot.uptime)}` | "
-                                  f"**Version**: [`{SETTINGS['Version']}`](https://github.com/staubtornado/tornado-bot)"
-                                  f"\n{'-'*82}")
+        embed = Embed(
+            title="Help",
+            colour=SETTINGS["Colours"]["Default"],
+            description=f"[<:member_join:980085600227065906> Add Me!]"
+                        f"(https://discord.com/api/oauth2/authorize?client_id={self.bot.user.id}"
+                        "&permissions=1394047577334&scope=bot%20applications.commands)⠀**|**⠀"
+                        f"[<:rooBless:980086267360468992> Support Server](https://discord.gg/C3Wz6fRZbV)⠀"
+                        f"**|**⠀<a:rooLove:980087863477669918> Vote on Top.gg⠀**|**⠀"
+                        f"<:rooSellout:980086802834681906> Donate\n{'-' * 82}\n"
+                        f"**Ping**: `{round(self.bot.latency * 1000)}ms` | "
+                        f"**Uptime**: `{time_to_string(time() - self.bot.uptime)}` | "
+                        f"**Version**: [`{SETTINGS['Version']}`](https://github.com/staubtornado/tornado-bot)"
+                        f"\n{'-' * 82}"
+        )
 
         if extension is None:
             for cog in self.bot.cogs:
