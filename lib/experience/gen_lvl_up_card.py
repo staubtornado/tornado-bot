@@ -21,24 +21,24 @@ async def generate_lvl_up_card(stats: ExperienceStats) -> File:
     editor.text(
         position=(350, 125),
         text=f"GG {stats.member},",
-        font=Font(path="./assets/font.ttf", size=35),
+        font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35),
         color=(255, 255, 255)
     )
 
     texts: list[Text] = [
         Text(
             text="you are now level",
-            font=Font(path="./assets/font.ttf", size=35),
+            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35),
             color=(255, 255, 255)
         ),
         Text(
             text=str(stats.level),
-            font=Font(path="./assets/font.ttf", size=35),
+            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35),
             color=(0, 255, 255)
         ),
         Text(
             text=f"on this server.",
-            font=Font(path="./assets/font.ttf", size=35),
+            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35),
             color=(255, 255, 255)
         )
     ]

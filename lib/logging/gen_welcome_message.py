@@ -43,21 +43,21 @@ async def generate_welcome_message(member: Member, banner: Optional[Asset]) -> F
         text=str(member),
         align="center",
         color=modes[white_mode],
-        font=Font(path="./assets/font.ttf", size=35)
+        font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35)
     )
     banner.text(
         position=(550, 290),
         text=f"{ordinal(member.guild.member_count)} Member",
         align="center",
         color=modes[white_mode],
-        font=Font(path="./assets/font.ttf", size=27)
+        font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=27)
     )
     banner.text(
         position=(550, 320),
         text=f"On Discord since {member.created_at.strftime('%B %Y')}",
         align="center",
         color=modes[white_mode],
-        font=Font(path="./assets/font.ttf", size=27)
+        font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=27)
     )
     banner.paste(avatar, (450, 25))
     return File(banner.image_bytes, filename="welcome_message.png")
