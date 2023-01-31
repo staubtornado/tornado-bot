@@ -10,7 +10,23 @@ from lib.utils.utils import shortened, read_file
 
 
 async def generate_rank_card(stats: ExperienceStats) -> File:
-    editor: Editor = Editor(BytesIO(await read_file("./assets/lvl_stats.png")))
+    editor: Editor = Editor(Image.new(
+        mode="RGBA",
+        size=(934, 282),
+        color=(48, 51, 55, 255)
+    ))
+    editor.bar(
+        position=(476, 252),
+        max_width=442,
+        height=19,
+        percentage=round((stats.xp / level_size(stats.level))*100),
+        color=(238, 136, 17)
+    )
+    editor.paste(
+        Editor(BytesIO(await read_file("./assets/lvl_stats.png"))),
+        (0, 0)
+    )
+
     try:
         _avatar: bytes = await stats.member.avatar.read()
     except AttributeError:
@@ -24,79 +40,74 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
         text=str(stats.member),
         align="center",
         color=(255, 255, 255),
-        font=Font(path="./assets/font.ttf", size=28)
+        font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=28)
     )
 
     rank: list[Text] = [
         Text(
-            text="#",
-            color=(255, 255, 255),
-            font=Font(path="./assets/font.ttf", size=38)
+            text=f"RANK ",
+            color=(163, 166, 170),
+            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=22)
         ),
         Text(
-            text=str(stats.rank if stats.rank else '?'),
-            font=Font(path="./assets/font.ttf", size=38),
-            color=(255, 122, 0)
+            text=f"#",
+            color=(255, 255, 255),
+            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35)
+        ),
+        Text(
+            text=f"{stats.rank}",
+            color=(238, 136, 17),
+            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35)
         )
     ]
-
     editor.multi_text(
+        position=(840, 115),
         texts=rank,
-        position=(925, 28),
         align="right",
         space_separated=False
     )
 
-    center_information: list[Text] = [
+    messages: list[Text] = [
         Text(
-            text="Messages",
-            color=(255, 255, 255),
-            font=Font(path="./assets/font.ttf", size=30)
+            text=f"MESSAGES",
+            color=(163, 166, 170),
+            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=22),
         ),
         Text(
-            text=str(shortened(stats.message_amount)),
-            font=Font(path="./assets/font.ttf", size=30),
-            color=(255, 122, 0)
-        ),
-        Text(
-            text="      Level",
-            color=(255, 255, 255),
-            font=Font(path="./assets/font.ttf", size=30)
-        ),
-        Text(
-            text=str(stats.level),
-            font=Font(path="./assets/font.ttf", size=30),
-            color=(255, 122, 0)
+            text=f" {shortened(stats.message_amount)}",
+            color=(238, 136, 17),
+            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35),
         )
     ]
     editor.multi_text(
-        texts=center_information,
-        position=(670, 105),
-        align="center"
+        position=(495, 115),
+        texts=messages,
+        align="left"
     )
+
+    level: list[Text] = [
+        Text(
+            text=f"LEVEL",
+            color=(163, 166, 170),
+            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=22),
+        ),
+        Text(
+            text=f" {stats.level if stats.level > 0 else '-'}",
+            color=(238, 136, 17),
+            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35),
+        )
+    ]
+    editor.multi_text(
+        position=(495, 155),
+        texts=level,
+        align="left"
+    )
+
     editor.text(
-        position=(870, 178),
-        text=f"{stats.xp} / {level_size(stats.level)} XP",
+        position=(910, 225),
+        text=f"{shortened(stats.xp)} / {shortened(level_size(stats.level))} XP",
         align="right",
         color=(255, 255, 255),
-        font=Font(path="./assets/font.ttf", size=22)
-    )
-
-    bar_width: int = 400
-    bar_height: int = 40
-    unfilled_bar: Editor = Editor(Image.new(
-        mode="RGBA",
-        size=(bar_width, bar_height),
-        color=(65, 68, 70)
-    )).rounded_corners(20)
-    editor.paste(unfilled_bar, (490, 200))
-
-    editor.bar(
-        position=(490, 200),
-        max_width=bar_width,
-        height=bar_height,
-        percentage=round((stats.xp / level_size(stats.level))*100),
-        radius=20,
-        color=(81, 196, 108)
+        font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=22)
     )
     return File(editor.image_bytes, filename="rank_card.png")

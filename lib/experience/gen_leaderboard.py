@@ -56,7 +56,7 @@ async def generate_leaderboard_cards(stats: list[ExperienceStats], page: tuple[i
             ),
             Text(
                 text=shortened(s.total),
-                color=(236, 246, 19),
+                color=(238, 136, 17),
                 font=Font('./assets/fonts/Roboto-Regular.ttf', 27)
             ),
             Text(
@@ -66,7 +66,7 @@ async def generate_leaderboard_cards(stats: list[ExperienceStats], page: tuple[i
             ),
             Text(
                 text=str(s.level),
-                color=(236, 246, 19),
+                color=(238, 136, 17),
                 font=Font('./assets/fonts/Roboto-Regular.ttf', 27)
             )
         ]
