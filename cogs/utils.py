@@ -1,13 +1,16 @@
 from datetime import datetime
 from difflib import get_close_matches
+from io import BytesIO
 from json import loads
 from re import sub
 from time import time, strptime, mktime
 from typing import Union
 
-from discord import Bot, slash_command, ApplicationContext, AutocompleteContext, Option, Embed, SlashCommandGroup
+from discord import Bot, slash_command, ApplicationContext, AutocompleteContext, Option, Embed, SlashCommandGroup, File
 from discord.ext.commands import Cog
 from requests import get
+from sympy import Symbol, plot
+from sympy.plotting.plot import Plot
 
 from data.config.settings import SETTINGS
 from lib.utils.utils import time_to_string, get_permissions, create_graph
@@ -67,7 +70,7 @@ class Utilities(Cog):
         await ctx.respond(embed=embed, file=file)
 
     @slash_command()
-    async def uptime(self, ctx: ApplicationContext):
+    async def uptime(self, ctx: ApplicationContext) -> None:
         """Check the bots' uptime."""
         await ctx.respond(f"⏱ **Uptime**: {time_to_string(time() - self.bot.uptime)}")
 
@@ -175,7 +178,7 @@ class Utilities(Cog):
         await ctx.respond(embed=embed)
 
     @slash_command()
-    async def feedback(self, ctx: ApplicationContext, message: str):
+    async def feedback(self, ctx: ApplicationContext, message: str) -> None:
         """Send short feedback to the bot developers."""
         embed: Embed = Embed(title="New Feedback", colour=SETTINGS["Colours"]["Default"])
         embed.add_field(name="By", value=str(ctx.author.id), inline=True)
@@ -186,7 +189,7 @@ class Utilities(Cog):
         await ctx.respond("🛫 **Thanks**! Your **feedback** has been **registered**.", ephemeral=True)
 
     @slash_command()
-    async def whois(self, ctx: ApplicationContext, ip: str):
+    async def whois(self, ctx: ApplicationContext, ip: str) -> None:
         """Get information about an IP address."""
         await ctx.defer()
 
@@ -197,6 +200,63 @@ class Utilities(Cog):
             await ctx.respond("**🗺️ {}**".format(sub(r"[\[\]']", "", str(content).replace(', ', '** in **'))))
             return
         await ctx.respond("❌ Given input is **not a valid IP**.")
+
+    @slash_command()
+    async def graph(self, ctx: ApplicationContext, function: str, start: int, end: int) -> None:
+        """Get a graph from f(x)."""
+        function = (
+            function.
+            replace(" ", "").
+            replace("f(x)=", "").
+            replace("e", "E").
+            replace("^", "**").
+            replace(",", ".")
+        )
+        x = Symbol('x')
+
+        buffer = BytesIO()
+        try:
+            graph: Plot = plot(function, (x, start, end), show=False, line_color="#5865F2")
+            graph.title = function
+            graph.save(buffer)
+        except Exception as e:
+            embed: Embed = Embed(
+                title="Error",
+                description="Invalid syntax. Please check the tips below.",
+                colour=SETTINGS["Colours"]["Error"]
+            )
+            embed.add_field(
+                name="Tips",
+                value="• Use `f(x)=` to define the function.\n"
+                      "• Use `^` to raise a number to a power.\n"
+                      "• Use `e` to represent the base of the natural logarithm.\n"
+                      "• Use `.` to represent a floating point number.\n"
+                      "• Use `*` to multiply two numbers.\n"
+                      "• Use `/` to divide two numbers.\n"
+                      "• Use `+` to add two numbers.\n"
+                      "• Use `-` to subtract two numbers.\n"
+                      "• Use `(` and `)` to group expressions.\n"
+                      "• Use `abs()` to get the absolute value of a number.\n"
+                      "• Use `sqrt()` to get the square root of a number.\n"
+                      "• Use `log()` to get the logarithm of a number.\n"
+                      "• Use `ln()` to get the natural logarithm of a number.\n"
+                      "• Use `sin()` to get the sine of an angle.\n"
+                      "• Use `cos()` to get the cosine of an angle.\n"
+                      "• Use `tan()` to get the tangent of an angle.\n"
+                      "• Use `asin()` to get the arcsine of an angle.\n"
+                      "• Use `acos()` to get the arccose of an angle.\n"
+                      "• Use `atan()` to get the arctangent of an angle.\n"
+                      "• Use `pi` to represent the ratio of a circle's circumference to its diameter.\n"
+            )
+            embed.add_field(
+                name="Error",
+                value=f"```py\n{e}\n```",
+                inline=False
+            )
+            await ctx.respond(embed=embed, ephemeral=True)
+            return
+        buffer.seek(0)
+        await ctx.respond(file=File(buffer, filename="graph.png"))
 
 
 def setup(bot: Bot):
