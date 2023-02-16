@@ -1,5 +1,6 @@
 BASEDIR=$(dirname "$0")
 
+python3.11 -m pip install --upgrade pip
 if [ ! -d "$BASEDIR/venv" ]; then
     python3.11 -m pip install --user virtualenv
     python3.11 -m virtualenv venv
