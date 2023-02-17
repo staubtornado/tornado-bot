@@ -3,13 +3,13 @@ from typing import Optional
 
 from PIL import Image
 from discord import Member, File, Asset
-from easy_pil import Editor, Font
+from easy_pil import Editor, Font, Text
 from numpy import average
 
-from lib.utils.utils import read_file, ordinal
+from lib.utils.utils import read_file, ordinal, create_texts
 
 
-async def generate_welcome_message(member: Member, banner: Optional[Asset]) -> File:
+async def generate_welcome_message(member: Member, banner: Optional[Asset], loop=None) -> File:
     _banner: Optional[bytes] = None
     if banner is not None:
         _banner = await banner.read()
@@ -38,26 +38,40 @@ async def generate_welcome_message(member: Member, banner: Optional[Asset]) -> F
     )
     del color, _avatar, _banner
 
-    banner.text(
-        position=(550, 240),
-        text=str(member),
-        align="center",
-        color=modes[white_mode],
-        font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35)
+    _member_text: list[Text] = await loop.run_in_executor(
+        None,
+        create_texts,
+        member.display_name,
+        modes[white_mode],
+        35
     )
+    _member_text.append(Text(
+        text=f"#{member.discriminator}",
+        font=Font(path="./assets/fonts/Noto/Latin/NotoSans-Regular.ttf", size=35),
+        color=modes[white_mode]
+    ))
+
+    banner.multi_text(
+        texts=_member_text,
+        position=(550, 251),
+        align="center",
+        space_separated=False
+    )
+    del _member_text
+
     banner.text(
         position=(550, 290),
         text=f"{ordinal(member.guild.member_count)} Member",
         align="center",
         color=modes[white_mode],
-        font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=27)
+        font=Font(path="./assets/fonts/Noto/Latin/NotoSans-Regular.ttf", size=27)
     )
     banner.text(
         position=(550, 320),
         text=f"On Discord since {member.created_at.strftime('%B %Y')}",
         align="center",
         color=modes[white_mode],
-        font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=27)
+        font=Font(path="./assets/fonts/Noto/Latin/NotoSans-Regular.ttf", size=27)
     )
     banner.paste(avatar, (450, 25))
     return File(banner.image_bytes, filename="welcome_message.png")
