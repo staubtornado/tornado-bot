@@ -85,7 +85,8 @@ client id and client secret.
 - [ ] Improve the auto-moderation system.
 - [ ] Improve the music search system.
 - [ ] Add multiple languages to the bot. 
-- [ ] Add support for usernames containing non-latin characters in rank-, level-, and leaderboard commands.
+- [x] Add support for usernames containing non-latin characters in rank-, level-, and leaderboard commands.
+- [ ] Added support for upload reminders (YouTube, Twitch, etc.)
 
 ---
 
