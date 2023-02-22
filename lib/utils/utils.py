@@ -8,6 +8,8 @@ from urllib.parse import ParseResult, urlparse
 
 from aiofiles import open as aio_open
 from discord import Permissions, File, ApplicationCommandInvokeError
+from easy_pil import Text, Font
+from fontTools.ttLib import TTFont
 from matplotlib import pyplot as plt, use
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -153,3 +155,41 @@ def linear_search(arr: list[int], x: int) -> int:
 async def read_file(filepath: str) -> bytes:
     async with aio_open(filepath, "rb") as f:
         return await f.read()
+
+
+def has_glyph(font_path: str, glyph: str) -> bool:
+    font: TTFont = TTFont(font_path, 0, allowVID=0, ignoreDecompileErrors=True, fontNumber=-1)
+
+    for table in font['cmap'].tables:
+        if ord(glyph) in table.cmap.keys():
+            return True
+    return False
+
+
+def create_texts(string: str, color: Union[str, tuple[int, ...]], size: int) -> list[Text]:
+    """Should be called in an executor."""
+
+    texts: list[Text] = []
+
+    for glyph in string:
+        for font in (
+                "./assets/fonts/Noto/Latin/NotoSans-Regular.ttf",
+                "./assets/fonts/Noto/Japanese/NotoSansJP-Regular.otf",
+                "./assets/fonts/Noto/Korean/NotoSansKR-Regular.otf",
+                "./assets/fonts/Noto/Simplified_Chinese/NotoSansSC-Regular.otf",
+                "./assets/fonts/Noto/Traditional_Chinese/NotoSansTC-Regular.otf"):
+
+            if has_glyph(font, glyph):
+                texts.append(Text(
+                    text=glyph,
+                    font=Font(path=font, size=size),
+                    color=color
+                ))
+                break
+        else:  # no break
+            texts.append(Text(
+                text=glyph,
+                font=Font(path=f"./assets/fonts/Noto/Latin/NotoSans-Regular.ttf", size=35),
+                color=color
+            ))
+    return texts

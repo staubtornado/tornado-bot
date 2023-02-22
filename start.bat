@@ -1,4 +1,6 @@
 @echo off
+
+C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311\python.exe -m pip install --upgrade pip
 if not exist "%~dp0venv\" (
     echo Creating virtual environment...+
     C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311\python.exe -m pip install virtualenv

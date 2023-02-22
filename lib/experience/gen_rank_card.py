@@ -6,10 +6,10 @@ from easy_pil import Editor, Font, Text
 
 from lib.db.data_objects import ExperienceStats
 from lib.experience.calculation import level_size  # WHY PYTHON?!?!
-from lib.utils.utils import shortened, read_file
+from lib.utils.utils import shortened, read_file, create_texts
 
 
-async def generate_rank_card(stats: ExperienceStats) -> File:
+async def generate_rank_card(stats: ExperienceStats, loop=None) -> File:
     editor: Editor = Editor(Image.new(
         mode="RGBA",
         size=(934, 251),
@@ -35,29 +35,42 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
     editor.paste(avatar, (145, 30))
     del _avatar, avatar
 
-    editor.text(
-        position=(225, 200),
-        text=str(stats.member),
-        align="center",
-        color=(255, 255, 255),
-        font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=28)
+    _member_text: list[Text] = await loop.run_in_executor(
+        None,
+        create_texts,
+        stats.member.display_name,
+        (255, 255, 255),
+        27
     )
+    _member_text.append(Text(
+        text=f"#{stats.member.discriminator}",
+        font=Font(path="./assets/fonts/Noto/Latin/NotoSans-Regular.ttf", size=27),
+        color=(255, 255, 255)
+    ))
+
+    editor.multi_text(
+        texts=_member_text,
+        position=(225, 200),
+        align="center",
+        space_separated=False
+    )
+    del _member_text
 
     rank: list[Text] = [
         Text(
             text=f"RANK ",
             color=(163, 166, 170),
-            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=22)
+            font=Font(path="./assets/fonts/Roboto/Roboto-Regular.ttf", size=22)
         ),
         Text(
             text=f"#",
             color=(255, 255, 255),
-            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35)
+            font=Font(path="./assets/fonts/Roboto/Roboto-Regular.ttf", size=35)
         ),
         Text(
             text=f"{stats.rank}",
             color=(238, 136, 17),
-            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35)
+            font=Font(path="./assets/fonts/Roboto/Roboto-Regular.ttf", size=35)
         )
     ]
     editor.multi_text(
@@ -79,17 +92,17 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
         Text(
             text=f"{percentile[0]}",
             color=(163, 166, 170),
-            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=22)
+            font=Font(path="./assets/fonts/Roboto/Roboto-Regular.ttf", size=22)
         ),
         Text(
             text=f"{percentile[1]}",
             color=(238, 136, 17),
-            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35)
+            font=Font(path="./assets/fonts/Roboto/Roboto-Regular.ttf", size=35)
         ),
         Text(
             text=f"%",
             color=(255, 255, 255),
-            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35)
+            font=Font(path="./assets/fonts/Roboto/Roboto-Regular.ttf", size=35)
         )
     ]
     editor.multi_text(
@@ -102,12 +115,12 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
         Text(
             text=f"{shortened(stats.message_amount)}",
             color=(238, 136, 17),
-            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35),
+            font=Font(path="./assets/fonts/Roboto/Roboto-Regular.ttf", size=35),
         ),
         Text(
             text=f"MESSAGE{'S' if stats.message_amount != 1 else ''}",
             color=(163, 166, 170),
-            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=22),
+            font=Font(path="./assets/fonts/Roboto/Roboto-Regular.ttf", size=22),
         )
     ]
     editor.multi_text(
@@ -120,12 +133,12 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
         Text(
             text=f"LEVEL",
             color=(163, 166, 170),
-            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=22),
+            font=Font(path="./assets/fonts/Roboto/Roboto-Regular.ttf", size=22),
         ),
         Text(
             text=f" {stats.level if stats.level > 0 else '-'}",
             color=(238, 136, 17),
-            font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=35),
+            font=Font(path="./assets/fonts/Roboto/Roboto-Regular.ttf", size=35),
         )
     ]
     editor.multi_text(
@@ -138,6 +151,6 @@ async def generate_rank_card(stats: ExperienceStats) -> File:
         text=f"{shortened(stats.xp)} / {shortened(level_size(stats.level))} XP",
         align="right",
         color=(255, 255, 255),
-        font=Font(path="./assets/fonts/Roboto-Regular.ttf", size=22)
+        font=Font(path="./assets/fonts/Roboto/Roboto-Regular.ttf", size=22)
     )
     return File(editor.image_bytes, filename="rank_card.png")

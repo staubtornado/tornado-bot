@@ -2,7 +2,7 @@ from abc import ABC
 from logging import getLogger, FileHandler, Formatter, DEBUG
 from time import time, strftime, localtime
 
-from discord import Bot, Interaction, ApplicationContext, CheckFailure, ApplicationCommandInvokeError
+from discord import Bot, Interaction, ApplicationContext, ApplicationCommandInvokeError
 
 from data.config.settings import SETTINGS
 from data.db.memory import Database

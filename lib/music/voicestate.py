@@ -224,7 +224,7 @@ class VoiceState:
                     if isinstance(e, ValueError) or isinstance(e, YTDLError):
                         embed.description = str(e)
                     else:
-                        attributes: str = str(dir(self.current.source))
+                        attributes: str = str(vars(self.current.source))
                         await save_traceback(e, attributes)
                         embed.description = f"❌ **Error** while **processing** the **song**:\n```{e}```"
                         embed.set_footer(text="An error report has been sent to the developer.")

@@ -45,7 +45,7 @@ class Experience(Cog):
 
                 try:
                     await message.reply(
-                        file=await generate_lvl_up_card(stats),
+                        file=await generate_lvl_up_card(stats, self.bot.loop),
                         delete_after=60
                     )
                 except Forbidden:
@@ -73,7 +73,7 @@ class Experience(Cog):
         if stats is None:
             await ctx.respond("❌ This **user has no stats**.")
             return
-        await ctx.respond(file=await generate_rank_card(stats))
+        await ctx.respond(file=await generate_rank_card(stats, self.bot.loop))
 
     @slash_command()
     async def leaderboard(self, ctx: ApplicationContext, page: int = 1) -> None:
@@ -97,7 +97,8 @@ class Experience(Cog):
             return
         await ctx.respond(files=await generate_leaderboard_cards(
             leaderboard[start:end],
-            (page, len(leaderboard) // SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"] + 1)
+            (page, len(leaderboard) // SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"] + 1),
+            self.bot.loop
         ))
 
 
