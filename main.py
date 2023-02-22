@@ -1,5 +1,5 @@
-from os import getenv, listdir, remove
-from os.path import join
+from os import getenv, listdir, remove, mkdir
+from os.path import join, exists
 from traceback import format_exc
 
 from discord import LoginFailure
@@ -22,6 +22,11 @@ def main():
     load_dotenv("./data/config/.env")
 
     cache: str = "./data/cache"
+    if not exists(cache):
+        mkdir(cache)
+    if not exists("./data/tracebacks"):
+        mkdir("./data/tracebacks")
+
     if len(listdir(cache)) > 0:
         for f in tqdm(listdir(cache), "[SYSTEM] Cleaning cache"):
             remove(join(cache, f))
