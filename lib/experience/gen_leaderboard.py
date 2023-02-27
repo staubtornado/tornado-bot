@@ -22,9 +22,6 @@ async def generate_leaderboard_cards(stats: list[ExperienceStats], page: tuple[i
     :return: list[:class:`discord.File`] objects of the generated cards.
     """
 
-    stats.extend(stats)
-    stats.extend(stats)
-
     editor: Editor = Editor(BytesIO(await read_file('./assets/leaderboard.png')))
     editor.text(
         text=stats[0].member.guild.name,
