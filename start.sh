@@ -15,6 +15,14 @@ then
     echo "Download it from https://www.python.org/downloads/"
     exit
 fi
+n
+#  Check if pip is installed under python3.11 -m pip
+if ! python3.11 -m pip --version &> /dev/null
+then
+    echo "pip could not be found"
+    echo "Download it from https://pip.pypa.io/en/stable/installation/"
+    exit
+fi
 
 python3.11 -m pip install --upgrade pip
 if [ ! -d "$BASEDIR/venv" ]; then
