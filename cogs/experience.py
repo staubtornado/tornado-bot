@@ -1,7 +1,7 @@
 from random import randint
 from typing import Optional
 
-from discord import Member, Message, slash_command, ApplicationContext, Forbidden
+from discord import Member, Message, slash_command, ApplicationContext, Forbidden, File
 from discord.ext.commands import Cog
 from pyrate_limiter import Limiter, RequestRate, Duration, BucketFullException
 
@@ -84,6 +84,13 @@ class Experience(Cog):
         if not settings.xp_is_activated:
             await ctx.respond("❌ Level system is **not yet enabled on this server**.")
             return
+        permissions = ctx.channel.permissions_for(ctx.guild.me)
+        if not all((
+                permissions.attach_files,
+                permissions.send_messages,
+        )):
+            await ctx.respond("❌ I **don't have the permissions** to send messages or attach files.")
+            return
 
         start: int = (page - 1) * SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"]
         end: int = start + SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"]
@@ -95,11 +102,14 @@ class Experience(Cog):
         if not 0 < page <= _max_pages:
             await ctx.respond(f"❌ **Invalid page**. Must be **between 1 and {_max_pages}**.")
             return
-        await ctx.respond(files=await generate_leaderboard_cards(
+        cards: list[File] = await generate_leaderboard_cards(
             leaderboard[start:end],
-            (page, len(leaderboard) // SETTINGS["Cogs"]["Experience"]["Leaderboard"]["ItemsPerPage"] + 1),
-            self.bot.loop
-        ))
+            (page, _max_pages),
+            self.bot.loop,
+        )
+        await ctx.respond(file=cards[0])
+        for card in cards[1:]:
+            await ctx.channel.send(file=card)
 
 
 def setup(bot: CustomBot) -> None:
