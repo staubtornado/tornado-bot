@@ -136,7 +136,10 @@ class VoiceState:
         if message is None and embed is None:
             return
         if self.channel:
-            await self.channel.send(content=message, embed=embed, delete_after=delete_after)
+            try:
+                await self.channel.send(content=message, embed=embed, delete_after=delete_after)
+            except Forbidden:
+                pass
 
     def set_live_stream(self, stream_url: str) -> None:
         self.queue.clear()
@@ -216,9 +219,9 @@ class VoiceState:
                     if self.exception:
                         raise self.exception
 
-                    source: YTDLSource = await YTDLSource.create_source(
+                    source: YTDLSource = await wait_for(YTDLSource.create_source(
                         self.current.source.ctx, self.current.source.search, loop=self.bot.loop
-                    )
+                    ), timeout=15)
                 except Exception as e:
                     embed: Embed = Embed(title="Error", color=0xFF0000)
                     if isinstance(e, ValueError) or isinstance(e, YTDLError):

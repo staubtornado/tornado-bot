@@ -1,4 +1,4 @@
-from asyncio import sleep
+from asyncio import sleep, wait_for, TimeoutError
 from http.client import HTTPException
 from math import ceil
 from random import randint, shuffle
@@ -7,7 +7,7 @@ from typing import Optional, Union, Any
 from asyncspotify import FullTrack, SimpleTrack
 from discord import ApplicationContext, slash_command, VoiceChannel, StageChannel, ClientException, \
     VoiceProtocol, Option, AutocompleteContext, Embed, ButtonStyle, Interaction, WebhookMessage, Forbidden, Member, \
-    Permissions, VoiceClient
+    Permissions
 from discord.ext.commands import Cog
 from discord.utils import basic_autocomplete
 from psutil import virtual_memory
@@ -212,7 +212,9 @@ class Music(Cog):
         search = PRESETS.get(search) or search
         ctx.voice_state.processing = True
         try:
-            song_s: Union[Song, list[Song]] = await process(search, ctx)
+            song_s: Union[Song, list[Song]] = await wait_for(process(search, ctx), timeout=20)
+        except TimeoutError:
+            await ctx.respond("⏱ **Timeout**. Processing **took too long**.")
         except (ValueError, YTDLError) as e:
             await ctx.respond(str(e))
         except AdditionalInputRequiredError as e:
