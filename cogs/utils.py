@@ -6,13 +6,16 @@ from re import sub
 from time import time, strptime, mktime
 from typing import Union
 
-from discord import Bot, slash_command, ApplicationContext, AutocompleteContext, Option, Embed, SlashCommandGroup, File
+from discord import slash_command, ApplicationContext, AutocompleteContext, Option, Embed, SlashCommandGroup, File, \
+    Member, User
 from discord.ext.commands import Cog
 from requests import get
 from sympy import Symbol, plot
 from sympy.plotting.plot import Plot
 
+from bot import CustomBot
 from data.config.settings import SETTINGS
+from lib.db.data_objects import GlobalUserStats
 from lib.utils.utils import time_to_string, get_permissions, create_graph
 
 
@@ -43,7 +46,7 @@ class Utilities(Cog):
     Useful commands and information about the bot.
     """
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: CustomBot):
         self.bot = bot
 
     @slash_command()
@@ -258,6 +261,25 @@ class Utilities(Cog):
         buffer.seek(0)
         await ctx.respond(file=File(buffer, filename="graph.png"))
 
+    @slash_command()
+    async def stats(self, ctx: ApplicationContext, member: Member = None) -> None:
+        """Get information about a member."""
+        if not member:
+            member = ctx.author
+        user: User = self.bot.get_user(member.id)
+        stats: GlobalUserStats = await self.bot.database.get_user_stats(user)
 
-def setup(bot: Bot):
+        embed: Embed = Embed(
+            title="Stats",
+            colour=SETTINGS["Colours"]["Default"]
+        )
+        embed.set_author(name=str(member), icon_url=member.avatar.url)
+        embed.add_field(name="Commands Executed", value=f"`{stats.commands_executed}`", inline=True)
+        embed.add_field(name="Songs Streamed", value=f"`{stats.songs_played}`", inline=True)
+        embed.add_field(name="Listened Time", value=f"`{stats.song_duration} seconds`", inline=True)
+        embed.set_footer(text="Stats are still in development.")
+        await ctx.respond(embed=embed)
+
+
+def setup(bot: CustomBot):
     bot.add_cog(Utilities(bot))

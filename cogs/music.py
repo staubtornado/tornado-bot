@@ -110,7 +110,7 @@ class Music(Cog):
             return
         if before.channel is None and after.channel is not None:
             voice_state.voice = self.bot.get_guild(member.guild.id).voice_client
-            voice_state.skip()
+            await voice_state.skip()
             return
 
         if before.channel is not None and after.channel is None:
@@ -144,7 +144,7 @@ class Music(Cog):
         except ClientException:
             await ctx.guild.voice_client.disconnect(force=False)
             ctx.voice_state.voice = await destination.connect()
-        ctx.voice_state.skip()
+        await ctx.voice_state.skip()
         await ctx.guild.change_voice_state(channel=destination, self_mute=False, self_deaf=True)
         await ctx.respond(f"👍 **Hello**! Joined {destination.mention}.")
 
@@ -416,7 +416,7 @@ class Music(Cog):
         author = ctx.author
         if force == "True":
             if tuple(filter(lambda role: "DJ" in role.name, ctx.author.roles)) or author.guild_permissions.manage_guild:
-                ctx.voice_state.skip()
+                await ctx.voice_state.skip()
                 await ctx.respond(f"⏭ **Forced to skip** current song.")
                 return
             if tuple(filter(lambda role: "DJ" in role.name, ctx.guild.roles)):
@@ -427,7 +427,7 @@ class Music(Cog):
             return
 
         if author == ctx.voice_state.current.requester:
-            ctx.voice_state.skip()
+            await ctx.voice_state.skip()
             await ctx.respond(f"⏭ **Skipped** the **song directly**, cause **you** added it.")
             return
 
@@ -438,7 +438,7 @@ class Music(Cog):
             majority: int = ceil(len([member for member in ctx.author.voice.channel.members if not member.bot]) / 3)
 
             if votes >= majority:
-                ctx.voice_state.skip()
+                await ctx.voice_state.skip()
                 await ctx.respond(f"⏭ **Skipped song**, as **{votes}/{majority}** users voted.")
                 return
             await ctx.respond(f"🗳️ **Skip vote** added: **{votes}/{majority}**")

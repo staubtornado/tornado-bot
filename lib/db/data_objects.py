@@ -1,7 +1,7 @@
 from enum import IntEnum
 from typing import Optional, Union
 
-from discord import Member, Guild
+from discord import Member, Guild, User
 
 
 class EmbedSize(IntEnum):
@@ -63,3 +63,19 @@ class ExperienceStats:
         self.message_amount = data.get("message_count")
         self.member = data.get("member")
         self.rank = data.get("rank")
+        self.commands_executed = data.get("commands_executed")
+        self.songs_played = data.get("songs")
+        self.music_streamed = data.get("music_streamed")
+
+
+class GlobalUserStats:
+    user: User
+    commands_executed: int
+    songs_played: int
+    song_duration: int
+
+    def __init__(self, data: dict[str, Union[int, User]]) -> None:
+        self.user = data.get("user")
+        self.commands_executed = data.get("command_executions")
+        self.songs_played = data.get("songs_played")
+        self.song_duration = data.get("song_duration")

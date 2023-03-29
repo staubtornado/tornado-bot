@@ -3,11 +3,11 @@ from enum import IntEnum
 from random import randrange
 from typing import Optional, Any, Union, Self
 
-from discord import Bot, VoiceClient, Guild, Embed, FFmpegPCMAudio, TextChannel, ApplicationContext, Forbidden
+from discord import VoiceClient, Guild, Embed, FFmpegPCMAudio, TextChannel, ApplicationContext, Forbidden, User
 
 from bot import CustomBot
 from data.config.settings import SETTINGS
-from lib.db.data_objects import GuildSettings, EmbedSize
+from lib.db.data_objects import GuildSettings, EmbedSize, GlobalUserStats
 from lib.music.exceptions import YTDLError
 from lib.music.prepared_source import PreparedSource
 from lib.music.queue import SongQueue
@@ -23,7 +23,7 @@ class Loop(IntEnum):
 
 
 class VoiceState:
-    bot: Bot
+    bot: CustomBot
     guild: Guild
     _channel: Union[TextChannel, Any]
 
@@ -251,6 +251,15 @@ class VoiceState:
                 delete_after=self.current.source.duration if self.update_embed else None
             )
 
+            for member in self.voice.channel.members:
+                if member.bot or member.voice.deaf or member.voice.self_deaf:
+                    continue
+                user: User = self.bot.get_user(member.id)
+                stats: GlobalUserStats = await self.bot.database.get_user_stats(user)
+                stats.songs_played += 1
+                stats.song_duration += self.current.source.duration
+                await self.bot.database.update_user_stats(stats)
+
             if len(self.queue) and isinstance(self.queue[0].source, PreparedSource):
                 try:
                     self.queue[0] = Song(await YTDLSource.create_source(
@@ -268,12 +277,29 @@ class VoiceState:
         self.skip_votes.clear()
         self._waiter.set()
 
-    def skip(self) -> None:
+    async def _remove_unheard_seconds(self):
+        if self.current is None:
+            return
+        if isinstance(self.current.source, PreparedSource):
+            return
+
+        for member in self.voice.channel.members:
+            if member.bot or member.voice.deaf or member.voice.self_deaf:
+                continue
+            user: User = self.bot.get_user(member.id)
+            stats: GlobalUserStats = await self.bot.database.get_user_stats(user)
+            stats.songs_played -= 1
+            remaining: float = int(self.voice.timestamp / 1000 * 0.02) - self.position
+            stats.song_duration -= self.current.source.duration - round(remaining)
+            await self.bot.database.update_user_stats(stats)
+
+    async def skip(self) -> None:
         if self.loop == Loop.SONG:
             self.loop = Loop.NONE
 
         if self.is_playing:
             self.voice.stop()
+        await self._remove_unheard_seconds()
 
     async def stop(self) -> None:
         self.queue.clear()
@@ -285,3 +311,4 @@ class VoiceState:
             if self.voice.is_connected():
                 await self.voice.disconnect()
             self.voice = None
+        await self._remove_unheard_seconds()

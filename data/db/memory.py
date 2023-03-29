@@ -2,11 +2,11 @@ from asyncio import sleep, get_event_loop
 from typing import Self
 
 from aiosqlite import Connection, connect
-from discord import Guild, Member
+from discord import Guild, Member, User
 from numpy import array, ndarray
 
 from data.config.settings import SETTINGS
-from lib.db.data_objects import ExperienceStats, GuildSettings
+from lib.db.data_objects import ExperienceStats, GuildSettings, GlobalUserStats
 from lib.experience.calculation import xp_to_level
 
 
@@ -49,6 +49,33 @@ class Database:
             "message_count": result[1],
             "rank": rank
         })
+
+    async def get_user_stats(self, user: User) -> GlobalUserStats:
+        cur = await self._database.execute(
+            """SELECT Commands, Songs, SongDuration FROM UserUsage WHERE UserID = ?""",
+            (user.id,)
+        )
+        try:
+            command_executions, songs_played, song_duration = await cur.fetchone()
+        except TypeError:
+            command_executions, songs_played, song_duration = (0, 0, 0)
+        return GlobalUserStats({
+            "user": user,
+            "command_executions": command_executions,
+            "songs_played": songs_played,
+            "song_duration": song_duration
+        })
+
+    async def update_user_stats(self, stats: GlobalUserStats) -> None:
+        await self._database.execute(
+            """INSERT OR IGNORE INTO UserUsage (UserID) VALUES (?)""",
+            (stats.user.id,)
+        )
+        await self._database.execute(
+            """UPDATE UserUsage SET Commands = ?, Songs = ?, SongDuration = ? WHERE UserID = ?""",
+            (stats.commands_executed, stats.songs_played, stats.song_duration, stats.user.id)
+        )
+        await self._database.commit()
 
     async def update_leaderboard(self, stats: ExperienceStats) -> None:
         await self._database.execute(
@@ -113,7 +140,7 @@ class Database:
         )
         await self._database.commit()
 
-    async def remove_user(self, member: Member) -> None:
+    async def remove_member(self, member: Member) -> None:
         await self._database.execute(
             """DELETE FROM experience WHERE (GuildID, UserID) = (?, ?)""",
             (member.guild.id, member.id)

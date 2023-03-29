@@ -30,3 +30,10 @@ CREATE TABLE IF NOT EXISTS keys (
     EnablesPremium INTEGER,
     EnablesBeta INTEGER
 );
+
+CREATE TABLE IF NOT EXISTS UserUsage (
+    UserID INTEGER PRIMARY KEY,
+    Commands INTEGER DEFAULT 0,
+    Songs INTEGER DEFAULT 0,
+    SongDuration INTEGER DEFAULT 0  --  in seconds
+)

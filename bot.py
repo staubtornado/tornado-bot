@@ -2,10 +2,11 @@ from abc import ABC
 from logging import getLogger, FileHandler, Formatter, DEBUG
 from time import time, strftime, localtime
 
-from discord import Bot, Interaction, ApplicationContext, ApplicationCommandInvokeError
+from discord import Bot, Interaction, ApplicationContext, ApplicationCommandInvokeError, User
 
 from data.config.settings import SETTINGS
 from data.db.memory import Database
+from lib.db.data_objects import GlobalUserStats
 from lib.utils.utils import save_traceback
 
 
@@ -36,6 +37,10 @@ class CustomBot(Bot, ABC):
         if interaction.is_command():
             print(f"[DEFAULT] [{strftime('%d.%m.%y %H:%M', localtime())}] "
                   f"{interaction.user} executed /{interaction.data['name']} in {interaction.guild}")
+            user: User = self.get_user(interaction.user.id)
+            stats: GlobalUserStats = await self.database.get_user_stats(user)
+            stats.commands_executed += 1
+            await self.database.update_user_stats(stats)
 
     async def on_application_command_error(self, ctx: ApplicationContext, error):
         if not SETTINGS["Production"]:

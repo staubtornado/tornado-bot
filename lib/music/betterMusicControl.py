@@ -119,7 +119,7 @@ class BetterMusicControlReceiver:
                         embed.set_author(name=request.requester, icon_url=request.requester.default_avatar)
 
                     if request.requester.id == request.session.current.requester.id:
-                        request.session.skip()
+                        await request.session.skip()
                         await request.session.send(embed=embed)
                     else:
                         request.session.skip_votes.add(request.requester.id)
@@ -127,7 +127,7 @@ class BetterMusicControlReceiver:
                         required: int = ceil(len([m for m in request.session.voice.channel.members if not m.bot]) / 3)
 
                         if total_votes >= required:
-                            request.session.skip()
+                            await request.session.skip()
                         else:
                             embed.description = f"🗳️ **Skip vote** added: **{total_votes}/{required}**"
                         await request.session.send(embed=embed)

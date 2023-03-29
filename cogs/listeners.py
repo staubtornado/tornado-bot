@@ -67,7 +67,7 @@ class Listeners(Cog):
 
     @Cog.listener()
     async def on_member_remove(self, member: Member) -> None:
-        await self.bot.database.remove_user(member)
+        await self.bot.database.remove_member(member)
         settings: GuildSettings = await self.bot.database.get_guild_settings(member.guild)
         if not settings.generate_audit_log:
             return
