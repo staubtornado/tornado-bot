@@ -278,7 +278,7 @@ class VoiceState:
         self._waiter.set()
 
     async def _remove_unheard_seconds(self):
-        if self.current is None:
+        if self.current is None or self.voice is None:
             return
         if isinstance(self.current.source, PreparedSource):
             return
