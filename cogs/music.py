@@ -1,592 +1,204 @@
-from asyncio import sleep, wait_for, TimeoutError
-from http.client import HTTPException
-from math import ceil
-from random import randint, shuffle
-from typing import Optional, Union, Any
+from math import floor
+from typing import Optional
+from urllib.parse import urlparse
 
-from asyncspotify import FullTrack, SimpleTrack
-from discord import ApplicationContext, slash_command, VoiceChannel, StageChannel, ClientException, \
-    VoiceProtocol, Option, AutocompleteContext, Embed, ButtonStyle, Interaction, WebhookMessage, Forbidden, Member, \
-    Permissions
+from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel, Color, Embed
 from discord.ext.commands import Cog
-from discord.utils import basic_autocomplete
-from psutil import virtual_memory
-from spotipy import SpotifyException
 
-from bot import CustomBot
-from data.config.settings import SETTINGS
-from lib.db.data_objects import EmbedSize
-from lib.music.api import search_on_spotify, get_lyrics
-from lib.music.betterMusicControl import BetterMusicControlReceiver
-from lib.music.exceptions import YTDLError
-from lib.music.music_application_context import MusicApplicationContext
-from lib.music.other import ensure_voice_state
-from lib.music.prepared_source import PreparedSource
-from lib.music.presets import PRESETS
-from lib.music.process import process, AdditionalInputRequiredError
+from bot import TornadoBot
+from lib.application_context import CustomApplicationContext
+from lib.exceptions import YouTubeNotEnabled
+from lib.music.audio_player import AudioPlayer
+from lib.music.extraction import YTDLSource
 from lib.music.song import Song
-from lib.music.views import LoopDecision, PlaylistParts, VariableButton
-from lib.music.voicestate import VoiceState, Loop
-from lib.utils.utils import ordinal, time_to_string, progress_bar
-
-
-async def auto_complete(ctx: AutocompleteContext) -> list[str]:
-    rtrn = list(PRESETS.keys())
-
-    if len([x for x in rtrn if x.lower().startswith(ctx.value.lower())]) > 0:
-        return [x for x in rtrn if x.lower().startswith(ctx.value.lower())]
-
-    rtrn.clear()
-    try:
-        response = search_on_spotify(search=ctx.value)
-        for item in response[0] + response[1]:
-            rtrn.append(item) if item not in rtrn else None
-    except SpotifyException:
-        pass
-    return rtrn if len(rtrn) > 0 else list(PRESETS.keys())
 
 
 class Music(Cog):
-    """
-    Play music from various sources like Spotify, YouTube or SoundCloud.
-    YouTube and Spotify playlists are supported, too.
-    """
+    _audio_player: dict[int, AudioPlayer]
 
-    bot: CustomBot
-    voice_states: dict[int, VoiceState]
-    _bmc: BetterMusicControlReceiver
-
-    def __init__(self, bot: CustomBot) -> None:
+    def __init__(self, bot: TornadoBot) -> None:
         self.bot = bot
-        self.voice_states = {}
-        self._bmc = BetterMusicControlReceiver(bot)
+        self._audio_player = {}
 
-    async def get_voice_state(self, ctx: ApplicationContext) -> VoiceState:
-        state: Optional[VoiceState] = self.voice_states.get(ctx.guild_id)
-        if not state or not state.is_valid:
-            state = await VoiceState.create(self.bot, ctx)
-            self.voice_states[ctx.guild_id] = state
-        return state
-
-    def cog_unload(self) -> None:
-        for state in self.voice_states.values():
-            self.bot.loop.create_task(state.stop())
-
-    async def cog_before_invoke(self, ctx: ApplicationContext) -> None:
-        ctx.voice_state = await self.get_voice_state(ctx)
-        ctx.playnext = False
-
-    @Cog.listener()  # Allows the bot to move to another channel or to prevent voice errors
+    @Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
         if member.id != self.bot.user.id:
             return
         if before.channel == after.channel:
             return
 
-        voice_state: VoiceState = self.voice_states.get(member.guild.id)
-        if not voice_state or not voice_state.is_valid:
+        player: Optional[AudioPlayer] = self._audio_player.get(member.guild.id)
+        voice_client: VoiceClient = member.guild.voice_client  # type: ignore
+
+        if not player:
             return
-        if voice_state.voice is None:
+
+        if not after.channel:
+            player.voice = None
             return
+        player.voice = voice_client
+
+        if before.channel is None and after.channel is not None:
+            pass
 
         if before.channel is not None and after.channel is not None:
-            for i in range(180):
-                await sleep(1)
-                if voice_state.voice is None:
-                    continue
-
-                channel: Union[VoiceChannel, Any] = self.bot.get_channel(voice_state.voice.channel.id)
-                if channel is None or channel.id != after.channel.id:
-                    return
-
-                if len(channel.members) > 1:
-                    break
-            else:  # No break
-                return
-            await sleep(2)
-
-            voice_state.voice.pause()
-            voice_state.voice.resume()
-            return
-        if before.channel is None and after.channel is not None:
-            voice_state.voice = self.bot.get_guild(member.guild.id).voice_client
-            await voice_state.skip()
-            return
-
-        if before.channel is not None and after.channel is None:
-            await sleep(5)
-            if self.bot.get_guild(member.guild.id).voice_client is not None:
-                return
-            await voice_state.stop()
+            voice_client.pause()
+            voice_client.resume()
 
     @slash_command()
-    async def join(self, ctx: MusicApplicationContext, channel: Optional[VoiceChannel] = None) -> None:
-        """Summons the bot into a voice channel."""
+    async def join(
+            self,
+            ctx: CustomApplicationContext,
+            destination: Option(
+                VoiceChannel,
+                "Destination, defaults to the voice channel you are in.",
+                required=False
+            ) = None
+    ) -> None:
+        """Joins a voice channel"""
 
-        try:
-            ensure_voice_state(ctx, no_voice_required=bool(channel))
-        except ValueError as e:
-            await ctx.respond(str(e))
+        if destination := destination or ctx.author.voice.channel:
+            await destination.connect()
+            await ctx.respond(f"👋 **Hello**! **Joined** {destination.mention}.")
             return
-
-        if ctx.voice_state.is_playing:
-            await ctx.respond(f"🎶 I am **currently playing** in {ctx.voice_client.channel.mention}.")
-            return
-        destination: Union[VoiceChannel, StageChannel] = channel or ctx.author.voice.channel
-
-        permissions: Permissions = destination.permissions_for(ctx.me)
-        if not all((permissions.connect, permissions.speak)):
-            await ctx.respond(f"🔒 I **need** the **permission** to join and speak in {destination.mention}.")
-            raise PermissionError
-
-        try:
-            ctx.voice_state.voice = await destination.connect()
-        except ClientException:
-            await ctx.guild.voice_client.disconnect(force=False)
-            ctx.voice_state.voice = await destination.connect()
-        await ctx.voice_state.skip()
-        await ctx.guild.change_voice_state(channel=destination, self_mute=False, self_deaf=True)
-        await ctx.respond(f"👍 **Hello**! Joined {destination.mention}.")
+        await ctx.respond("❌ You are **not connected to a voice channel**.")
 
     @slash_command()
-    async def stop(self, ctx: MusicApplicationContext) -> None:
-        """Stops current song and clears the queue."""
-
-        try:
-            ensure_voice_state(ctx, no_processing=True)
-        except ValueError as e:
-            await ctx.respond(str(e))
-            return
-
-        ctx.voice_state.loop = Loop.NONE
-        ctx.voice_state.queue.clear()
-        ctx.voice_state.voice.stop()
-        ctx.voice_state.current = None
-        ctx.voice_state.live = False
-        await ctx.respond("⏹ **Stopped** song and **cleared** the **queue**.")
-
-    @slash_command()
-    async def leave(self, ctx: MusicApplicationContext) -> None:
-        """Clears song queue and removes bot from voice channel."""
-
-        if isinstance(ctx.guild.voice_client, VoiceProtocol):
-            await ctx.respond(f"👋 **Bye**. Left {ctx.guild.voice_client.channel.mention}.")
-            await ctx.guild.voice_client.disconnect(force=True)
-        else:
-            await ctx.respond("🔄 ️**Reset voice** state.")
-        await ctx.voice_state.stop()
-        del self.voice_states[ctx.guild_id]
-
-    @slash_command()
-    async def play(self, ctx: MusicApplicationContext,
-                   search: Option(str, "Name or URL of song, playlist URL, or preset.",
-                                  autocomplete=basic_autocomplete(auto_complete), required=True)) -> None:
-        """Play music in a voice channel."""
+    async def play(
+            self,
+            ctx: CustomApplicationContext,
+            search: Option(
+                str,
+                "The song to play. This can be a search query or a to a playlist.",
+                required=True
+            )):
+        """Plays a song or playlist."""
         await ctx.defer()
 
         try:
-            ensure_voice_state(ctx, no_processing=True, no_live_notice=True)
-        except ValueError as e:
-            await ctx.respond(str(e))
-            return
-
-        if virtual_memory().percent > 75 and SETTINGS["Production"]:
-            await ctx.respond("🔥 **I am** currently **experiencing high usage**. Please **try again later**.")
-            return
-
-        try:
-            if not ctx.guild.voice_client:
-                await self.join(ctx, None)  # Overwrite voice state channel.
+            if urlparse(search).scheme in ("http", "https"):
+                result: YTDLSource = await YTDLSource.from_url(ctx, search, loop=self.bot.loop)
             else:
-                if ctx.voice_state.voice is not None:
-                    if ctx.voice_state.voice.channel.id != ctx.guild.voice_client.channel.id:
-                        await ctx.voice_client.disconnect(force=False)  # If bot is in a different channel.
-                        await self.join(ctx, None)  # Overwrite voice state channel.
-                    else:
-                        if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
-                            ctx.voice_state.voice.pause()
-                            ctx.voice_state.voice.resume()
-        except PermissionError:
-            return
-
-        search = PRESETS.get(search) or search
-        ctx.voice_state.processing = True
-        try:
-            song_s: Union[Song, list[Song]] = await wait_for(process(search, ctx), timeout=20)
-        except TimeoutError:
-            await ctx.respond("⏱ **Timeout**. Processing **took too long**.")
-        except (ValueError, YTDLError) as e:
-            await ctx.respond(str(e))
-        except AdditionalInputRequiredError as e:
-            view: PlaylistParts = PlaylistParts()
-            for option in e.args[1]:
-                view.add_item(VariableButton(
-                    custom_id=str(randint(100000000, 999999999)),
-                    callback=view.callback,
-                    label=option,
-                    style=ButtonStyle.green if "-" in option else ButtonStyle.blurple
-                ))
-            response: Union[Interaction, WebhookMessage] = await ctx.respond(e.args[0], view=view)
-            await view.wait()
-
-            tracks: list[Union[FullTrack, SimpleTrack, dict, Song]] = []
-            match view.value:
-                case None:
-                    await response.edit(content="❌ **Timeout**. User did **not respond within given time**.", view=None)
-                case "Help me choose.":
-                    tracks.extend(e.args[2])
-                    shuffle(tracks)
-                case _:
-                    answer: list[str] = str(view.value).split(" - ")
-                    tracks = e.args[2][int(answer[0]) - 1:int(answer[1])]
-            for track in tracks[:ctx.voice_state.queue.maxsize - len(ctx.voice_state.queue)]:
-                ctx.voice_state.put(Song(PreparedSource(ctx, track)), ctx.playnext)
-        else:
-            if isinstance(song_s, list):
-                if len(song_s) > 1:
-                    await ctx.respond(f"✅ Enqueued **{len(song_s)} songs**.")
-                    return
-                song_s = song_s[0]
-
-            if ctx.voice_state.is_playing or ctx.voice_state.voice.is_paused():
-                if ctx.playnext:
-                    await ctx.respond(f"🎶 **Playing** 🔎 `{str(song_s).replace(' by ', '` by `')}` **next**!")
-                else:
-                    await ctx.respond(f"✅ **Enqueued** 🔎 `{str(song_s).replace(' by ', '` by `')}`.")
-            else:
-                await ctx.respond(f"🎶 **Playing** 🔎 `{str(song_s).replace(' by ', '` by `')}` **now**!")
-        finally:
-            ctx.voice_state.processing = False
-
-    @slash_command()
-    async def playnext(self, ctx: MusicApplicationContext,
-                       search: Option(str, "Name or URL of song, playlist URL, or preset.",
-                                      autocomplete=basic_autocomplete(auto_complete), required=True)) -> None:
-        """Same as /play but appends to front of queue."""
-        ctx.playnext = True
-        await self.play(ctx, search)
-
-    @slash_command()
-    async def queue(self, ctx: MusicApplicationContext, page: int = 1) -> None:
-        """Shows the song queue."""
-
-        size: int = len(ctx.voice_state.queue)
-        if not size:
-            await ctx.respond("❌ The **queue** is **empty**.")
-            return
-
-        start: int = (page - 1) * SETTINGS["Cogs"]["Music"]["Queue"]["ItemsPerPage"]
-        end: int = start + SETTINGS["Cogs"]["Music"]["Queue"]["ItemsPerPage"]
-        duration: int = ctx.voice_state.queue.duration
-
-        if not 0 < page <= ceil(size / SETTINGS["Cogs"]["Music"]["Queue"]["ItemsPerPage"]):
-            await ctx.respond(
-                (f"❌ **Invalid page**. Must be **between 1 and "
-                 f"{ceil(size / SETTINGS['Cogs']['Music']['Queue']['ItemsPerPage'])}**.")
+                result: YTDLSource = await YTDLSource.from_search(
+                    ctx,
+                    f"https://music.youtube.com/search?q={search}#songs",
+                    loop=self.bot.loop
+                )
+        except YouTubeNotEnabled:
+            embed: Embed = Embed(
+                title="YouTube is not available",
+                description=(
+                    "Switch to a self hosted bot instance for more customization options.\n"
+                    "Read more [here](https://www.gamerbraves.com/youtube-forces-discords-rythm-bot-to-shut-down/)."
+                ),
+                color=Color.brand_red()
             )
-            return
-
-        description = (
-            f"**Size**: `{size}`\n"
-            f"**Duration**: `{time_to_string(duration)}`\n"
-            f"\n"
-            f"**Now Playing**\n"
-            f"[{ctx.voice_state.current}]({ctx.voice_state.current.source.url})\n"
-            f"\n"
-            f"**Requesters**\n"
-        )
-
-        emojis: list[str] = [
-            "<:aubanana:939542863929307216>",
-            "<:aublue:939543978892722247>",
-            "<:aubrown:939543989760167956>",
-            "<:aucoral:939543993816064100>",
-            "<:aucyan:939543991081398292>",
-            "<:aublack:939543985620406272>",
-            "<:augreen:939543980100698123>",
-            "<:aulime:939543992490676234>",
-            "<:aumaroon:939542861182025828>",
-            "<:auorange:939543983019933726>",
-            "<:aupink:939543981115715595>",
-            "<:aupurple:939543988229267507>",
-            "<:aured:939543977215008778>",
-            "<:aurose:939542862595498004>",
-            "<:autan:939542866294894642>",
-            "<:auwhite:939543986723508255>",
-            "<:auyellow:939543984139816991>",
-            "<:augray:939542865200152616>"
-        ]
-        shuffle(emojis)
-
-        requesters: dict[str, int] = {}
-        for i, song in enumerate(ctx.voice_state.queue[start:end], start=start + 1):
-            if not requesters.get(song.requester.mention):
-                requesters[song.requester.mention] = end - i - 1
-        for requester in requesters:
-            description += f"{emojis[requesters[requester]]} {requester}\n"
-        description += "\n**Queue**\n"
-
-        for i, song in enumerate(ctx.voice_state.queue[start:end], start=start + 1):
-            url: str = song.source.url.split("%")[0]
-            description += f"`{i}.` {emojis[requesters[song.requester.mention]]} [{song}]({url})\n"
-
-        embed: Embed = Embed(title="Queue", color=0xFF0000, description=description)
-        embed.set_footer(
-            text=f"Page {page}/{ceil(len(ctx.voice_state.queue) / SETTINGS['Cogs']['Music']['Queue']['ItemsPerPage'])}"
-        )
-        await ctx.respond(embed=embed)
-
-    @slash_command()
-    async def shuffle(self, ctx: MusicApplicationContext) -> None:
-        """Shuffles the song queue."""
-
-        try:
-            ensure_voice_state(ctx, requires_queue=True)
-        except ValueError as e:
-            await ctx.respond(str(e))
-            return
-
-        ctx.voice_state.queue.shuffle()
-        await ctx.respond("🔀 **Shuffled** the queue.")
-
-    @slash_command()
-    async def reverse(self, ctx: MusicApplicationContext) -> None:
-        """Reverses the song queue."""
-
-        try:
-            ensure_voice_state(ctx, requires_queue=True)
-        except ValueError as e:
-            await ctx.respond(str(e))
-            return
-
-        ctx.voice_state.queue.reverse()
-        await ctx.respond("↩ **Reversed** the **queue**.")
-
-    @slash_command()
-    async def remove(self, ctx: MusicApplicationContext, index: int) -> None:
-        """Removes a song from the queue at a given index."""
-
-        try:
-            ensure_voice_state(ctx, requires_queue=True)
-        except ValueError as e:
-            await ctx.respond(str(e))
-            return
-
-        if index < 1:
-            await ctx.respond("❌ **Invalid index**.")
-            return
-
-        try:
-            ctx.voice_state.queue.remove(index - 1)
-        except IndexError:
-            await ctx.respond(f"❌ There is **no song with** the **{ordinal(n=index)} position** in queue.")
-            return
-        await ctx.respond(f"🗑 **Removed** the **{ordinal(n=index)} song** in queue.")
-
-    @slash_command()
-    async def clear(self, ctx: MusicApplicationContext) -> None:
-        """Clears the song queue."""
-
-        try:
-            ensure_voice_state(ctx, requires_queue=True, no_processing=True)
-        except ValueError as e:
-            await ctx.respond(str(e))
-            return
-
-        ctx.voice_state.queue.clear()
-        await ctx.respond("📂 **Cleared** the **queue**.")
-
-    @slash_command()
-    async def loop(self, ctx: MusicApplicationContext) -> None:
-        """Loops current song/queue. Invoke again to disable loop."""
-        await ctx.respond("⚠️**What** do you want **to change?**", view=LoopDecision(ctx))
-
-    @slash_command()
-    async def skip(self, ctx: MusicApplicationContext,
-                   force: Option(str, "Bypasses votes and directly skips song.", choices=["True"],
-                                 required=False) = "False") -> None:
-        """(Vote) skip to next song. Requester can always skip."""
-
-        try:
-            ensure_voice_state(ctx, requires_song=True, no_live_notice=True)
-        except ValueError as e:
-            await ctx.respond(str(e))
-            return
-
-        author = ctx.author
-        if force == "True":
-            if tuple(filter(lambda role: "DJ" in role.name, ctx.author.roles)) or author.guild_permissions.manage_guild:
-                await ctx.voice_state.skip()
-                await ctx.respond(f"⏭ **Forced to skip** current song.")
-                return
-            if tuple(filter(lambda role: "DJ" in role.name, ctx.guild.roles)):
-                await ctx.respond(f"❌ You are **not a DJ**.")
-                return
-            await ctx.respond(f"❌ **Only a DJ can force** song **skipping**.\n"
-                              f"❔Roles that have `DJ` in their name are valid.")
-            return
-
-        if author == ctx.voice_state.current.requester:
-            await ctx.voice_state.skip()
-            await ctx.respond(f"⏭ **Skipped** the **song directly**, cause **you** added it.")
-            return
-
-        if author.id not in ctx.voice_state.skip_votes:
-            ctx.voice_state.skip_votes.add(author.id)
-
-            votes: int = len(ctx.voice_state.skip_votes)
-            majority: int = ceil(len([member for member in ctx.author.voice.channel.members if not member.bot]) / 3)
-
-            if votes >= majority:
-                await ctx.voice_state.skip()
-                await ctx.respond(f"⏭ **Skipped song**, as **{votes}/{majority}** users voted.")
-                return
-            await ctx.respond(f"🗳️ **Skip vote** added: **{votes}/{majority}**")
-            return
-        await ctx.respond("❌ **Cheating** not allowed**!** You **already voted**.")
-
-    @slash_command()
-    async def now(self, ctx: MusicApplicationContext) -> None:
-        """Current playing song with elapsed time."""
-
-        if ctx.voice_state.live:
-            await ctx.respond(
-                "❌ **Not available while playing** a **live** stream.\n"
-                "❔Execute **/**`stop` to **switch to default song streaming**."
-            )
-            return
-
-        if ctx.voice_state.current is None:
-            await ctx.respond("❌ **Nothing** is currently **playing**.")
-            return
-
-        if isinstance(ctx.voice_state.current.source, PreparedSource):
-            await ctx.respond("⚠️Next song is **currently processing**.")
-            return
-
-        embed: Embed = ctx.voice_state.current.create_embed(
-            EmbedSize(ctx.voice_state.embed_size), queue=ctx.voice_state.queue, loop=ctx.voice_state.loop
-        )
-
-        duration: int = int(ctx.voice_state.current.source.duration)
-        elapsed: int = int(ctx.voice_state.voice.timestamp / 1000 * 0.02) - ctx.voice_state.position
-        bar: str = progress_bar(elapsed, duration, content=("-", "•**", "-"), length=30)
-        value: str = f"**{time_to_string(int(elapsed))} {bar} **{time_to_string(duration)}**"
-        embed.insert_field_at(3, name="‎", value=value, inline=False)
-        await ctx.respond(embed=embed)
-
-    @slash_command()
-    async def pause(self, ctx: MusicApplicationContext) -> None:
-        """Pauses current song."""
-
-        try:
-            ensure_voice_state(ctx, requires_song=True, no_live_notice=True)
-        except ValueError as e:
-            await ctx.respond(str(e))
-            return
-
-        if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
-            ctx.voice_state.voice.pause()
-            await ctx.respond("⏯ **Paused** song, use **/**`resume` to **continue**.")
-            return
-        await ctx.respond("❌ The **song** is **already paused**.")
-
-    @slash_command()
-    async def resume(self, ctx: MusicApplicationContext) -> None:
-        """Resumes the current song."""
-
-        try:
-            ensure_voice_state(ctx, no_live_notice=True)
-        except ValueError as e:
-            await ctx.respond(str(e))
-            return
-
-        if ctx.voice_state.is_playing and ctx.voice_state.voice.is_paused():
-            ctx.voice_state.voice.resume()
-            await ctx.respond("⏯ **Resumed** song, use **/**`pause` to **pause**.")
-            return
-        await ctx.respond("❌ Either is the **song is not paused**, **or nothing** is currently **playing**.")
-
-    @slash_command()
-    async def volume(self, ctx: MusicApplicationContext, percent: int) -> None:
-        """Sets the volume of the current song."""
-
-        try:
-            ensure_voice_state(ctx, requires_song=True, no_live_notice=True)
-        except ValueError as e:
-            await ctx.respond(str(e))
-            return
-
-        if not (0 < percent <= 100):
-            if percent > 100:
-                await ctx.respond("❌ **Volume** cannot be **larger than 100%**.")
-            elif percent <= 0:
-                await ctx.respond("❌ **Volume** has to be **larger than 0%**. Use **/**`pause` pause.")
-            return
-
-        before: int = int(ctx.voice_state.current.source.volume * 100)
-        ctx.voice_state.current.source.volume = percent / 100
-        emoji: str = "🔈" if percent < 50 else "🔉" if percent == 50 else "🔊"
-        await ctx.respond(f"{emoji} **Set volume** of song from {before}% **to {percent}%**")
-
-    @slash_command()
-    async def lyrics(self, ctx: MusicApplicationContext,
-                     song: Optional[str] = None, artist: Optional[str] = None) -> None:
-        """Search for lyrics, default search is current song."""
-        await ctx.defer()
-
-        try:
-            response = get_lyrics(song or ctx.voice_state.current.source.title,
-                                  artist or ctx.voice_state.current.source.uploader)
-
-            embed = Embed(title="Lyrics", description=response[0], colour=0xFF0000)
-            embed.set_author(name=f"{response[2]} by {response[3]}", icon_url=response[1])
             await ctx.respond(embed=embed)
-        except (AttributeError, HTTPException):
-            await ctx.respond("❌ **Can not find any lyrics** for that song.")
+            return
+
+        if not result:
+            await ctx.respond("No results found")
+            return
+
+        # Check for valid existing player
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        if not audio_player:
+            audio_player = AudioPlayer(ctx)
+            self._audio_player[ctx.guild.id] = audio_player
+
+        # Join voice channel if not already in one
+        if not audio_player.voice:
+            if not ctx.author.voice:
+                await ctx.respond("❌ You are **not connected to a voice channel**.")
+                return
+            await self.join(ctx)
+
+        audio_player.put(Song(result))
+        await ctx.respond(f"🎶 **Added** `{result}` **to the queue**.")
 
     @slash_command()
-    async def history(self, ctx: MusicApplicationContext) -> None:
-        """Latest played songs in the current session."""
-
-        if not len(ctx.voice_state.history):
-            await ctx.respond("❌ There is **no data in** this **session**.")
+    async def pause(self, ctx: CustomApplicationContext) -> None:
+        """Pauses the currently playing song."""
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        if not audio_player:
+            await ctx.respond("❌ **Not currently playing** anything.")
             return
 
-        embed: Embed = Embed(title="History", description="Latest played songs in this session.\n\n", colour=0xFF0000)
-        for i, item in enumerate(ctx.voice_state.history, start=1):
-            embed.description += f"`{i}`. {item}\n"
-        await ctx.respond(embed=embed)
+        if audio_player.voice.is_paused():
+            await ctx.respond("❌ **Already paused**.")
+            return
+        audio_player.voice.pause()
+        await ctx.respond("⏸️ **Paused**.")
 
     @slash_command()
-    async def session(self, ctx: MusicApplicationContext) -> None:
-        """Receive current session ID to hotkey control music."""
-
-        try:
-            ctx.voice_state.add_control(ctx.author.id)
-        except ValueError as e:
-            await ctx.respond(str(e))
+    async def resume(self, ctx: CustomApplicationContext) -> None:
+        """Resumes the currently paused song."""
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        if not audio_player:
+            await ctx.respond("❌ **Not currently playing** anything.")
             return
 
-        embed: Embed = Embed(
-            title="__Secret__ ID", color=0xFF0000,
-            description="This ID is personalized and should therefore **only be used by you**.\n"
-                        "Sharing isn't caring, **sharing is __dangerous__**.")
-
-        ip: str = SETTINGS["BetterMusicControlListenOnIP"]
-        port: int = SETTINGS["BetterMusicControlListenOnPort"]
-        session_id: str = f"`{ip}:{port}?{ctx.voice_state.id}={ctx.voice_state.session[ctx.author.id][0]}`"
-        embed.add_field(name="Session ID", value=session_id, inline=False)
-        embed.add_field(name="Software",
-                        value="BetterMusicControl is not installed yet?\n"
-                              "Get it [here](https://github.com/staubtornado/BetterMusicControl/releases/latest).")
-        try:
-            await ctx.author.send(embed=embed)
-        except Forbidden:
-            await ctx.respond("❌ **Failed** to send. Please **check if** your **DMs are open**.")
+        if not audio_player.voice.is_playing():
+            await ctx.respond("❌ **Already playing**.")
             return
-        await ctx.respond("📨 **Sent** the **__secret__ ID** for the current session **to your DMs**.")
+        audio_player.voice.resume()
+        await ctx.respond("▶️ **Resumed**.")
+
+    @slash_command()
+    async def skip(
+            self,
+            ctx: CustomApplicationContext,
+            force: Option(
+                str,
+                "Force skip the current song.",
+                required=False,
+                choices=["True"]
+            ) = "False"
+    ) -> None:
+        """Skips the currently playing song."""
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        if not audio_player:
+            await ctx.respond("❌ **Not currently playing** anything.")
+            return
+
+        if force == "True" and ctx.author.guild_permissions.manage_guild:
+            audio_player.skip()
+            await ctx.respond("⏭️ **Force skipped**.")
+            return
+
+        if ctx.author.id in audio_player.current.skip_votes:
+            await ctx.respond("❌ You have already voted to skip.")
+            return
+
+        current: Song = audio_player.current
+
+        majority: int = floor(len([member for member in audio_player.voice.channel.members if not member.bot]) * 0.66)
+        if len(current.skip_votes) >= majority:
+            audio_player.skip()
+            await ctx.respond("⏭️ **Skipped**.")
+            return
+        current.skip_votes.add(ctx.author.id)
+        await ctx.respond(f"🗳️ **Voted to skip**. **{len(current.skip_votes)}/{majority}** votes.")
+
+    @slash_command()
+    async def stop(self, ctx: CustomApplicationContext) -> None:
+        """Stops the currently playing song."""
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+
+        if not ctx.author.guild_permissions.manage_guild:
+            if len([member for member in audio_player.voice.channel.members if not member.bot]) > 3:
+                await ctx.respond("❌ You are currently **not authorized** to stop the player.")
+                return
+
+        if not audio_player:
+            await ctx.respond("❌ **Not currently playing** anything.")
+            return
+
+        audio_player.stop()
+        await ctx.respond("⏹️ **Stopped**.")
 
 
-def setup(bot: CustomBot) -> None:
+
+
+def setup(bot: TornadoBot) -> None:
     bot.add_cog(Music(bot))

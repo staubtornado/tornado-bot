@@ -1,49 +1,32 @@
-from os import getenv, listdir, remove, mkdir
-from os.path import join, exists
-from traceback import format_exc
+from os import environ, listdir
 
 from discord import LoginFailure
-from dotenv import load_dotenv
-from tqdm import tqdm
 
-from bot import CustomBot
-from data.config.settings import SETTINGS
-from lib.presence.presence import update_rich_presence
+from bot import TornadoBot
+from lib.logging import log
 
 
-def main():
-    bot: CustomBot = CustomBot(
-        owner_ids=SETTINGS["OwnerIDs"],
-        description=SETTINGS["Description"],
-        intents=SETTINGS["Intents"],
-    )
+def main() -> None:
+    """Main entry point of the program."""
 
-    print(f"VERSION: {SETTINGS['Version']}\nCopyright (c) 2021 - present Staubtornado\n{'-' * 30}")
-    load_dotenv("./data/config/.env")
+    # Load environment variables from .env file
+    with open("./config/.env", "r") as file:
+        for line in file.readlines():
+            key, value = line.strip().split("=", 1)
+            if key not in environ:
+                environ[key] = value
 
-    cache: str = "./data/cache"
-    if not exists(cache):
-        mkdir(cache)
-    if not exists("./data/tracebacks"):
-        mkdir("./data/tracebacks")
+    bot: TornadoBot = TornadoBot()
 
-    if len(listdir(cache)) > 0:
-        for f in tqdm(listdir(cache), "[SYSTEM] Cleaning cache"):
-            remove(join(cache, f))
-    update_rich_presence.start(bot)
-
-    for filename in listdir('./cogs'):
-        if filename.endswith('.py'):
-            try:
-                bot.load_extension(f'cogs.{filename[:-3]}')
-            except Exception as e:
-                print(f"[FATAL ERROR] Failed to load {filename}: {e} \n{format_exc()}")
+    # Load cogs
+    for cog in listdir('./cogs'):
+        if cog.endswith('.py') and not cog.startswith('_'):
+            bot.load_extension(f'cogs.{cog[:-3]}')
 
     try:
-        bot.run(getenv("DISCORD_BOT_TOKEN"))
+        bot.run(environ["DISCORD_TOKEN"])
     except LoginFailure:
-        print("[FATAL ERROR] Invalid token. Please check your .env file and visit "
-              "https://discord.com/developers/applications to create a new token.")
+        log("Failed to log in to Discord. Check your token.", error=True)
 
 
 if __name__ == "__main__":

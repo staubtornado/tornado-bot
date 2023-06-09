@@ -1,42 +1,42 @@
 from asyncio import Queue
 from collections import deque
-from itertools import islice
 from random import shuffle
-from typing import Any
+
+from lib.music.song import Song
 
 
 class SongQueue(Queue):
     _queue: deque
 
-    def __getitem__(self, item) -> Any:
-        if isinstance(item, slice):
-            return list(islice(self._queue, item.start, item.stop, item.step))
+    def __init__(self, maxsize: int = 0) -> None:
+        super().__init__(maxsize)
+
+    def __repr__(self) -> str:
+        return f"<SongQueue maxsize={self.maxsize} qsize={self.qsize()}>"
+
+    def __getitem__(self, item: int) -> Song:
         return self._queue[item]
 
-    def __iter__(self):
-        return self._queue.__iter__()
+    def __iter__(self) -> iter:
+        return iter(self._queue)
 
     def __len__(self) -> int:
-        return self.qsize()
+        return len(self._queue)
 
-    def clear(self) -> None:
-        self._queue.clear()
+    def __reversed__(self):
+        return reversed(self._queue)
+
+    def __setitem__(self, key, value) -> None:
+        self._queue[key] = value
+
+    def __delitem__(self, key) -> None:
+        del self._queue[key]
+
+    def __contains__(self, item) -> bool:
+        return item in self._queue
 
     def shuffle(self) -> None:
         shuffle(self._queue)
 
-    def reverse(self) -> None:
-        self._queue.reverse()
-
-    def insert(self, index: int, item) -> None:
-        self._queue.insert(index, item)
-
-    def __setitem__(self, index: int, item) -> None:
-        self._queue[index] = item
-
-    def remove(self, index: int) -> None:
-        del self._queue[index]
-
-    @property
-    def duration(self) -> int:
-        return sum(song.source.duration for song in self._queue)
+    def clear(self) -> None:
+        self._queue.clear()

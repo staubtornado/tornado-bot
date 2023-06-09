@@ -1,89 +1,164 @@
-from random import random
-from typing import Union, Any
+from typing import Self
+from urllib.parse import urlparse
 
 from discord import Member, Embed
 
-from lib.db.data_objects import EmbedSize
-from lib.music.prepared_source import PreparedSource
-from lib.music.queue import SongQueue
-from lib.music.ytdl import YTDLSource
-from lib.utils.utils import time_to_string, shortened
+from lib.enums import SongEmbedSize, AudioPlayerLoopMode
+from lib.music.extraction import YTDLSource
+from lib.utils import format_time, shortened, truncate
+
+HOST_COLORS = {
+    "youtube": 0xff0000,
+    "soundcloud": 0xff8800,
+    "bandcamp": 0x6666ff,
+    "vimeo": 0x00ff00,
+    "twitch": 0x6441a5,
+    "spotify": 0x1db954,
+    "attachment": 0x000000,
+    "other": 0x000000
+}
 
 
 class Song:
-    __slots__ = ("source", "requester")
+    """
+    Class to represent a song
 
-    source: Union[YTDLSource, PreparedSource]
-    requester: Union[Member, Any]  # Will always be Member
+    Attributes
+    ----------
+    source: YTDLSource
+        The source of the song
+    requester: Member
+        The member who requested the song
+    title: str
+        The title of the song
+    uploader: str
+        The uploader of the song
+    url: str
+        The url of the song
+    duration: int
+        The duration of the song in seconds
+    skip_votes: set[int]
+        The set of member IDs who have voted to skip the song
+    """
 
-    def __init__(self, source: Union[YTDLSource, PreparedSource]) -> None:
-        self.source = source
-        self.requester = source.requester
+    source: YTDLSource
+    requester: Member
+    skip_votes: set[int]
 
-    def __str__(self) -> str:
-        return str(self.source)
+    title: str
+    uploader: str
+    url: str
+    duration: int
 
-    @staticmethod
-    def embed_has_advertisement(embed: Embed) -> bool:
-        return len(embed.fields) == 4
+    def __init__(self, source: YTDLSource) -> None:
+        self._source = source
+        self._requester = source.requester
+        self._skip_votes = set()
 
-    @staticmethod
-    def _add_advertisement(embed: Embed) -> Embed:
-        if random() <= 0.33:
-            embed.add_field(
-                name="<a:rooCool:1024373563165249638> Did you know?",
-                value=("You can **pause**, **resume**, and **skip songs using** your media **buttons**.\n"
-                       "Execute **/**`session` and follow the instructions."),
-                inline=False
-            )
-        return embed
+    @property
+    def source(self) -> YTDLSource:
+        return self._source
 
-    def to_prepared_src(self):
-        """Converts current YTDLSource Object into PreparedSource Object."""
+    @property
+    def requester(self) -> Member:
+        return self._requester
 
-        self.source = PreparedSource(
-            self.source.ctx,
-            {
-                "title": self.source.title,
-                "uploader": self.source.uploader,
-                "duration": self.source.duration,
-                "url": self.source.url
-            }
-        )
+    @property
+    def title(self) -> str:
+        return self.source.title
 
-    def create_embed(self, size: EmbedSize, *, queue: SongQueue, loop: int) -> Embed:
-        """Song embed containing all important information related to the song."""
+    @property
+    def uploader(self) -> str:
+        return self.source.uploader
 
-        description: str = (f"[Video]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) "
-                            f"**|** {time_to_string(self.source.duration)} **|** {self.requester.mention}")
+    @property
+    def url(self) -> str:
+        return self.source.url
 
+    @property
+    def duration(self) -> int:
+        return self.source.duration
+
+    @property
+    def skip_votes(self) -> set[int]:
+        return self._skip_votes
+
+    def get_embed(
+            self,
+            loop: AudioPlayerLoopMode,
+            queue: list[Self],
+            size: SongEmbedSize = SongEmbedSize.DEFAULT,
+            progress: float = 0
+    ) -> Embed:
+        """
+        Get an embed for the song
+
+        :param loop: AudioPlayerLoop
+            The loop mode of the player
+        :param queue: list[Song]
+            The queue of the player. Should contain all songs that are intended to be shown in the embed
+        :param size: SongEmbedSize
+            The size of the embed
+        :param progress: int
+            Whether to include the elapsed time in the embed. If 0, the elapsed time will not be included
+        :return: `discord.Embed`
+        """
+
+        host: str = urlparse(self.source.url).hostname
         embed: Embed = Embed(
-            title=self.source.title_embed,
-            description=description,
-            color=0xFF0000
+            title=self.title,
+            color=HOST_COLORS.get(host) or HOST_COLORS["other"]
         )
+        if progress:
+            elapsed_time: int = int(self.source.duration * progress)
+            duration = f"{format_time(elapsed_time)} **/** {format_time(self.source.duration)}"
+        else:
+            duration = format_time(self.source.duration)
+
+        description: str = (
+            f"[URL]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) **|** "
+            f"{duration} **|** {self.requester.mention}"
+        )
+        embed.description = description
         embed.set_thumbnail(url=self.source.thumbnail_url)
 
-        if size == EmbedSize.SMALL:
-            return self._add_advertisement(embed)
+        if size == SongEmbedSize.SMALL:
+            return embed
 
-        stats_value: str = (
-            f"{shortened(self.source.views) if self.source.views is not None else 'Error'} **/** "
-            f"{shortened(self.source.likes) if self.source.likes is not None else 'Error'}"
+        try:
+            embed.add_field(
+                name="Views / Likes",
+                value=f"{shortened(self.source.views)} **/** {shortened(self.source.likes)}"
+            )
+        except TypeError:
+            pass
+
+        embed.add_field(
+            name="Loop",
+            value={0: "Disabled", 1: "Queue", 2: "Song"}[loop.value]
         )
-        embed.add_field(name="Views / Likes", value=stats_value)
-        embed.add_field(name="Loop", value={0: "Disabled", 1: "Song", 2: "Queue"}.get(loop))
-        embed.add_field(name="Uploaded", value=f"<t:{str(self.source.upload_date.timestamp())[:-2]}:R>")
+        embed.add_field(
+            name="Uploaded",
+            value=f"<t:{self.source.upload_date.timestamp():.0f}:R>"
+        )
 
-        if size == EmbedSize.NO_QUEUE:
-            return self._add_advertisement(embed)
+        if not len(queue) or size == SongEmbedSize.NO_QUEUE:
+            return embed
 
-        queue_str: str = ""
-        for i, song in enumerate(queue[0:5], start=1):
-            queue_str += f"`{i}`. [{song}]({song.source.url})\n"
+        _queue: list[str] = []
+        for i, song in enumerate(queue, start=1):
+            _queue.append(f"{i}. [{truncate(f'{song.title} by {song.uploader}', 55)}]({song.url})")
+
         if len(queue) > 5:
-            remaining: int = len(queue) - queue_str.count("\n")
-            queue_str += f"Use **/**`queue` to show **{remaining}** more..."
+            _queue.append(f"Execute **/**queue to **see {len(queue) - 5} more**.")
 
-        embed.add_field(name="Queue", value=queue_str, inline=False) if len(queue) else None
-        return self._add_advertisement(embed)
+        embed.add_field(
+            name="Queue",
+            value="\n".join(_queue)
+        )
+        return embed
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Song):
+            return NotImplemented
+        return self.url == other.url
