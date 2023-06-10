@@ -11,6 +11,10 @@ from lib.spotify.track import Track
 
 
 class SpotifyAPI:
+    """
+    A Spotify API client. Lightweight wrapper around the Spotify Web API.
+    """
+
     def __init__(self, client_id: str, client_secret: str) -> None:
         self._client_id = client_id
         self._client_secret = client_secret
@@ -45,7 +49,7 @@ class SpotifyAPI:
                 raise SpotifyRateLimit(retry_after=int(response.headers["Retry-After"]))
             case 200:  # OK
                 pass
-            case 204:  # No content
+            case 404:  # No content
                 raise SpotifyNotFound()
             case _:
                 raise SpotifyNotAvailable(response.reason)
@@ -80,6 +84,9 @@ class SpotifyAPI:
         Note: All raised exceptions are subclasses of :class:`SpotifyException`.
         """
 
+        if "https://open.spotify.com/" in track_id:
+            track_id = self._strip_url(track_id)
+
         response: dict = await self._get(f"https://api.spotify.com/v1/tracks/{track_id}")
         return Track(response)
 
@@ -94,6 +101,9 @@ class SpotifyAPI:
 
         Note: All raised exceptions are subclasses of :class:`SpotifyException`.
         """
+
+        if "https://open.spotify.com/" in album_id:
+            album_id = self._strip_url(album_id)
 
         response: dict = await self._get(f"https://api.spotify.com/v1/albums/{album_id}")
         return Album(response)
@@ -110,6 +120,9 @@ class SpotifyAPI:
         Note: All raised exceptions are subclasses of :class:`SpotifyException`.
         """
 
+        if "https://open.spotify.com/" in artist_id:
+            artist_id = self._strip_url(artist_id)
+
         response: dict = await self._get(f"https://api.spotify.com/v1/artists/{artist_id}/top-tracks?market=DE")
         return Artist(response)
 
@@ -125,6 +138,9 @@ class SpotifyAPI:
 
         Note: All raised exceptions are subclasses of :class:`SpotifyException`.
         """
+
+        if "https://open.spotify.com/" in playlist_id:
+            playlist_id = self._strip_url(playlist_id)
 
         response: dict = await self._get(f"https://api.spotify.com/v1/playlists/{playlist_id}")
         playlist = Playlist(response)
