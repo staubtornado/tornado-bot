@@ -1,9 +1,11 @@
+from datetime import datetime, timedelta
 from re import match
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientResponse
 
 from lib.spotify.album import Album
 from lib.spotify.artist import Artist
+from lib.spotify.exceptions import SpotifyRateLimit, SpotifyNotFound, SpotifyNotAvailable
 from lib.spotify.playlist import Playlist
 from lib.spotify.track import Track
 
@@ -13,6 +15,8 @@ class SpotifyAPI:
         self._client_id = client_id
         self._client_secret = client_secret
         self._token = None
+
+        self._retry_after = None
 
     async def _get_token(self) -> None:
         async with ClientSession() as session:
@@ -34,9 +38,26 @@ class SpotifyAPI:
             return m.group(4)
         raise ValueError("Invalid Spotify URL")
 
+    def _validate_response_status(self, response: ClientResponse) -> None:
+        match response.status:
+            case 429:  # Rate limit
+                self._retry_after = datetime.now() + timedelta(seconds=int(response.headers["Retry-After"]))
+                raise SpotifyRateLimit(retry_after=int(response.headers["Retry-After"]))
+            case 200:  # OK
+                pass
+            case 204:  # No content
+                raise SpotifyNotFound()
+            case _:
+                raise SpotifyNotAvailable(response.reason)
+
     async def _get(self, url: str) -> dict:
         if not self._token:
             await self._get_token()
+
+        if self._retry_after and datetime.now() < self._retry_after:
+            raise SpotifyRateLimit(retry_after=(self._retry_after - datetime.now()).seconds)
+        self._retry_after = None
+
         async with ClientSession() as session:
             async with session.get(
                 url,
