@@ -1,21 +1,25 @@
 from datetime import datetime
+from os import environ
 from typing import Optional, Any
 
 from discord import Bot, Interaction, ApplicationContext, ApplicationCommandInvokeError
 
 from config.settings import SETTINGS
 from lib.logging import log, save_traceback
+from lib.spotify.api import SpotifyAPI
 
 
 class TornadoBot(Bot):
     uptime: datetime
     settings: dict[str, Any]
+    spotify: SpotifyAPI
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         self._uptime = None
         self._settings = SETTINGS
+        self._spotify = SpotifyAPI(environ["SPOTIFY_CLIENT_ID"], environ["SPOTIFY_CLIENT_SECRET"])
 
     @property
     def uptime(self) -> Optional[datetime]:
@@ -26,6 +30,11 @@ class TornadoBot(Bot):
     def settings(self) -> dict[str, Any]:
         """Returns the settings dictionary."""
         return self._settings
+
+    @property
+    def spotify(self) -> SpotifyAPI:
+        """Returns the Spotify API instance."""
+        return self._spotify
 
     async def on_ready(self) -> None:
         self._uptime = datetime.utcnow()
