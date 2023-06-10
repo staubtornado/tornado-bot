@@ -1,8 +1,10 @@
 from asyncio import Queue
 from collections import deque
 from random import shuffle
+from typing import Union
 
 from lib.music.song import Song
+from lib.spotify.track import Track
 
 
 class SongQueue(Queue):
@@ -14,7 +16,7 @@ class SongQueue(Queue):
     def __repr__(self) -> str:
         return f"<SongQueue maxsize={self.maxsize} qsize={self.qsize()}>"
 
-    def __getitem__(self, item: int) -> Song:
+    def __getitem__(self, item: int) -> Union[Song, Track]:
         return self._queue[item]
 
     def __iter__(self) -> iter:

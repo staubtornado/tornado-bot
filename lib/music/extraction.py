@@ -1,12 +1,13 @@
+from asyncio import AbstractEventLoop
 from datetime import datetime
 from typing import Self
-from urllib.parse import urlparse
 
 from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio, Member
 from yt_dlp import YoutubeDL
 
 from lib.application_context import CustomApplicationContext
 from lib.exceptions import YouTubeNotEnabled
+from lib.spotify.track import Track
 
 
 class YTDLSource(PCMVolumeTransformer):
@@ -43,11 +44,10 @@ class YTDLSource(PCMVolumeTransformer):
     likes: int
     duration: int
 
-    def __init__(self, ctx: ApplicationContext, source: FFmpegPCMAudio, *, data: dict, volume: float = 0.5) -> None:
+    def __init__(self, requester: Member, source: FFmpegPCMAudio, *, data: dict, volume: float = 0.5) -> None:
         super().__init__(source, volume)
 
-        self._ctx = ctx
-        self._requester = ctx.author  # type: ignore
+        self._requester = requester
 
         self._title = data.get('title')
         self._uploader = data.get('uploader')
@@ -66,10 +66,6 @@ class YTDLSource(PCMVolumeTransformer):
         self._duration = data.get('duration')
 
     @property
-    def ctx(self) -> ApplicationContext:
-        return self._ctx
-
-    @property
     def requester(self) -> Member:
         return self._requester  # type: ignore
 
@@ -78,7 +74,7 @@ class YTDLSource(PCMVolumeTransformer):
         return self._title
 
     @property
-    def uploader(self) -> str:
+    def artist(self) -> str:
         return self._uploader
 
     @property
@@ -114,30 +110,30 @@ class YTDLSource(PCMVolumeTransformer):
         return self._duration
 
     def __str__(self) -> str:
-        return f"{self.title} by {self.uploader}"
+        return f"{self.title} by {self.artist}"
 
     def __repr__(self) -> str:
-        return f"<YTDLSource title='{self.title}' uploader='{self.uploader}'>"
+        return f"<YTDLSource title='{self.title}' uploader='{self.artist}'>"
 
     @classmethod
-    async def from_url(cls, ctx: CustomApplicationContext, url: str, *, loop=None) -> Self:
-        loop = loop or ctx.bot.loop
-
+    async def from_url(cls, ctx: CustomApplicationContext, url: str, loop: AbstractEventLoop) -> Self:
         data = await loop.run_in_executor(None, lambda: cls.ytdl.extract_info(url, download=False))
 
-        # Check whether URL is from YouTube
+        # Check whether the URL is from YouTube
         if data['webpage_url_domain'] == 'youtube.com' and not ctx.bot.settings['Music']['YouTubeEnabled']:
             raise YouTubeNotEnabled()
 
         if 'entries' in data:
             data = data['entries'][0]
-        return cls(ctx, FFmpegPCMAudio(data['url'], **cls.FFMPEG_OPTIONS), data=data)
+        return cls(ctx.author, FFmpegPCMAudio(data['url'], **cls.FFMPEG_OPTIONS), data=data)
 
     @classmethod
-    async def from_search(cls, ctx: CustomApplicationContext, search: str, *, loop=None) -> Self:
-        loop = loop or ctx.bot.loop
-
-        data = await loop.run_in_executor(None, lambda: cls.ytdl.extract_info(search, download=False, process=False))
+    async def from_search(cls, requester: Member, search: str, loop: AbstractEventLoop) -> Self:
+        data = await loop.run_in_executor(None, lambda: cls.ytdl.extract_info(
+            f"https://music.youtube.com/search?q={search}#songs",
+            download=False,
+            process=False
+        ))
 
         if 'entries' in data:
             for entry in data['entries']:
@@ -147,4 +143,9 @@ class YTDLSource(PCMVolumeTransformer):
             None,
             lambda: cls.ytdl.extract_info(data['url'], download=False)
         )
-        return cls(ctx, FFmpegPCMAudio(processed_data['url'], **cls.FFMPEG_OPTIONS), data=processed_data)
+        return cls(requester, FFmpegPCMAudio(processed_data['url'], **cls.FFMPEG_OPTIONS), data=processed_data)
+
+    @classmethod
+    async def from_track(cls, requester: Member, track: Track, loop: AbstractEventLoop) -> Self:
+        search: str = f"{track.name} {' '.join(str(artist) for artist in track.artists)}"
+        return await cls.from_search(requester, search, loop=loop)

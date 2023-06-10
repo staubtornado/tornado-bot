@@ -1,10 +1,11 @@
-from typing import Self
+from typing import Self, Union
 from urllib.parse import urlparse
 
 from discord import Member, Embed
 
 from lib.enums import SongEmbedSize, AudioPlayerLoopMode
 from lib.music.extraction import YTDLSource
+from lib.spotify.track import Track
 from lib.utils import format_time, shortened, truncate
 
 HOST_COLORS = {
@@ -50,13 +51,17 @@ class Song:
     url: str
     duration: int
 
-    def __init__(self, source: YTDLSource) -> None:
+    def __init__(self, source: Union[YTDLSource, Track], requester: Member = None) -> None:
+        if isinstance(source, Track):
+            if not requester:
+                raise ValueError("Requester must be provided when creating a Song from a Track")
+
         self._source = source
-        self._requester = source.requester
+        self._requester = requester or source.requester
         self._skip_votes = set()
 
     @property
-    def source(self) -> YTDLSource:
+    def source(self) -> Union[YTDLSource, Track]:
         return self._source
 
     @property
@@ -69,7 +74,7 @@ class Song:
 
     @property
     def uploader(self) -> str:
-        return self.source.uploader
+        return self.source.artist
 
     @property
     def url(self) -> str:
@@ -96,11 +101,13 @@ class Song:
         :param loop: AudioPlayerLoop
             The loop mode of the player
         :param queue: list[Song]
-            The queue of the player. Should contain all songs that are intended to be shown in the embed
+            The queue of the player.
+            It Should contain all songs that are intended to be shown in the embed
         :param size: SongEmbedSize
             The size of the embed
         :param progress: int
-            Whether to include the elapsed time in the embed. If 0, the elapsed time will not be included
+            Whether to include the elapsed time in the embed.
+            If 0, the elapsed time will not be included
         :return: `discord.Embed`
         """
 
@@ -116,7 +123,7 @@ class Song:
             duration = format_time(self.source.duration)
 
         description: str = (
-            f"[URL]({self.source.url}) **|** [{self.source.uploader}]({self.source.uploader_url}) **|** "
+            f"[URL]({self.source.url}) **|** [{self.source.artist}]({self.source.uploader_url}) **|** "
             f"{duration} **|** {self.requester.mention}"
         )
         embed.description = description
@@ -147,7 +154,7 @@ class Song:
 
         _queue: list[str] = []
         for i, song in enumerate(queue, start=1):
-            _queue.append(f"{i}. [{truncate(f'{song.title} by {song.uploader}', 55)}]({song.url})")
+            _queue.append(f"{i}. [{truncate(f'{song.title} by {song.artist}', 55)}]({song.url})")
 
         if len(queue) > 5:
             _queue.append(f"Execute **/**queue to **see {len(queue) - 5} more**.")

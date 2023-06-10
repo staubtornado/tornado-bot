@@ -6,8 +6,10 @@ from discord import VoiceClient, HTTPException, Forbidden, Message
 from lib.application_context import CustomApplicationContext
 from lib.enums import AudioPlayerLoopMode
 from lib.logging import log, save_traceback
+from lib.music.extraction import YTDLSource
 from lib.music.queue import SongQueue
 from lib.music.song import Song
+from lib.spotify.track import Track
 
 
 class AudioPlayer:
@@ -108,6 +110,14 @@ class AudioPlayer:
 
             if not self.active:
                 break
+
+            if isinstance(song.source, Track):
+                try:
+                    source = await YTDLSource.from_track(song.requester, song.source, loop=self.ctx.bot.loop)
+                except Exception as e:
+                    await save_traceback(e)
+                    continue
+                song = Song(source)
 
             self._voice.play(song.source, after=self._prepare_next)
             self._current = song
