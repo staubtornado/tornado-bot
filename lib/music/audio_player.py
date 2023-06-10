@@ -12,18 +12,18 @@ from lib.music.song import Song
 
 class AudioPlayer:
     ctx: CustomApplicationContext
-    queue: SongQueue[Song]
 
     active: bool
     current: Optional[Song]
     loop: AudioPlayerLoopMode
     voice: Optional[VoiceClient]
 
+    _queue: SongQueue[Song]
     _message: Optional[Message]
 
     def __init__(self, ctx: CustomApplicationContext) -> None:
         self.ctx = ctx
-        self.queue = SongQueue()
+        self._queue = SongQueue()
 
         self._voice = None
         self._loop = AudioPlayerLoopMode.NONE
@@ -40,7 +40,7 @@ class AudioPlayer:
         return self.active
 
     def __len__(self) -> int:
-        return len(self.queue)
+        return len(self._queue)
 
     @property
     def active(self) -> bool:
@@ -96,7 +96,7 @@ class AudioPlayer:
             await self._delete_previous_message()
 
             try:
-                song: Song = await wait_for(self.queue.get(), timeout=180)
+                song: Song = await wait_for(self._queue.get(), timeout=180)
             except TimeoutError:
                 if self.active:
                     try:
@@ -114,7 +114,7 @@ class AudioPlayer:
             self._timestamp = int(self.voice.timestamp / 1000 * 0.02)
 
             try:
-                self._message = await self.ctx.send(embed=song.get_embed(self.loop, list(self.queue), 2, 0))
+                self._message = await self.ctx.send(embed=song.get_embed(self.loop, list(self._queue), 2, 0))
             except (Forbidden, HTTPException):
                 pass
             await self._event.wait()
@@ -128,14 +128,14 @@ class AudioPlayer:
 
         :raises asyncio.QueueFull: If the queue is full
         """
-        self.queue.put_nowait(song)
+        self._queue.put_nowait(song)
 
     def clear(self) -> None:
         """
         Clear the queue
         :return: None
         """
-        self.queue.clear()
+        self._queue.clear()
 
     def skip(self) -> None:
         """
@@ -166,12 +166,12 @@ class AudioPlayer:
         Stop the player and clear the queue
         :return: None
         """
-        self.queue.clear()
+        self._queue.clear()
         if self.voice:
             self.voice.stop()
 
     def _cleanup(self) -> None:
-        self.queue.clear()
+        self._queue.clear()
         self._player_task.cancel()
         self.ctx.bot.loop.create_task(self._delete_previous_message())
 
