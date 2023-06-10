@@ -65,21 +65,67 @@ class SpotifyAPI:
                     "Authorization": f"Bearer {self._token}"
                 }
             ) as response:
+                self._validate_response_status(response)
                 return await response.json()
 
     async def get_track(self, track_id: str) -> Track:
+        """
+        :param track_id: The Spotify ID of the track.
+        :return: The track.
+
+        :raises SpotifyRateLimit: If the rate limit is exceeded.
+        :raises SpotifyNotFound: If the track could not be found.
+        :raises SpotifyNotAvailable: If the Spotify API is not available.
+
+        Note: All raised exceptions are subclasses of :class:`SpotifyException`.
+        """
+
         response: dict = await self._get(f"https://api.spotify.com/v1/tracks/{track_id}")
         return Track(response)
 
     async def get_album(self, album_id: str) -> Album:
+        """
+        :param album_id: The Spotify ID of the album.
+        :return: The album.
+
+        :raises SpotifyRateLimit: If the rate limit is exceeded.
+        :raises SpotifyNotFound: If the album could not be found.
+        :raises SpotifyNotAvailable: If the Spotify API is not available.
+
+        Note: All raised exceptions are subclasses of :class:`SpotifyException`.
+        """
+
         response: dict = await self._get(f"https://api.spotify.com/v1/albums/{album_id}")
         return Album(response)
 
     async def get_artist(self, artist_id: str) -> Artist:
+        """
+        :param artist_id: The Spotify ID of the artist.
+        :return: The artist.
+
+        :raises SpotifyRateLimit: If the rate limit is exceeded.
+        :raises SpotifyNotFound: If the artist could not be found.
+        :raises SpotifyNotAvailable: If the Spotify API is not available.
+
+        Note: All raised exceptions are subclasses of :class:`SpotifyException`.
+        """
+
         response: dict = await self._get(f"https://api.spotify.com/v1/artists/{artist_id}/top-tracks?market=DE")
         return Artist(response)
 
     async def get_playlist(self, playlist_id: str, limit: int = 400) -> Playlist:
+        """
+        :param playlist_id: The Spotify ID of the playlist.
+        :param limit: The maximum number of tracks to fetch.
+        :return: The playlist.
+
+        :raises SpotifyRateLimit: If the rate limit is exceeded.
+        :raises SpotifyNotFound: If the playlist could not be found.
+        :raises SpotifyNotAvailable: If the Spotify API is not available.
+
+        Note: All raised exceptions are subclasses of :class:`SpotifyException`.
+        """
+
         response: dict = await self._get(f"https://api.spotify.com/v1/playlists/{playlist_id}")
         playlist = Playlist(response)
 
@@ -91,4 +137,4 @@ class SpotifyAPI:
             playlist += Playlist(response)
             if i + 50 >= _response["total"]:
                 break
-        return playlist  # type: ignore
+        return playlist
