@@ -1,16 +1,21 @@
 from math import floor
-from typing import Optional
-from urllib.parse import urlparse
+from typing import Optional, Any, Callable, Union
+from urllib.parse import urlparse, ParseResultBytes
 
-from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel, Color, Embed
+from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel
 from discord.ext.commands import Cog
 
 from bot import TornadoBot
 from lib.application_context import CustomApplicationContext
 from lib.exceptions import YouTubeNotEnabled
+from lib.logging import save_traceback
 from lib.music.audio_player import AudioPlayer
+from lib.music.embeds import Embeds
 from lib.music.extraction import YTDLSource
 from lib.music.song import Song
+from lib.spotify.exceptions import SpotifyNotFound, SpotifyRateLimit, SpotifyException
+from lib.spotify.track import Track
+from lib.spotify.track_collection import TrackCollection
 
 
 class Music(Cog):
@@ -75,30 +80,37 @@ class Music(Cog):
         """Plays a song or playlist."""
         await ctx.defer()
 
-        try:
-            if urlparse(search).scheme in ("http", "https"):
+        #  Analyze the search query
+        parse_result: ParseResultBytes = urlparse(search)
+        if parse_result.netloc == "open.spotify.com":  # If the search query is not a Spotify URL
+            functions: dict[str, Callable] = {
+                "track": ctx.bot.spotify.get_track,
+                "album": ctx.bot.spotify.get_album,
+                "playlist": ctx.bot.spotify.get_playlist,
+                "artist": ctx.bot.spotify.get_artist
+            }
+            try:
+                result: Any = await functions[str(parse_result.path).split("/")[1]](search)
+            except (KeyError, IndexError, SpotifyNotFound):
+                await ctx.respond("❌ Invalid Spotify URL.")
+                return
+            except SpotifyException as e:
+                await ctx.respond("❌ **Spotify** API error.")
+                if isinstance(e, SpotifyRateLimit):
+                    return
+                return await save_traceback(e)
+        elif parse_result.scheme in ("http", "https"):  # If the search query is another URL
+            try:
                 result: YTDLSource = await YTDLSource.from_url(ctx, search, loop=self.bot.loop)
-            else:
-                result: YTDLSource = await YTDLSource.from_search(
-                    ctx,
-                    f"https://music.youtube.com/search?q={search}#songs",
-                    loop=self.bot.loop
-                )
-        except YouTubeNotEnabled:
-            embed: Embed = Embed(
-                title="YouTube is not available",
-                description=(
-                    "Switch to a self hosted bot instance for more customization options.\n"
-                    "Read more [here](https://www.gamerbraves.com/youtube-forces-discords-rythm-bot-to-shut-down/)."
-                ),
-                color=Color.brand_red()
+            except YouTubeNotEnabled:
+                await ctx.respond(embed=Embeds.YOUTUBE_NOT_ENABLED)
+                return
+        else:  # If the search query is a search query
+            result: YTDLSource = await YTDLSource.from_search(
+                ctx.author,
+                search,
+                loop=self.bot.loop
             )
-            await ctx.respond(embed=embed)
-            return
-
-        if not result:
-            await ctx.respond("No results found")
-            return
 
         # Check for valid existing player
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
@@ -106,15 +118,22 @@ class Music(Cog):
             audio_player = AudioPlayer(ctx)
             self._audio_player[ctx.guild.id] = audio_player
 
-        # Join voice channel if not already in one
+        # Join a voice channel if not already in one
         if not audio_player.voice:
             if not ctx.author.voice:
                 await ctx.respond("❌ You are **not connected to a voice channel**.")
                 return
             await self.join(ctx)
 
-        audio_player.put(Song(result))
-        await ctx.respond(f"🎶 **Added** `{result}` **to the queue**.")
+        if isinstance(result, TrackCollection):
+            for track in result:
+                audio_player.put(Song(track, ctx.author))
+            await ctx.respond(f"🎶 **Added** `{len(result)}` **tracks to the queue**.")
+            return
+        if isinstance(result, Union[Track, YTDLSource]):
+            audio_player.put(Song(result))
+            await ctx.respond(f"🎶 **Added** `{result.title}` **to the queue**.")
+            return
 
     @slash_command()
     async def pause(self, ctx: CustomApplicationContext) -> None:
@@ -196,8 +215,6 @@ class Music(Cog):
 
         audio_player.stop()
         await ctx.respond("⏹️ **Stopped**.")
-
-
 
 
 def setup(bot: TornadoBot) -> None:
