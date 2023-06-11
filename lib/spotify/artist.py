@@ -8,8 +8,8 @@ class Artist(PartialArtist):
     """
 
     def __init__(self, data: dict) -> None:
-        super().__init__(data)
-        self._top_tracks = [Track(track) for track in data["top_tracks"]]
+        super().__init__(data['tracks'][0]['artists'][0])
+        self._top_tracks = [Track(track) for track in data["tracks"]]
 
     @property
     def top_tracks(self) -> list[Track]:
