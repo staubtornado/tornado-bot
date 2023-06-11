@@ -1,7 +1,7 @@
 from math import floor, ceil
 from random import shuffle
 from re import match
-from typing import Optional, Any, Callable, Union
+from typing import Optional, Callable, Union
 from urllib.parse import urlparse, ParseResultBytes
 
 from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel, Embed, Color
@@ -311,6 +311,43 @@ class Music(Cog):
             embed.description += f"`{i}.` [{song.source.title}]({url.scheme}://{url.netloc}{url.path})\n"
 
         embed.set_footer(text=f"Page {page}/{pages}")
+        await ctx.respond(embed=embed)
+
+    @slash_command()
+    async def shuffle(self, ctx: CustomApplicationContext) -> None:
+        """Shuffles the queue."""
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        if not audio_player or not len(audio_player):
+            await ctx.respond("❌ **Not currently playing** anything.")
+            return
+
+        audio_player.shuffle()
+        await ctx.respond("🔀 **Shuffled** the queue.")
+
+    @slash_command()
+    async def history(self, ctx: CustomApplicationContext) -> None:
+        """Displays the last 5 songs played."""
+
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        if audio_player is None:
+            await ctx.respond("❌ **Not currently playing** anything.")
+            return
+
+        if not audio_player.history:
+            await ctx.respond("❌ **No history**.")
+            return
+
+        embed: Embed = Embed(
+            title="History",
+            color=Color.blurple()
+        )
+        for i, song in enumerate(audio_player.history, start=1):
+            embed.add_field(
+                name=f"{i}. {song.source.title}",
+                value=f"**Duration:** `{format_time(song.duration)}`\n"
+                      f"**Requester:** {song.requester.mention}",
+                inline=False
+            )
         await ctx.respond(embed=embed)
 
 

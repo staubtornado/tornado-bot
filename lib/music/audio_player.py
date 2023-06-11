@@ -22,6 +22,7 @@ class AudioPlayer:
 
     _queue: SongQueue[Song]
     _message: Optional[Message]
+    _history: list[Song]
 
     def __init__(self, ctx: CustomApplicationContext) -> None:
         self.ctx = ctx
@@ -33,6 +34,7 @@ class AudioPlayer:
         self._message = None
         self._current = None
         self._event = Event()
+        self._history = []
         self._player_task = self.ctx.bot.loop.create_task(self._player())
 
     def __del__(self) -> None:
@@ -108,6 +110,13 @@ class AudioPlayer:
         """
         return self._queue.duration
 
+    @property
+    def history(self) -> list[Song]:
+        """
+        :returns: The last 5 songs played.
+        """
+        return self._history
+
     async def _player(self) -> None:
         while True:
             self._event.clear()
@@ -135,10 +144,17 @@ class AudioPlayer:
                     continue
                 song = Song(source)
 
+            # Add the song to the history
+            if song not in self._history:
+                self._history.append(song)
+            self._history = self._history[-5:]
+
+            # Play the song
             self._voice.play(song.source, after=self._prepare_next)
             self._current = song
             self._timestamp = int(self.voice.timestamp / 1000 * 0.02)
 
+            # Send the message
             try:
                 self._message = await self.ctx.send(embed=song.get_embed(self.loop, list(self._queue), 2, 0))
             except (Forbidden, HTTPException):
@@ -195,6 +211,13 @@ class AudioPlayer:
         self._queue.clear()
         if self.voice:
             self.voice.stop()
+
+    def shuffle(self) -> None:
+        """
+        Shuffle the queue
+        :return: None
+        """
+        self._queue.shuffle()
 
     def _cleanup(self) -> None:
         self._queue.clear()
