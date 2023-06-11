@@ -147,5 +147,5 @@ class YTDLSource(PCMVolumeTransformer):
 
     @classmethod
     async def from_track(cls, requester: Member, track: Track, loop: AbstractEventLoop) -> Self:
-        search: str = f"{track.name} {' '.join(str(artist) for artist in track.artists)}"
+        search: str = f"{track.title} {' '.join(str(artist) for artist in track.artists)}"
         return await cls.from_search(requester, search, loop=loop)

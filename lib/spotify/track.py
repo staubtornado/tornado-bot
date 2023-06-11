@@ -8,7 +8,7 @@ class Track:
 
     def __init__(self, data: dict) -> None:
         self._id = data["id"]
-        self._name = data["name"]
+        self._title = data["name"]
         self._artists = [PartialArtist(artist) for artist in data["artists"]]
         self._duration = data["duration_ms"] // 1000
         self._url = data["external_urls"]["spotify"]
@@ -21,11 +21,11 @@ class Track:
         return self.id
 
     @property
-    def name(self) -> str:
+    def title(self) -> str:
         """
         :return: The name of the track.
         """
-        return self._name
+        return self._title
 
     @property
     def artists(self) -> list[PartialArtist]:
