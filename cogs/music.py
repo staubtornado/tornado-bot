@@ -1,8 +1,10 @@
-from math import floor
+from math import floor, ceil
+from random import shuffle
+from re import match
 from typing import Optional, Any, Callable, Union
 from urllib.parse import urlparse, ParseResultBytes
 
-from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel
+from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel, Embed, Color
 from discord.ext.commands import Cog
 
 from bot import TornadoBot
@@ -13,9 +15,11 @@ from lib.music.audio_player import AudioPlayer
 from lib.music.embeds import Embeds
 from lib.music.extraction import YTDLSource
 from lib.music.song import Song
+from lib.spotify.artist import Artist
 from lib.spotify.exceptions import SpotifyNotFound, SpotifyRateLimit, SpotifyException
 from lib.spotify.track import Track
 from lib.spotify.track_collection import TrackCollection
+from lib.utils import format_time
 
 
 class Music(Cog):
@@ -90,8 +94,11 @@ class Music(Cog):
                 "artist": ctx.bot.spotify.get_artist
             }
             try:
-                result: Any = await functions[str(parse_result.path).split("/")[1]](search)
-            except (KeyError, IndexError, SpotifyNotFound):
+                m = match(r"(https://)?open.spotify\.com/(intl-\w+/)?(track|album|artist|playlist)/(\w+)", search)
+                if not m:
+                    raise SpotifyNotFound
+                result = await functions[m.group(3)](search)
+            except (KeyError, SpotifyNotFound):
                 await ctx.respond("❌ Invalid Spotify URL.")
                 return
             except SpotifyException as e:
@@ -129,6 +136,11 @@ class Music(Cog):
             for track in result:
                 audio_player.put(Song(track, ctx.author))
             await ctx.respond(f"🎶 **Added** `{len(result)}` **tracks to the queue**.")
+            return
+        if isinstance(result, Artist):
+            for track in result.top_tracks:
+                audio_player.put(Song(track, ctx.author))
+            await ctx.respond(f"🎶 **Added** `{len(result.top_tracks)}` **tracks to the queue**.")
             return
         if isinstance(result, Union[Track, YTDLSource]):
             audio_player.put(Song(result))
@@ -201,7 +213,7 @@ class Music(Cog):
 
     @slash_command()
     async def stop(self, ctx: CustomApplicationContext) -> None:
-        """Stops the currently playing song."""
+        """Stops the currently playing song and clears the queue."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
 
         if not ctx.author.guild_permissions.manage_guild:
@@ -214,7 +226,92 @@ class Music(Cog):
             return
 
         audio_player.stop()
-        await ctx.respond("⏹️ **Stopped**.")
+        await ctx.respond("⏹️ **Stopped and cleared** the queue.")
+
+    @slash_command()
+    async def queue(
+            self,
+            ctx: CustomApplicationContext,
+            page: Option(
+                int,
+                "The page to view. Defaults to 1.",
+                required=False
+            ) = 1
+    ) -> None:
+        """Displays the current queue."""
+
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        if not audio_player:
+            await ctx.respond("❌ **Not currently playing** anything.")
+            return
+
+        if not len(audio_player):
+            await ctx.respond("❌ **The queue is empty**.")
+            return
+
+        pages: int = ceil(len(audio_player) / 9)
+        if not 1 <= page <= pages:
+            await ctx.respond(f"❌ **Page** `{page}` **does not exist**. The queue has **{pages}** pages.")
+            return
+
+        start: int = (page - 1) * 9
+        end: int = start + 9
+        duration: int = audio_player.duration
+
+        description: str = (
+            f"**Size:** `{len(audio_player)}`\n"
+            f"**Duration:** `{format_time(duration)}`\n"
+            "\n"
+            "**Currently Playing:**\n"
+            f"`{audio_player.current.source.title}` by `{audio_player.current.uploader}`\n"
+            "\n"
+            "**Requesters:**\n"
+        )
+
+        emojis: list[str] = [  # length: 18
+            "aubanana",
+            "aublack",
+            "aublue",
+            "aubrown",
+            "aubgreen",
+            "aubgrey",
+            "auborange",
+            "aubpink",
+            "aubpurple",
+            "auyellow",
+            "auwhite",
+            "aucyan",
+            "aumaroon",
+            "aucoral",
+            "aurose",
+            "autan",
+            "aulime",
+            "aured"
+        ]
+        shuffle(emojis)
+
+        #  requester.mention: emoji
+        requesters: dict[str, str] = {}
+
+        embed: Embed = Embed(
+            title="Queue",
+            description=description,
+            color=Color.blurple()
+        )
+
+        for i, song in enumerate(audio_player[start:end], start=start + 1):
+            if not requesters.get(song.requester.mention):
+                requesters[song.requester.mention] = emojis.pop(0)
+        for requester, emoji in requesters.items():
+            embed.description += f"{emoji} {requester}\n"
+        embed.description += "\n**Queue:**\n"
+
+        for i, song in enumerate(audio_player[start:end], start=start + 1):
+            url = urlparse(song.source.url)  # used to shorten the url in some cases
+            embed.description += f"`{i}.` [{song.source.title}]({url.scheme}://{url.netloc}{url.path})\n"
+
+        embed.set_footer(text=f"Page {page}/{pages}")
+        await ctx.respond(embed=embed)
 
 
 def setup(bot: TornadoBot) -> None:
