@@ -2,10 +2,8 @@ from asyncio import Queue
 from collections import deque
 from itertools import islice
 from random import shuffle
-from typing import Union, List, Any
 
 from lib.music.song import Song
-from lib.spotify.track import Track
 
 
 class SongQueue(Queue):
@@ -17,7 +15,7 @@ class SongQueue(Queue):
     def __repr__(self) -> str:
         return f"<SongQueue maxsize={self.maxsize} qsize={self.qsize()}>"
 
-    def __getitem__(self, item: int) -> Song | Track | list[Song | Track]:
+    def __getitem__(self, item: int) -> Song | list[Song]:
         if isinstance(item, slice):
             return list(islice(self._queue, item.start, item.stop, item.step))
         return self._queue[item]
@@ -45,6 +43,9 @@ class SongQueue(Queue):
 
     def clear(self) -> None:
         self._queue.clear()
+
+    def insert(self, index: int, item: Song) -> None:
+        self._queue.insert(index, item)
 
     @property
     def duration(self) -> int:
