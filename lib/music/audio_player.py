@@ -1,5 +1,5 @@
 from asyncio import wait_for, TimeoutError, Event
-from typing import Optional
+from typing import Optional, Any, Iterator
 
 from discord import VoiceClient, HTTPException, Forbidden, Message
 
@@ -43,6 +43,14 @@ class AudioPlayer:
 
     def __len__(self) -> int:
         return len(self._queue)
+
+    def __iter__(self) -> Iterator[Any]:
+        return iter(self._queue)
+
+    def __getitem__(self, item: int | slice) -> SongQueue[Song] | Song | Track:
+        if isinstance(item, slice):
+            return self._queue[item.start:item.stop:item.step]
+        return self._queue[item]
 
     @property
     def active(self) -> bool:
@@ -88,9 +96,17 @@ class AudioPlayer:
     def progress(self) -> float:
         """
         The progress of the current song.
-        :return: The percentage of the current song that has been played. Between 0 and 1
+        :returns: The percentage of the current song that has been played.
+        Between 0 and 1
         """
         return (self._timestamp - self.voice.timestamp / 1000 * 0.02) / self.current.duration
+
+    @property
+    def duration(self) -> int:
+        """
+        :returns: The duration of the queue in seconds.
+        """
+        return self._queue.duration
 
     async def _player(self) -> None:
         while True:
