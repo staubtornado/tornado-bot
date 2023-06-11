@@ -1,7 +1,7 @@
-from asyncio import wait_for, TimeoutError, Event
-from typing import Optional, Any, Iterator
+from asyncio import wait_for, TimeoutError, Event, QueueFull
+from typing import Any, Iterator
 
-from discord import VoiceClient, HTTPException, Forbidden, Message
+from discord import VoiceClient, HTTPException, Forbidden, Message, FFmpegPCMAudio
 
 from lib.application_context import CustomApplicationContext
 from lib.enums import AudioPlayerLoopMode
@@ -16,12 +16,12 @@ class AudioPlayer:
     ctx: CustomApplicationContext
 
     active: bool
-    current: Optional[Song]
+    current: Song | None
     loop: AudioPlayerLoopMode
-    voice: Optional[VoiceClient]
+    voice: VoiceClient | None
 
     _queue: SongQueue[Song]
-    _message: Optional[Message]
+    _message: Message | None
     _history: list[Song]
 
     def __init__(self, ctx: CustomApplicationContext) -> None:
@@ -29,7 +29,7 @@ class AudioPlayer:
         self._queue = SongQueue()
 
         self._voice = None
-        self._loop = AudioPlayerLoopMode.NONE
+        self._loop = AudioPlayerLoopMode.SONG
         self._timestamp = 0
         self._message = None
         self._current = None
@@ -63,7 +63,7 @@ class AudioPlayer:
         return self._player_task is not None and not self._player_task.done()
 
     @property
-    def current(self) -> Optional[Song]:
+    def current(self) -> Song | None:
         """
         The current song.
         :return: Song if there is a song playing, None otherwise
@@ -71,7 +71,7 @@ class AudioPlayer:
         return self._current
 
     @property
-    def voice(self) -> Optional[VoiceClient]:
+    def voice(self) -> VoiceClient | None:
         """
         The voice client.
         :return: VoiceClient if there is a voice client, None otherwise
@@ -79,7 +79,7 @@ class AudioPlayer:
         return self._voice
 
     @voice.setter
-    def voice(self, value: Optional[VoiceClient]) -> None:
+    def voice(self, value: VoiceClient | None) -> None:
         self._voice = value
 
     @property
@@ -122,13 +122,29 @@ class AudioPlayer:
             self._event.clear()
             await self._delete_previous_message()
 
+            #  Add the previous song to queue if loop is enabled
+            if self.loop and self.current:
+                self.current.source.original = FFmpegPCMAudio(
+                    self.current.source.stream_url, **YTDLSource.FFMPEG_OPTIONS
+                )
+
+                try:
+                    if self._loop == AudioPlayerLoopMode.QUEUE:
+                        self._queue.put_nowait(self.current)
+                    else:
+                        self._queue.insert(0, self.current)
+                except QueueFull:
+                    await self.send("⚠️ **Queue is full**, ignoring loop.")
+
+            #  Waiting for the next song, leaving if there is no song in 3 minutes
+            self._current = None
             try:
                 song: Song = await wait_for(self._queue.get(), timeout=180)
             except TimeoutError:
                 if self.active:
                     try:
-                        await self.ctx.send(f"**Left** {self.voice.channel.mention} **due to inactivity**.")
-                    except (Forbidden, HTTPException, AttributeError):
+                        await self.send(f"**Left** {self.voice.channel.mention} **due to inactivity**.")
+                    except AttributeError:
                         pass
                 self._cleanup()
                 break
@@ -136,6 +152,7 @@ class AudioPlayer:
             if not self.active:
                 break
 
+            #  Convert the track to a playable source
             if isinstance(song.source, Track):
                 try:
                     source = await YTDLSource.from_track(song.requester, song.source, loop=self.ctx.bot.loop)
@@ -155,10 +172,7 @@ class AudioPlayer:
             self._timestamp = int(self.voice.timestamp / 1000 * 0.02)
 
             # Send the message
-            try:
-                self._message = await self.ctx.send(embed=song.get_embed(self.loop, list(self._queue), 2, 0))
-            except (Forbidden, HTTPException):
-                pass
+            self._message = await self.send(embed=song.get_embed(self.loop, list(self._queue), 2, 0))
             await self._event.wait()
 
     def put(self, song: Song) -> None:
@@ -209,6 +223,7 @@ class AudioPlayer:
         :return: None
         """
         self._queue.clear()
+        self._loop = AudioPlayerLoopMode.NONE
         if self.voice:
             self.voice.stop()
 
@@ -218,6 +233,19 @@ class AudioPlayer:
         :return: None
         """
         self._queue.shuffle()
+
+    async def send(self, *args, **kwargs) -> Message | None:
+        """
+        Send a message to the channel.
+        Note: If the message fails to send, it will be ignored.
+        :param args: The arguments to pass to `discord.abc.Messageable.send`
+        :param kwargs: The keyword arguments to pass to `discord.abc.Messageable.send`
+        :return: None
+        """
+        try:
+            return await self.ctx.send(*args, **kwargs)
+        except (Forbidden, HTTPException):
+            pass
 
     def _cleanup(self) -> None:
         self._queue.clear()
