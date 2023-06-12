@@ -1,5 +1,6 @@
 from asyncio import wait_for, TimeoutError, Event, QueueFull
-from typing import Any, Iterator
+from math import floor
+from typing import Any, Iterator, Callable
 
 from discord import VoiceClient, HTTPException, Forbidden, Message, FFmpegPCMAudio
 
@@ -23,12 +24,14 @@ class AudioPlayer:
     _queue: SongQueue[Song]
     _message: Message | None
     _history: list[Song]
+    _votes: dict[Callable[[], None], set[int]]
 
     def __init__(self, ctx: CustomApplicationContext) -> None:
         self.ctx = ctx
         self._queue = SongQueue()
 
         self._voice = None
+        self._votes = {}
         self._loop = AudioPlayerLoopMode.SONG
         self._timestamp = 0
         self._message = None
@@ -195,9 +198,13 @@ class AudioPlayer:
 
     def skip(self) -> None:
         """
-        Skip the current song
+        Skip the current song.
+        Disable loop of song if it is enabled.
         :return: None
         """
+        if self._loop == AudioPlayerLoopMode.SONG:
+            self._loop = AudioPlayerLoopMode.NONE
+
         if self.voice:
             self.voice.stop()
 
@@ -234,6 +241,38 @@ class AudioPlayer:
         """
         self._queue.shuffle()
 
+    def leave(self, *, force: bool = False) -> None:
+        self.ctx.bot.loop.create_task(self.voice.disconnect(force=force))
+
+    def vote(self, func: Callable[[], None], member_id: int, percentage: float = 0.45) -> tuple[int, int, bool]:
+        """
+        Request a vote to execute a function.
+        Executes the function if the vote is successful.
+
+        Example: Clear the queue if 50% of the members vote for it: player.vote(player.clear, ctx.author.id, 0.5)
+
+        :param func: The function to execute, it should not take any positional arguments
+
+        :param member_id: The member who requested the vote.
+        :param percentage: The percentage of members required executing the function
+
+        :returns: A tuple containing the number of votes, required votes, and if the vote was successful
+        """
+
+        if func not in self._votes:
+            self._votes[func] = set()
+        self._votes[func].add(member_id)
+
+        votes: int = len(self._votes[func])
+        total_members: int = len([member.id for member in self.voice.channel.members if not member.bot])
+        required: int = floor(total_members * percentage)
+
+        if votes >= required:
+            self._votes[func].clear()
+            func()
+            return votes, required, True
+        return votes, required, False
+
     async def send(self, *args, **kwargs) -> Message | None:
         """
         Send a message to the channel.
@@ -266,4 +305,6 @@ class AudioPlayer:
         if error:
             log(f"Player error: {error}", error=True)
             self.ctx.bot.loop.create_task(save_traceback(error))
+        if self.skip in self._votes:
+            self._votes[self.skip].clear()
         self._event.set()
