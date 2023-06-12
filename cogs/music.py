@@ -73,6 +73,33 @@ class Music(Cog):
         await ctx.respond("❌ You are **not connected to a voice channel**.")
 
     @slash_command()
+    async def leave(self, ctx: CustomApplicationContext) -> None:
+        """Leaves a voice channel, requires 50% approval. DJ permissions override this."""
+
+        # If the bot is not connected to a voice channel
+        if not ctx.guild.voice_client:
+            await ctx.respond("❌ I am **not connected to a voice channel**.")
+            return
+
+        # Check if the user is a DJ
+        is_dj: bool = ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]
+        if is_dj:
+            await ctx.guild.voice_client.disconnect(force=False)
+            await ctx.respond("👋 **Goodbye**!")
+            return
+
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+
+        # Add a vote to leave and check if the vote was successful
+        vote: tuple[int, int, bool] = audio_player.vote(audio_player.leave, ctx.author.id, 0.5)
+        if vote[2]:
+            await ctx.guild.voice_client.disconnect(force=False)
+            await ctx.respond("👋 **Goodbye**!")
+            return
+        percent: int = floor((vote[0] / vote[1]) * 100)
+        await ctx.respond(f"🗳️ **Vote to stop** the player. {vote[0]}/{vote[1]} (**{percent}%**)")
+
+    @slash_command()
     async def play(
             self,
             ctx: CustomApplicationContext,
@@ -143,7 +170,7 @@ class Music(Cog):
             await ctx.respond(f"🎶 **Added** `{len(result.top_tracks)}` **tracks to the queue**.")
             return
         if isinstance(result, Union[Track, YTDLSource]):
-            audio_player.put(Song(result))
+            audio_player.put(Song(result, ctx.author))
             await ctx.respond(f"🎶 **Added** `{result.title}` **to the queue**.")
             return
 
@@ -186,47 +213,55 @@ class Music(Cog):
                 choices=["True"]
             ) = "False"
     ) -> None:
-        """Skips the currently playing song."""
+        """Skips current song, requires 33% approval. The requester can always skip."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
         if not audio_player:
             await ctx.respond("❌ **Not currently playing** anything.")
             return
 
-        if force == "True" and ctx.author.guild_permissions.manage_guild:
+        # Check if the user is the requester
+        if ctx.author.id == audio_player.current.requester.id:
+            audio_player.skip()
+            await ctx.respond("⏭️ **Skipped**.")
+            return
+
+        # Check if the user is a DJ and force skip
+        is_dj: bool = ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]
+        if force == "True":
+            if not is_dj:
+                await ctx.respond("❌ You are **not a DJ**.")
+                return
             audio_player.skip()
             await ctx.respond("⏭️ **Force skipped**.")
             return
 
-        if ctx.author.id in audio_player.current.skip_votes:
-            await ctx.respond("❌ You have already voted to skip.")
+        # Add a vote and check if the song should be skipped
+        vote: tuple[int, int, bool] = audio_player.vote(audio_player.skip, ctx.author.id, 0.33)
+        if vote[2]:
+            await ctx.respond("🗳️ **Voted to skip** the song.")
             return
-
-        current: Song = audio_player.current
-
-        majority: int = floor(len([member for member in audio_player.voice.channel.members if not member.bot]) * 0.66)
-        if len(current.skip_votes) >= majority:
-            audio_player.skip()
-            await ctx.respond("⏭️ **Skipped**.")
-            return
-        current.skip_votes.add(ctx.author.id)
-        await ctx.respond(f"🗳️ **Voted to skip**. **{len(current.skip_votes)}/{majority}** votes.")
+        percent: int = round(vote[0] / vote[1] * 100)
+        await ctx.respond(f"🗳️ **Vote to skip** the song. {vote[0]}/{vote[1]} (**{percent}%**)")
 
     @slash_command()
     async def stop(self, ctx: CustomApplicationContext) -> None:
-        """Stops the currently playing song and clears the queue."""
+        """Stops the current song and clears the queue. Requires 45% approval. DJs can always stop."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
 
-        if not ctx.author.guild_permissions.manage_guild:
-            if len([member for member in audio_player.voice.channel.members if not member.bot]) > 3:
-                await ctx.respond("❌ You are currently **not authorized** to stop the player.")
-                return
-
-        if not audio_player:
-            await ctx.respond("❌ **Not currently playing** anything.")
+        # Check if the user is a DJ
+        is_dj: bool = ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]
+        if is_dj:
+            audio_player.stop()
+            await ctx.respond("⏹️ **Stopped**.")
             return
 
-        audio_player.stop()
-        await ctx.respond("⏹️ **Stopped and cleared** the queue.")
+        # Add a vote and check if the player should be stopped
+        vote: tuple[int, int, bool] = audio_player.vote(audio_player.stop, ctx.author.id, 0.45)
+        if vote[2]:
+            await ctx.respond("🗳️ **Voted to stop** the player.")
+            return
+        percent: int = round(vote[0] / vote[1] * 100)
+        await ctx.respond(f"🗳️ **Vote to stop** the player. {vote[0]}/{vote[1]} (**{percent}%**)")
 
     @slash_command()
     async def queue(
@@ -315,14 +350,27 @@ class Music(Cog):
 
     @slash_command()
     async def shuffle(self, ctx: CustomApplicationContext) -> None:
-        """Shuffles the queue."""
+        """Shuffles the queue, requires 33% approval. DJs can always shuffle."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
         if not audio_player or not len(audio_player):
             await ctx.respond("❌ **Not currently playing** anything.")
             return
 
-        audio_player.shuffle()
-        await ctx.respond("🔀 **Shuffled** the queue.")
+        # Check if the user is a DJ
+        is_dj: bool = ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]
+        if is_dj:
+            audio_player.shuffle()
+            await ctx.respond("🔀 **Shuffled**.")
+            return
+
+        # Add a vote and check if the queue should be shuffled
+        vote: tuple[int, int, bool] = audio_player.vote(audio_player.shuffle, ctx.author.id, 0.33)
+        if vote[2]:
+            await ctx.respond("🗳️ **Voted to shuffle** the queue.")
+            return
+
+        percent: int = round(vote[0] / vote[1] * 100)
+        await ctx.respond(f"🗳️ **Vote to shuffle** the queue. {vote[0]}/{vote[1]} (**{percent}%**)")
 
     @slash_command()
     async def history(self, ctx: CustomApplicationContext) -> None:
@@ -349,6 +397,27 @@ class Music(Cog):
                 inline=False
             )
         await ctx.respond(embed=embed)
+
+    @slash_command()
+    async def clear(self, ctx: CustomApplicationContext) -> None:
+        """Clears the queue. Requires 45% approval. DJs can clear without approval."""
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        if not audio_player or not len(audio_player):
+            await ctx.respond("❌ **Not currently playing** anything.")
+            return
+
+        if ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]:
+            audio_player.clear()
+            await ctx.respond("📂 **Cleared** the queue.")
+            return
+
+        vote: tuple[int, int, bool] = audio_player.vote(audio_player.clear, ctx.author.id, 0.45)
+
+        if vote[2]:
+            await ctx.respond("🗳️ **Voted to clear** the queue.")
+            return
+        percent: int = round(vote[0] / vote[1] * 100)
+        await ctx.respond(f"🗳️ **Vote to clear** the queue. {vote[0]}/{vote[1]} (**{percent}%**)")
 
 
 def setup(bot: TornadoBot) -> None:

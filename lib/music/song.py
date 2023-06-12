@@ -38,13 +38,10 @@ class Song:
         The url of the song
     duration: int
         The duration of the song in seconds
-    skip_votes: set[int]
-        The set of member IDs who have voted to skip the song
     """
 
     source: YTDLSource
     requester: Member
-    skip_votes: set[int]
 
     title: str
     uploader: str
@@ -58,7 +55,6 @@ class Song:
 
         self._source = source
         self._requester = requester or source.requester
-        self._skip_votes = set()
 
     @property
     def source(self) -> Union[YTDLSource, Track]:
@@ -83,10 +79,6 @@ class Song:
     @property
     def duration(self) -> int:
         return self.source.duration
-
-    @property
-    def skip_votes(self) -> set[int]:
-        return self._skip_votes
 
     def get_embed(
             self,
