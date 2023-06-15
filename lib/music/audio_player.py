@@ -1,4 +1,4 @@
-from asyncio import wait_for, TimeoutError, Event, QueueFull
+from asyncio import wait_for, TimeoutError, Event, QueueFull, sleep
 from math import floor
 from typing import Any, Iterator, Callable
 
@@ -39,6 +39,8 @@ class AudioPlayer:
         self._event = Event()
         self._history = []
         self._player_task = self.ctx.bot.loop.create_task(self._player())
+
+        self.ctx.bot.loop.create_task(self._inactivity_check())
 
     def __del__(self) -> None:
         self._cleanup()
@@ -119,6 +121,21 @@ class AudioPlayer:
         :returns: The last 5 songs played.
         """
         return self._history
+
+    async def _inactivity_check(self) -> None:
+        """
+        Checks if the bot is alone in the voice channel.
+        If it is, it will leave directly.
+
+        :return: None
+        """
+
+        await sleep(60)
+        while self.active:
+            member_amount = len([member for member in self.voice.channel.members if not member.bot])
+            if not member_amount:
+                self._cleanup()
+            await sleep(60)
 
     async def _player(self) -> None:
         while True:
@@ -241,8 +258,8 @@ class AudioPlayer:
         """
         self._queue.shuffle()
 
-    def leave(self, *, force: bool = False) -> None:
-        self.ctx.bot.loop.create_task(self.voice.disconnect(force=force))
+    def leave(self) -> None:
+        self._cleanup()
 
     def vote(self, func: Callable[[], None], member_id: int, percentage: float = 0.45) -> tuple[int, int, bool]:
         """
