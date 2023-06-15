@@ -6,6 +6,7 @@ from urllib.parse import urlparse, ParseResultBytes
 
 from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel, Embed, Color
 from discord.ext.commands import Cog
+from yt_dlp import DownloadError
 
 from bot import TornadoBot
 from lib.contexts import CustomApplicationContext
@@ -140,6 +141,9 @@ class Music(Cog):
                 result: YTDLSource = await YTDLSource.from_url(ctx, search, loop=self.bot.loop)
             except YouTubeNotEnabled:
                 await ctx.respond(embed=Embeds.YOUTUBE_NOT_ENABLED)
+                return
+            except DownloadError:
+                await ctx.respond("❌ **Download error**. Try a different source.")
                 return
         else:  # If the search query is a search query
             result: YTDLSource = await YTDLSource.from_search(

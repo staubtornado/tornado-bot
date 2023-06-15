@@ -1,6 +1,7 @@
 from asyncio import AbstractEventLoop
 from datetime import datetime
-from typing import Self
+from typing import Self, Any, AsyncGenerator
+from urllib.parse import quote
 
 from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio, Member
 from yt_dlp import YoutubeDL
@@ -20,7 +21,8 @@ class YTDLSource(PCMVolumeTransformer):
         'noplaylist': True,
         # 'quiet': True,
         'source_address': '0.0.0.0',
-        'default_search': 'auto'
+        'default_search': 'auto',
+        'playlist_items': '1,2,3,4,5'
     }
 
     FFMPEG_OPTIONS = {
@@ -117,6 +119,15 @@ class YTDLSource(PCMVolumeTransformer):
 
     @classmethod
     async def from_url(cls, ctx: CustomApplicationContext, url: str, loop: AbstractEventLoop) -> Self:
+        """
+        Creates a YTDLSource from a URL.
+        YouTube URLs are checked against the bot settings to see if they are enabled.
+
+        :param ctx: The context of the command.
+        :param url: The URL to create the source from.
+        :param loop: The event loop to run the YTDLSource creation in.
+        :return: The created YTDLSource.
+        """
         data = await loop.run_in_executor(None, lambda: cls.ytdl.extract_info(url, download=False))
 
         # Check whether the URL is from YouTube
@@ -129,6 +140,16 @@ class YTDLSource(PCMVolumeTransformer):
 
     @classmethod
     async def from_search(cls, requester: Member, search: str, loop: AbstractEventLoop) -> Self:
+        """
+        Creates a YTDLSource from a search.
+
+        :param requester: The member who requested the source.
+        :param search: The search to create the source from.
+        :param loop: The event loop to run the YTDLSource creation in.
+        :return: The created YTDLSource.
+        """
+
+        search = quote(search)
         data = await loop.run_in_executor(None, lambda: cls.ytdl.extract_info(
             f"https://music.youtube.com/search?q={search}#songs",
             download=False,
@@ -147,5 +168,40 @@ class YTDLSource(PCMVolumeTransformer):
 
     @classmethod
     async def from_track(cls, requester: Member, track: Track, loop: AbstractEventLoop) -> Self:
+        """
+        Creates a YTDLSource from a Track, currently only supports Spotify tracks.
+
+        :param requester: The member who requested the source.
+        :param track: The track to create the source from.
+        :param loop: The event loop to run the YTDLSource creation in.
+        :return: The created YTDLSource.
+        """
+
         search: str = f"{track.title} {' '.join(str(artist) for artist in track.artists)}"
         return await cls.from_search(requester, search, loop=loop)
+
+    @classmethod
+    async def search(
+            cls,
+            requester: Member,
+            search: str,
+            loop: AbstractEventLoop
+    ) -> AsyncGenerator[Self, Any]:
+        """
+        Searches YouTube for a query and yields the results.
+
+        :param requester: The member who requested the search.
+        :param search: The query to search for.
+        :param loop: The event loop to run the search in.
+        :return: The results of the search.
+        """
+
+        search = quote(search)
+        data = await loop.run_in_executor(None, lambda: cls.ytdl.extract_info(
+            f"https://music.youtube.com/search?q={search}#songs",
+            download=False,
+            process=True
+        ))
+
+        for entry in data['entries']:
+            yield cls(requester, FFmpegPCMAudio(entry['url'], **cls.FFMPEG_OPTIONS), data=entry)
