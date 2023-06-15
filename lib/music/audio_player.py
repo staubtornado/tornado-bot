@@ -140,7 +140,7 @@ class AudioPlayer:
     async def _player(self) -> None:
         while True:
             self._event.clear()
-            await self._delete_previous_message()
+            await self._delete_previous_messages()
 
             #  Add the previous song to queue if loop is enabled
             if self.loop and self.current:
@@ -315,13 +315,13 @@ class AudioPlayer:
     def _cleanup(self) -> None:
         self._queue.clear()
         self._player_task.cancel()
-        self.ctx.bot.loop.create_task(self._delete_previous_message())
+        self.ctx.bot.loop.create_task(self._delete_previous_messages())
 
         if self._voice:
             self._voice.stop()
             self.ctx.bot.loop.create_task(self._voice.disconnect())
 
-    async def _delete_previous_message(self) -> None:
+    async def _delete_previous_messages(self) -> None:
         for message in self._messages:
             try:
                 await message.delete()
@@ -329,6 +329,7 @@ class AudioPlayer:
                 break
             except AttributeError:
                 pass
+        self._messages.clear()
 
     def _prepare_next(self, error=None) -> None:
         if error:
