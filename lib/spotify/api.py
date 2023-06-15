@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 from re import match
+from typing import AsyncGenerator
+from urllib.parse import quote
 
 from aiohttp import ClientSession, ClientResponse
 
@@ -154,3 +156,20 @@ class SpotifyAPI:
             if i + 50 >= _response["total"]:
                 break
         return playlist
+
+    async def search(self, query: str, limit: int = 10) -> AsyncGenerator[Track, None]:
+        """
+        :param query: The query to search for.
+        :param limit: The maximum number of results to fetch.
+        :return: The search results.
+
+        :raises SpotifyRateLimit: If the rate limit is exceeded.
+        :raises SpotifyNotFound: If the search results could not be found.
+        :raises SpotifyNotAvailable: If the Spotify API is not available.
+
+        Note: All raised exceptions are subclasses of :class:`SpotifyException`.
+        """
+        query = quote(query)
+        response: dict = await self._get(f"https://api.spotify.com/v1/search?q={query}&type=track&limit={limit}")
+        for track in response["tracks"]["items"]:
+            yield Track(track)
