@@ -2,7 +2,7 @@ from asyncio import wait_for, TimeoutError, Event, QueueFull, sleep
 from math import floor
 from typing import Any, Iterator, Callable
 
-from discord import VoiceClient, HTTPException, Forbidden, Message, FFmpegPCMAudio
+from discord import VoiceClient, HTTPException, Forbidden, Message, FFmpegPCMAudio, InteractionMessage
 
 from lib.contexts import CustomApplicationContext
 from lib.enums import AudioPlayerLoopMode
@@ -22,7 +22,7 @@ class AudioPlayer:
     voice: VoiceClient | None
 
     _queue: SongQueue[Song]
-    _message: Message | None
+    _messages: list[Message | InteractionMessage | None]
     _history: list[Song]
     _votes: dict[Callable[[], None], set[int]]
 
@@ -34,7 +34,7 @@ class AudioPlayer:
         self._votes = {}
         self._loop = AudioPlayerLoopMode.SONG
         self._timestamp = 0
-        self._message = None
+        self._messages = []
         self._current = None
         self._event = Event()
         self._history = []
@@ -54,7 +54,7 @@ class AudioPlayer:
     def __iter__(self) -> Iterator[Any]:
         return iter(self._queue)
 
-    def __getitem__(self, item: int | slice) -> SongQueue[Song] | Song | Track:
+    def __getitem__(self, item: int | slice) -> SongQueue[Song] | Song:
         if isinstance(item, slice):
             return self._queue[item.start:item.stop:item.step]
         return self._queue[item]
@@ -106,7 +106,7 @@ class AudioPlayer:
         :returns: The percentage of the current song that has been played.
         Between 0 and 1
         """
-        return (self._timestamp - self.voice.timestamp / 1000 * 0.02) / self.current.duration
+        return ((self.voice.timestamp / 1000 * 0.02) - self._timestamp) / self.current.duration
 
     @property
     def duration(self) -> int:
@@ -192,8 +192,17 @@ class AudioPlayer:
             self._timestamp = int(self.voice.timestamp / 1000 * 0.02)
 
             # Send the message
-            self._message = await self.send(embed=song.get_embed(self.loop, list(self._queue), 2, 0))
+            self._messages.append(await self.send(embed=song.get_embed(self.loop, list(self._queue), 2, 0)))
             await self._event.wait()
+
+    def add_message(self, message: Message | InteractionMessage | None) -> None:
+        """
+        Add a message to the player
+        :param message: The message to add
+
+        :return: None
+        """
+        self._messages.append(message)
 
     def put(self, song: Song) -> None:
         """
@@ -313,10 +322,13 @@ class AudioPlayer:
             self.ctx.bot.loop.create_task(self._voice.disconnect())
 
     async def _delete_previous_message(self) -> None:
-        try:
-            await self._message.delete()
-        except (Forbidden, HTTPException, AttributeError):
-            pass
+        for message in self._messages:
+            try:
+                await message.delete()
+            except (Forbidden, HTTPException):
+                break
+            except AttributeError:
+                pass
 
     def _prepare_next(self, error=None) -> None:
         if error:
