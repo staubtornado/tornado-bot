@@ -12,6 +12,7 @@ from lib.contexts import CustomApplicationContext
 from lib.exceptions import YouTubeNotEnabled
 from lib.logging import save_traceback
 from lib.music.audio_player import AudioPlayer
+from lib.music.auto_complete import complete
 from lib.music.embeds import Embeds
 from lib.music.extraction import YTDLSource
 from lib.music.song import Song
@@ -106,7 +107,8 @@ class Music(Cog):
             search: Option(
                 str,
                 "The song to play. This can be a search query or a to a playlist.",
-                required=True
+                required=True,
+                autocomplete=complete
             )):
         """Plays a song or playlist."""
         await ctx.defer()
