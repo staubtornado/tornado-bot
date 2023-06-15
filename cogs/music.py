@@ -351,6 +351,20 @@ class Music(Cog):
         await ctx.respond(embed=embed)
 
     @slash_command()
+    async def now(self, ctx: CustomApplicationContext) -> None:
+        """Displays the currently playing song."""
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        if not audio_player or not audio_player.current:
+            await ctx.respond("❌ **Not currently playing** anything.")
+            return
+
+        song: Song = audio_player.current
+        message = await ctx.respond(
+            embed=song.get_embed(audio_player.loop, list(audio_player[:5]), progress=audio_player.progress)
+        )
+        audio_player.add_message(await message.original_response())
+
+    @slash_command()
     async def shuffle(self, ctx: CustomApplicationContext) -> None:
         """Shuffles the queue, requires 33% approval. DJs can always shuffle."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
