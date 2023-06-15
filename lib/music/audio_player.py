@@ -4,7 +4,7 @@ from typing import Any, Iterator, Callable
 
 from discord import VoiceClient, HTTPException, Forbidden, Message, FFmpegPCMAudio
 
-from lib.application_context import CustomApplicationContext
+from lib.contexts import CustomApplicationContext
 from lib.enums import AudioPlayerLoopMode
 from lib.logging import log, save_traceback
 from lib.music.extraction import YTDLSource

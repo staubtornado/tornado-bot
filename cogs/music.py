@@ -8,7 +8,7 @@ from discord import Member, VoiceState, VoiceClient, slash_command, Option, Voic
 from discord.ext.commands import Cog
 
 from bot import TornadoBot
-from lib.application_context import CustomApplicationContext
+from lib.contexts import CustomApplicationContext
 from lib.exceptions import YouTubeNotEnabled
 from lib.logging import save_traceback
 from lib.music.audio_player import AudioPlayer

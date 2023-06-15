@@ -5,7 +5,7 @@ from typing import Self
 from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio, Member
 from yt_dlp import YoutubeDL
 
-from lib.application_context import CustomApplicationContext
+from lib.contexts import CustomApplicationContext
 from lib.exceptions import YouTubeNotEnabled
 from lib.spotify.track import Track
 
