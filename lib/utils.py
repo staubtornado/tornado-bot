@@ -1,3 +1,4 @@
+from random import randint, randrange
 from time import strftime, gmtime
 
 from millify import millify
@@ -25,3 +26,9 @@ def shortened(n: int) -> str:
 def truncate(s: str, limit: int, ending: str = "...") -> str:
     """Shortens a string to a certain limit and adds an ending."""
     return s[:limit - len(ending)] + ending if len(s) > limit else s
+
+
+def random_hex(length: int) -> str:
+    """Generates a random hex string."""
+    return f'{randrange(16**length):x}'.zfill(length)
+
