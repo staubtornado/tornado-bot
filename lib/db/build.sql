@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS EmojiGuilds (
+    guildId INTEGER NOT NULL,
+    PRIMARY KEY (guildId)
+);
+
+CREATE TABLE IF NOT EXISTS Emojis (
+    name TEXT NOT NULL,
+    emoji TEXT NOT NULL,
+    isAnimated INTEGER NOT NULL DEFAULT 0,
+    guildId INTEGER NOT NULL,
+    PRIMARY KEY (name)
+);
