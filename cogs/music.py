@@ -441,6 +441,26 @@ class Music(Cog):
         percent: int = round(vote[0] / vote[1] * 100)
         await ctx.respond(f"🗳️ **Vote to clear** the queue. {vote[0]}/{vote[1]} (**{percent}%**)")
 
+    @slash_command()
+    async def remove(
+            self,
+            ctx: CustomApplicationContext,
+            index: Option(int, "The index of the song to remove.", min_value=1, max_value=200)
+    ) -> None:
+        """Removes a song from the queue."""
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        if not audio_player or not len(audio_player):
+            await ctx.respond("❌ **Not currently playing** anything.")
+            return
+
+        if index > len(audio_player):
+            await ctx.respond("❌ **Invalid index**.")
+            return
+
+        song: Song = audio_player[index - 1]
+        audio_player.remove(index - 1)
+        await ctx.respond(f"✅ **Removed** `{song.source.title}` from the queue.")
+
 
 def setup(bot: TornadoBot) -> None:
     bot.add_cog(Music(bot))

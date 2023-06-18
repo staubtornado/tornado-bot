@@ -267,6 +267,15 @@ class AudioPlayer:
         """
         self._queue.shuffle()
 
+    def remove(self, index: int) -> None:
+        """
+        Remove a song from the queue
+        :param index: The index of the song to remove
+
+        :return: None
+        """
+        del self._queue[index]
+
     def leave(self) -> None:
         self._cleanup()
 
