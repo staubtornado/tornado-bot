@@ -10,6 +10,7 @@ from yt_dlp import DownloadError
 
 from bot import TornadoBot
 from lib.contexts import CustomApplicationContext
+from lib.db.emoji import Emoji
 from lib.exceptions import YouTubeNotEnabled
 from lib.logging import save_traceback
 from lib.music.audio_player import AudioPlayer
@@ -309,30 +310,30 @@ class Music(Cog):
             "**Requesters:**\n"
         )
 
-        emojis: list[str] = [  # length: 18
-            "aubanana",
-            "aublack",
-            "aublue",
-            "aubrown",
-            "aubgreen",
-            "aubgrey",
-            "auborange",
-            "aubpink",
-            "aubpurple",
-            "auyellow",
-            "auwhite",
-            "aucyan",
-            "aumaroon",
-            "aucoral",
-            "aurose",
-            "autan",
-            "aulime",
-            "aured"
+        emojis: list[Emoji] = [
+            await ctx.bot.database.get_emoji("aubanana"),
+            await ctx.bot.database.get_emoji("aublack"),
+            await ctx.bot.database.get_emoji("aublue"),
+            await ctx.bot.database.get_emoji("aubrown"),
+            await ctx.bot.database.get_emoji("aubgreen"),
+            await ctx.bot.database.get_emoji("aubgrey"),
+            await ctx.bot.database.get_emoji("auborange"),
+            await ctx.bot.database.get_emoji("aubpink"),
+            await ctx.bot.database.get_emoji("aubpurple"),
+            await ctx.bot.database.get_emoji("auyellow"),
+            await ctx.bot.database.get_emoji("auwhite"),
+            await ctx.bot.database.get_emoji("aucyan"),
+            await ctx.bot.database.get_emoji("aumaroon"),
+            await ctx.bot.database.get_emoji("aucoral"),
+            await ctx.bot.database.get_emoji("aurose"),
+            await ctx.bot.database.get_emoji("autan"),
+            await ctx.bot.database.get_emoji("aulime"),
+            await ctx.bot.database.get_emoji("aured")
         ]
         shuffle(emojis)
 
         #  requester.mention: emoji
-        requesters: dict[str, str] = {}
+        requesters: dict[str, Emoji] = {}
 
         embed: Embed = Embed(
             title="Queue",
@@ -349,7 +350,8 @@ class Music(Cog):
 
         for i, song in enumerate(audio_player[start:end], start=start + 1):
             url = urlparse(song.source.url)  # used to shorten the url in some cases
-            embed.description += f"`{i}.` [{song.source.title}]({url.scheme}://{url.netloc}{url.path})\n"
+            emoji: Emoji = requesters[song.requester.mention]
+            embed.description += f"`{i}.` {emoji} [{song.source.title}]({url.scheme}://{url.netloc}{url.path})\n"
 
         embed.set_footer(text=f"Page {page}/{pages}")
         await ctx.respond(embed=embed)
