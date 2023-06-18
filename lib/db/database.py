@@ -42,7 +42,7 @@ class Database:  # aiosqlite3
 
         async with self._db.execute(
                 "REPLACE INTO Emojis (emoji, name, isAnimated, guildId) VALUES (?, ?, ?, ?);",
-                (emoji.id, emoji.name, emoji.is_animated, emoji.guild_id)
+                (emoji.emoji_id, emoji.name, emoji.is_animated, emoji.guild_id)
         ):
             await self._db.commit()
 
