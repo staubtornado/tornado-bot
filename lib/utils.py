@@ -1,7 +1,10 @@
+from io import BytesIO
 from random import randint, randrange
 from time import strftime, gmtime
 
 from millify import millify
+from PIL import Image
+from colorthief import ColorThief
 
 
 def ordinal(n: int) -> str:
@@ -31,4 +34,28 @@ def truncate(s: str, limit: int, ending: str = "...") -> str:
 def random_hex(length: int) -> str:
     """Generates a random hex string."""
     return f'{randrange(16**length):x}'.zfill(length)
+
+
+def dominant_color(image: bytes) -> tuple[int, int, int]:
+    """
+    Gets the average color of an image.
+
+    :param image: The image to get the average color of.
+
+    :return: The average color of the image.
+    """
+    
+    color_thief = ColorThief(BytesIO(image))
+
+    # get the dominant color
+    dominant_color = color_thief.get_color(quality=1)
+    return dominant_color
+
+    
+    
+
+    # 
+    
+
+    
 

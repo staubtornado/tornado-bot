@@ -1,23 +1,15 @@
+from asyncio import get_event_loop
 from typing import Self, Union
 from urllib.parse import urlparse
 
 from discord import Member, Embed
+from aiohttp import ClientSession
 
 from lib.enums import SongEmbedSize, AudioPlayerLoopMode
 from lib.music.extraction import YTDLSource
 from lib.spotify.track import Track
 from lib.utils import format_time, shortened, truncate
-
-HOST_COLORS = {
-    "youtube": 0xff0000,
-    "soundcloud": 0xff8800,
-    "bandcamp": 0x6666ff,
-    "vimeo": 0x00ff00,
-    "twitch": 0x6441a5,
-    "spotify": 0x1db954,
-    "attachment": 0x000000,
-    "other": 0x000000
-}
+from lib.utils import dominant_color
 
 
 class Song:
@@ -80,7 +72,7 @@ class Song:
     def duration(self) -> int:
         return self.source.duration
 
-    def get_embed(
+    async def get_embed(
             self,
             loop: AudioPlayerLoopMode,
             queue: list[Self],
@@ -103,10 +95,16 @@ class Song:
         :return: `discord.Embed`
         """
 
-        host: str = urlparse(self.source.url).hostname
+        _loop = get_event_loop()
+        # Read the image bytes of the url
+        async with ClientSession() as session:
+            async with session.get(self.source.thumbnail_url) as response:
+                image_bytes = await response.read()
+
+
         embed: Embed = Embed(
             title=self.title,
-            color=HOST_COLORS.get(host) or HOST_COLORS["other"]
+            color=_loop.run_in_executor(None, dominant_color, image_bytes)
         )
         if progress:
             elapsed_time: int = int(self.source.duration * progress)
