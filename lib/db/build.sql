@@ -10,3 +10,11 @@ CREATE TABLE IF NOT EXISTS Emojis (
     guildId INTEGER NOT NULL,
     PRIMARY KEY (name)
 );
+
+CREATE TABLE IF NOT EXISTS Leveling (
+    guildId INTEGER NOT NULL,
+    userId INTEGER NOT NULL,
+    xp INTEGER NOT NULL DEFAULT 0,
+    messageCount INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (guildId, userId)
+);
