@@ -1,10 +1,11 @@
 from io import BytesIO
-from random import randint, randrange
+from random import randrange
 from time import strftime, gmtime
 
-from millify import millify
 from PIL import Image
-from colorthief import ColorThief
+from easy_pil import Editor
+from fast_colorthief import get_dominant_color
+from millify import millify
 
 
 def ordinal(n: int) -> str:
@@ -44,18 +45,7 @@ def dominant_color(image: bytes) -> tuple[int, int, int]:
 
     :return: The average color of the image.
     """
-    
-    color_thief = ColorThief(BytesIO(image))
 
-    # get the dominant color
-    dominant_color = color_thief.get_color(quality=1)
-    return dominant_color
-
-    
-    
-
-    # 
-    
-
-    
-
+    editor: Editor = Editor(BytesIO(image))
+    editor.blur(amount=5)
+    return get_dominant_color(editor.image_bytes, 1)
