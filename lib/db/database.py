@@ -3,16 +3,27 @@ from pathlib import Path
 
 from aiosqlite import connect
 
-from lib.db.emoji import Emoji
+from lib.db.db_classes import Emoji, LevelingStats
+
+
+def _open_file() -> bytes:
+    with open("./lib/db/build.sql", "rb") as file:
+        return file.read()
 
 
 class Database:  # aiosqlite3
     def __init__(self, path: Path | str, loop: AbstractEventLoop) -> None:
         self._db = None
+        self._loop = loop
         loop.create_task(self._connect(path))
 
     async def _connect(self, path: Path | str) -> None:
         self._db = await connect(path)
+
+        #  Execute build.sql to create tables
+        _bytes = await self._loop.run_in_executor(None, _open_file)
+        await self._db.executescript(_bytes.decode("utf-8"))
+        await self._db.commit()
 
     async def get_emoji(self, name: str) -> Emoji | None:
         """
@@ -21,7 +32,8 @@ class Database:  # aiosqlite3
         :return: Emoji or None if not found.
         """
 
-        async with self._db.execute("SELECT emoji, name, isAnimated, guildId FROM Emojis WHERE name = ?", (name,)) as cursor:
+        async with self._db.execute(
+                "SELECT emoji, name, isAnimated, guildId FROM Emojis WHERE name = ?", (name,)) as cursor:
             if data := await cursor.fetchone():
                 return Emoji(*data)
 
@@ -65,4 +77,64 @@ class Database:  # aiosqlite3
         async with self._db.execute("INSERT INTO EmojiGuilds (guildId) VALUES (?);", (guild_id,)):
             await self._db.commit()
 
+    async def get_guild_leaderboard(self, guild_id: int, limit: int = 19, offset: int = 0) -> list[LevelingStats]:
+        """
+        Gets the leaderboard for a guild.
+        :param guild_id: The guild ID to get the leaderboard for.
+        :param limit: The limit of users to get.
+        :param offset: The offset to start from.
+        :return: List of LevelingStats.
+        """
 
+        async with self._db.execute(
+                "SELECT * FROM Leveling WHERE guildId = ? ORDER BY xp DESC LIMIT ?;",
+                (guild_id, limit + offset)) as cursor:
+            return [LevelingStats(*data) for data in await cursor.fetchall()]
+
+    async def get_global_leaderboard(self, limit: int = 19, offset: int = 0) -> list[LevelingStats]:
+        """
+        Gets the global leaderboard.
+        :param limit: The limit of users to get.
+        :param offset: The offset to start from.
+        :return: List of LevelingStats.
+        """
+
+        async with self._db.execute(
+                "SELECT * FROM Leveling ORDER BY xp DESC LIMIT ?;",
+                (limit + offset,)) as cursor:
+            return [LevelingStats(*data) for data in await cursor.fetchall()]
+
+    async def get_leveling_stats(self, user_id: int, guild_id: int) -> LevelingStats | None:
+        """
+        Gets a user's leveling stats.
+        :param user_id: The user ID to get the stats for.
+        :param guild_id: The guild ID to get the stats for.
+        :return: LevelingStats or None if not found.
+        """
+
+        async with self._db.execute(
+                "SELECT * FROM Leveling WHERE userId = ? AND guildId = ?;",
+                (user_id, guild_id)) as cursor:
+            if data := await cursor.fetchone():
+                return LevelingStats(*data)
+
+    async def set_leveling_stats(self, stats: LevelingStats) -> None:
+        """
+        Sets a user's LevelingStats stats.
+        :param stats: The stats to set.
+        :return: None
+        """
+
+        async with self._db.execute("REPLACE INTO Leveling VALUES (?, ?, ?, ?);", (*stats,)):
+            await self._db.commit()
+
+    async def remove_leveling_stats(self, user_id: int, guild_id: int) -> None:
+        """
+        Removes a user's LevelingStats stats.
+        :param user_id: The user ID to remove the stats for.
+        :param guild_id: The guild ID to remove the stats for.
+        :return: None
+        """
+
+        async with self._db.execute("DELETE FROM Leveling WHERE userId = ? AND guildId = ?;", (user_id, guild_id)):
+            await self._db.commit()
