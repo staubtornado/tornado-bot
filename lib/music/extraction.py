@@ -156,13 +156,21 @@ class YTDLSource(PCMVolumeTransformer):
             process=False
         ))
 
-        if 'entries' in data:
-            for entry in data['entries']:
-                data = entry
-                break
+        if 'entries' not in data:
+            process_info = data
+        else:
+            process_info = None
+            for entry in data['entries']:  # entries is a generator, so we need to iterate through it
+                if entry:
+                    process_info = entry
+                    break
+
+        if not process_info:
+            raise ValueError("No data to process")
+
         processed_data = await loop.run_in_executor(
             None,
-            lambda: cls.ytdl.extract_info(data['url'], download=False)
+            lambda: cls.ytdl.extract_info(process_info['url'], download=False)
         )
         return cls(requester, FFmpegPCMAudio(processed_data['url'], **cls.FFMPEG_OPTIONS), data=processed_data)
 

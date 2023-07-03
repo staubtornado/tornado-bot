@@ -176,6 +176,8 @@ class AudioPlayer:
             if isinstance(song.source, Track):
                 try:
                     source = await YTDLSource.from_track(song.requester, song.source, loop=self.ctx.bot.loop)
+                except ValueError:
+                    continue
                 except Exception as e:
                     await save_traceback(e)
                     continue

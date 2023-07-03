@@ -150,11 +150,15 @@ class Music(Cog):
                 await ctx.respond("❌ **Download error**. Try a different source.")
                 return
         else:  # If the search query is a search query
-            result: YTDLSource = await YTDLSource.from_search(
-                ctx.author,
-                search,
-                loop=self.bot.loop
-            )
+            try:
+                result: YTDLSource = await YTDLSource.from_search(
+                    ctx.author,
+                    search,
+                    loop=self.bot.loop
+                )
+            except ValueError:
+                await ctx.respond("❌ **No results**.")
+                return
 
         # Check for valid existing player
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
