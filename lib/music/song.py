@@ -2,7 +2,7 @@ from asyncio import get_event_loop
 from typing import Self, Union
 from urllib.parse import urlparse
 
-from discord import Member, Embed
+from discord import Member, Embed, Color
 from aiohttp import ClientSession
 
 from lib.enums import SongEmbedSize, AudioPlayerLoopMode
@@ -101,10 +101,9 @@ class Song:
             async with session.get(self.source.thumbnail_url) as response:
                 image_bytes = await response.read()
 
-
         embed: Embed = Embed(
             title=self.title,
-            color=_loop.run_in_executor(None, dominant_color, image_bytes)
+            color=Color.from_rgb(*await _loop.run_in_executor(None, dominant_color, image_bytes))
         )
         if progress:
             elapsed_time: int = int(self.source.duration * progress)

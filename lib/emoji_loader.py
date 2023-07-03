@@ -4,7 +4,7 @@ from os import listdir
 from discord import Guild, Forbidden, HTTPException
 
 from lib.db.database import Database
-from lib.db.emoji import Emoji
+from lib.db.db_classes import Emoji
 from lib.logging import log
 
 

@@ -10,7 +10,7 @@ from yt_dlp import DownloadError
 
 from bot import TornadoBot
 from lib.contexts import CustomApplicationContext
-from lib.db.emoji import Emoji
+from lib.db.db_classes import Emoji
 from lib.exceptions import YouTubeNotEnabled
 from lib.logging import save_traceback
 from lib.music.audio_player import AudioPlayer
@@ -42,16 +42,16 @@ class Music(Cog):
         player: Optional[AudioPlayer] = self._audio_player.get(member.guild.id)
         voice_client: VoiceClient = member.guild.voice_client  # type: ignore
 
-        if not player:
-            return
-
         if not after.channel:
-            player.voice = None
+            if player:
+                player.voice = None
             return
-        player.voice = voice_client
 
         if before.channel is None and after.channel is not None:
             pass
+
+        if player:
+            player.voice = voice_client
 
         if before.channel is not None and after.channel is not None:
             voice_client.pause()
@@ -68,6 +68,9 @@ class Music(Cog):
             ) = None
     ) -> None:
         """Joins a voice channel"""
+
+        if not self._audio_player.get(ctx.guild.id):
+            self._audio_player[ctx.guild.id] = AudioPlayer(ctx)
 
         if destination := destination or ctx.author.voice.channel:
             await destination.connect()
