@@ -32,6 +32,9 @@ class Music(Cog):
         self.bot = bot
         self._audio_player = {}
 
+    def __getitem__(self, item: int) -> AudioPlayer:
+        return self._audio_player[item]
+
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
         if member.id != self.bot.user.id:

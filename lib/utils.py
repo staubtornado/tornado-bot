@@ -2,7 +2,6 @@ from io import BytesIO
 from random import randrange
 from time import strftime, gmtime
 
-from PIL import Image
 from easy_pil import Editor
 from fast_colorthief import get_dominant_color
 from millify import millify
