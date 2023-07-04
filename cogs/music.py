@@ -121,6 +121,8 @@ class Music(Cog):
         """Plays a song or playlist."""
         await ctx.defer()
 
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+
         #  Analyze the search query
         parse_result: ParseResultBytes = urlparse(search)
         if parse_result.netloc == "open.spotify.com":  # If the search query is not a Spotify URL
@@ -136,10 +138,10 @@ class Music(Cog):
                     raise SpotifyNotFound
                 result = await functions[m.group(3)](search)
             except (KeyError, SpotifyNotFound):
-                await ctx.respond("❌ Invalid Spotify URL.")
+                await ctx.respond(f"{emoji_cross} Invalid Spotify URL.")
                 return
             except SpotifyException as e:
-                await ctx.respond("❌ **Spotify** API error.")
+                await ctx.respond(f"{emoji_cross} **Spotify** API error.")
                 if isinstance(e, SpotifyRateLimit):
                     return
                 return await save_traceback(e)
@@ -150,7 +152,7 @@ class Music(Cog):
                 await ctx.respond(embed=YOUTUBE_NOT_ENABLED)
                 return
             except DownloadError:
-                await ctx.respond("❌ **Download error**. Try a different source.")
+                await ctx.respond(f"{emoji_cross} **Download error**. Try a different source.")
                 return
         else:  # If the search query is a search query
             try:
@@ -160,7 +162,7 @@ class Music(Cog):
                     loop=self.bot.loop
                 )
             except ValueError:
-                await ctx.respond("❌ **No results**.")
+                await ctx.respond(f"{emoji_cross} **No results**.")
                 return
 
         # Check for valid existing player
@@ -176,19 +178,22 @@ class Music(Cog):
                 return
             await self.join(ctx)
 
+        emoji_playlist: Emoji = await ctx.bot.database.get_emoji("playlist")
+        emoji_checkmark: Emoji = await ctx.bot.database.get_emoji("checkmark")
+
         if isinstance(result, TrackCollection):
             for track in result:
                 audio_player.put(Song(track, ctx.author))
-            await ctx.respond(f"🎶 **Added** `{len(result)}` **tracks to the queue**.")
+            await ctx.respond(f"{emoji_playlist} **Added** `{len(result)}` **tracks to the queue**.")
             return
         if isinstance(result, Artist):
             for track in result.top_tracks:
                 audio_player.put(Song(track, ctx.author))
-            await ctx.respond(f"🎶 **Added** `{len(result.top_tracks)}` **tracks to the queue**.")
+            await ctx.respond(f"{emoji_playlist} **Added** `{len(result.top_tracks)}` **tracks to the queue**.")
             return
         if isinstance(result, Union[Track, YTDLSource]):
             audio_player.put(Song(result, ctx.author))
-            await ctx.respond(f"🎶 **Added** `{result.title}` **to the queue**.")
+            await ctx.respond(f"{emoji_checkmark} **Added** `{result.title}` **to the queue**.")
             return
 
     @slash_command()
