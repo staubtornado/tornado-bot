@@ -1,7 +1,7 @@
 from math import floor, ceil
 from random import shuffle
 from re import match
-from typing import Optional, Callable, Union
+from typing import Optional, Callable
 from urllib.parse import urlparse, ParseResultBytes
 
 from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel, Embed, Color
@@ -20,8 +20,6 @@ from lib.music.extraction import YTDLSource
 from lib.music.song import Song
 from lib.spotify.artist import Artist
 from lib.spotify.exceptions import SpotifyNotFound, SpotifyRateLimit, SpotifyException
-from lib.spotify.track import Track
-from lib.spotify.track_collection import TrackCollection
 from lib.utils import format_time
 
 
@@ -147,7 +145,7 @@ class Music(Cog):
                 return await save_traceback(e)
         elif parse_result.scheme in ("http", "https"):  # If the search query is another URL
             try:
-                result: YTDLSource = await YTDLSource.from_url(ctx, search, loop=self.bot.loop)
+                result = await YTDLSource.from_url(ctx, search, loop=self.bot.loop)
             except YouTubeNotEnabled:
                 await ctx.respond(embed=YOUTUBE_NOT_ENABLED)
                 return
@@ -156,7 +154,7 @@ class Music(Cog):
                 return
         else:  # If the search query is a search query
             try:
-                result: YTDLSource = await YTDLSource.from_search(
+                result = await YTDLSource.from_search(
                     ctx.author,
                     search,
                     loop=self.bot.loop
@@ -182,20 +180,20 @@ class Music(Cog):
         emoji_playlist: Emoji = await ctx.bot.database.get_emoji("playlist")
         emoji_checkmark: Emoji = await ctx.bot.database.get_emoji("checkmark")
 
-        if isinstance(result, TrackCollection):
-            for track in result:
-                audio_player.put(Song(track, ctx.author))
-            await ctx.respond(f"{emoji_playlist} **Added** `{len(result)}` **tracks to the queue**.")
-            return
         if isinstance(result, Artist):
-            for track in result.top_tracks:
-                audio_player.put(Song(track, ctx.author))
-            await ctx.respond(f"{emoji_playlist} **Added** `{len(result.top_tracks)}` **tracks to the queue**.")
-            return
-        if isinstance(result, Union[Track, YTDLSource]):
+            result = result.top_tracks
+
+        # Check if the result is iterable
+        try:
+            iter(result)
+        except TypeError:
             audio_player.put(Song(result, ctx.author))
             await ctx.respond(f"{emoji_checkmark} **Added** `{result.title}` **to the queue**.")
             return
+        for track in result:
+            audio_player.put(Song(track, ctx.author))
+        await ctx.respond(f"{emoji_playlist} **Added** `{len(result)}` **tracks to the queue**.")
+        return
 
     @slash_command()
     async def pause(self, ctx: CustomApplicationContext) -> None:
