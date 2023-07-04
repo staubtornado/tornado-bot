@@ -5,6 +5,7 @@ from bot import TornadoBot
 from cogs.music import Music
 from lib.contexts import CustomApplicationContext
 from lib.db.db_classes import GuildSettings
+from lib.enums import SongEmbedSize
 from lib.music.audio_player import AudioPlayer
 
 
@@ -49,7 +50,11 @@ class Configuration(Cog):
         await ctx.defer(ephemeral=True)
 
         settings: GuildSettings = await self.bot.database.get_guild_settings(ctx.guild.id)
-        settings.song_embed_size = {"small": 2, "withoutQueue": 1, "default": 0}[size]
+        settings.song_embed_size = {
+            "small": SongEmbedSize.SMALL,
+            "withoutQueue": SongEmbedSize.NO_QUEUE,
+            "default": SongEmbedSize.DEFAULT
+        }[size]
         await self.bot.database.set_guild_settings(settings)
 
         cog: Cog = self.bot.get_cog("Music")

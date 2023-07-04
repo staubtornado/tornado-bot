@@ -39,6 +39,7 @@ class AudioPlayer:
         self._event = Event()
         self._history = []
         self._player_task = self.ctx.bot.loop.create_task(self._player())
+        self.embed_size = 2
 
         self.ctx.bot.loop.create_task(self._inactivity_check())
 
@@ -138,6 +139,8 @@ class AudioPlayer:
             await sleep(60)
 
     async def _player(self) -> None:
+        self.embed_size = (await self.ctx.bot.database.get_guild_settings(self.ctx.guild.id)).song_embed_size
+
         while True:
             self._event.clear()
             await self._delete_previous_messages()

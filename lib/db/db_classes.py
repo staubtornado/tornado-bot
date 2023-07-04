@@ -1,5 +1,7 @@
 from dataclasses import dataclass, asdict
 
+from lib.enums import SongEmbedSize
+
 
 @dataclass
 class Emoji:
@@ -44,7 +46,7 @@ class GuildSettings:
     xp_active: bool
     xp_multiplier: int
 
-    song_embed_size: int
+    song_embed_size: SongEmbedSize
 
     log_channel_id: int | None
     send_welcome_message: bool
