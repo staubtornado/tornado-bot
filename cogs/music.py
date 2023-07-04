@@ -15,7 +15,7 @@ from lib.exceptions import YouTubeNotEnabled
 from lib.logging import save_traceback
 from lib.music.audio_player import AudioPlayer
 from lib.music.auto_complete import complete
-from lib.music.embeds import Embeds
+from lib.music.embeds import YOUTUBE_NOT_ENABLED
 from lib.music.extraction import YTDLSource
 from lib.music.song import Song
 from lib.spotify.artist import Artist
@@ -147,7 +147,7 @@ class Music(Cog):
             try:
                 result: YTDLSource = await YTDLSource.from_url(ctx, search, loop=self.bot.loop)
             except YouTubeNotEnabled:
-                await ctx.respond(embed=Embeds.YOUTUBE_NOT_ENABLED)
+                await ctx.respond(embed=YOUTUBE_NOT_ENABLED)
                 return
             except DownloadError:
                 await ctx.respond("❌ **Download error**. Try a different source.")
