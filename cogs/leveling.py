@@ -1,3 +1,4 @@
+from time import time
 from random import randint
 
 from discord import Message, slash_command, Option, Member, Forbidden, HTTPException, File, MessageType, NotFound
@@ -19,6 +20,7 @@ class Leveling(Cog):
         self._limiter = Limiter(
             RequestRate(1, Duration.MINUTE)
         )
+        self._global_leaderboard = None
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
@@ -74,7 +76,11 @@ class Leveling(Cog):
 
         await ctx.defer()
         offset: int = (page - 1) * 19
-        _leaderboard: list[LevelingStats] = await self.bot.database.get_guild_leaderboard(ctx.guild.id, limit=19, offset=offset)
+        _leaderboard: list[LevelingStats] = await self.bot.database.get_guild_leaderboard(
+            guild_id=ctx.guild.id,
+            limit=19,
+            offset=offset
+        )
         if not _leaderboard:
             await ctx.respond("❌ **No leaderboard** found for this guild.")
             return
@@ -129,7 +135,12 @@ class Leveling(Cog):
 
         # Calculate the rank of the user globally.
         # Get the global leaderboard
-        leaderboard_global: list[LevelingStats] = (await self.bot.database.get_global_leaderboard(-1))[rank:]
+        leaderboard_global: list[LevelingStats] = (await self.bot.database.get_global_leaderboard(-1))
+
+        # Cache the global leaderboard for 60 minutes
+        if not self._global_leaderboard or time() - self._global_leaderboard[1] > 3600:
+            self._global_leaderboard = (leaderboard_global, time())
+        leaderboard_global = leaderboard_global[rank:]
 
         # Get the index of the user in the global leaderboard, binary search
         rank_global: int = 0
