@@ -62,7 +62,9 @@ class Song:
 
     @property
     def uploader(self) -> str:
-        return self.source.artist
+        if isinstance(self.source, YTDLSource):
+            return self.source.uploader
+        return self.source.artists[0].name
 
     @property
     def url(self) -> str:
@@ -116,10 +118,10 @@ class Song:
             f"{duration} **|** {self.requester.mention}"
         )
         embed.description = description
-        embed.set_thumbnail(url=self.source.thumbnail_url)
 
         if size == SongEmbedSize.SMALL:
             return embed
+        embed.set_thumbnail(url=self.source.thumbnail_url)
 
         try:
             embed.add_field(
@@ -142,8 +144,13 @@ class Song:
             return embed
 
         _queue: list[str] = []
-        for i, song in enumerate(queue, start=1):
-            _queue.append(f"{i}. [{truncate(f'{song.title} by {song.artist}', 55)}]({song.url})")
+        for i, song in enumerate(queue[:5], start=1):
+            _url = urlparse(song.url)
+            url: str = f"{_url.scheme}://{_url.netloc}{_url.path}"
+            try:
+                _queue.append(f"{i}. [{truncate(f'{song.title} by {song.uploader}', 55)}]({url})")
+            except Exception as e:
+                pass
 
         if len(queue) > 5:
             _queue.append(f"Execute **/**queue to **see {len(queue) - 5} more**.")
