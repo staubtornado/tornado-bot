@@ -18,3 +18,20 @@ CREATE TABLE IF NOT EXISTS Leveling (
     messageCount INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (guildId, userId)
 );
+
+
+CREATE TABLE IF NOT EXISTS GuildSettings (
+    guildId INTEGER NOT NULL,
+    betaFeatures INTEGER NOT NULL DEFAULT 0,
+    premium INTEGER NOT NULL DEFAULT 0,
+
+    xpActive INTEGER NOT NULL DEFAULT 1,
+    xpMultiplier INTEGER NOT NULL DEFAULT 1,
+
+    musicEmbedSize INTEGER NOT NULL DEFAULT 0,
+
+    logChannel INTEGER DEFAULT 0,
+    sendWelcomeMessage INTEGER NOT NULL DEFAULT 0,
+    welcomeMessage TEXT NOT NULL DEFAULT "Welcome {user} to {guild}!",
+    PRIMARY KEY (guildId)
+);

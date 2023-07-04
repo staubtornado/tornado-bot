@@ -3,7 +3,7 @@ from pathlib import Path
 
 from aiosqlite import connect
 
-from lib.db.db_classes import Emoji, LevelingStats
+from lib.db.db_classes import Emoji, LevelingStats, GuildSettings
 
 
 def _open_file() -> bytes:
@@ -138,4 +138,36 @@ class Database:  # aiosqlite3
         """
 
         async with self._db.execute("DELETE FROM Leveling WHERE userId = ? AND guildId = ?;", (user_id, guild_id)):
+            await self._db.commit()
+
+    async def get_guild_settings(self, guild_id: int) -> GuildSettings:
+        """
+        Gets a guild's settings.
+        :param guild_id: The guild ID to get the settings for.
+        :return: GuildSettings.
+        """
+
+        async with self._db.execute("SELECT * FROM GuildSettings WHERE guildId = ?;", (guild_id,)) as cursor:
+            if data := await cursor.fetchone():
+                return GuildSettings(*data)
+            return GuildSettings(guild_id, False, False, True, 1, 0, None, False, "Welcome {user} to {guild}!")
+
+    async def set_guild_settings(self, settings: GuildSettings) -> None:
+        """
+        Sets a guild's settings.
+        :param settings: The settings to set.
+        :return: None
+        """
+
+        async with self._db.execute("REPLACE INTO GuildSettings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);", (*settings,)):
+            await self._db.commit()
+
+    async def remove_guild_settings(self, guild_id: int) -> None:
+        """
+        Removes the guild's settings.
+        :param guild_id: The guild ID to remove the settings for.
+        :return: None
+        """
+
+        async with self._db.execute("DELETE FROM GuildSettings WHERE guildId = ?;", (guild_id,)):
             await self._db.commit()
