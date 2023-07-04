@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Self, Any, AsyncGenerator
 from urllib.parse import quote
 
-from discord import PCMVolumeTransformer, ApplicationContext, FFmpegPCMAudio, Member
+from discord import PCMVolumeTransformer, FFmpegPCMAudio, Member
 from yt_dlp import YoutubeDL
 
 from lib.contexts import CustomApplicationContext
@@ -31,20 +31,6 @@ class YTDLSource(PCMVolumeTransformer):
     }
 
     ytdl: YoutubeDL = YoutubeDL(YTDL_OPTIONS)
-
-    ctx: ApplicationContext
-    requester: Member
-
-    title: str
-    uploader: str
-    uploader_url: str
-    upload_date: datetime
-    url: str
-    stream_url: str
-    thumbnail_url: str
-    views: int
-    likes: int
-    duration: int
 
     def __init__(self, requester: Member, source: FFmpegPCMAudio, *, data: dict, volume: float = 0.5) -> None:
         super().__init__(source, volume)

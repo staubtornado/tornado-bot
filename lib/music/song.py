@@ -1,46 +1,23 @@
 from asyncio import get_event_loop
-from typing import Self, Union
+from typing import Self
 from urllib.parse import urlparse
 
-from discord import Member, Embed, Color
 from aiohttp import ClientSession
+from discord import Member, Embed, Color
 
 from lib.enums import SongEmbedSize, AudioPlayerLoopMode
 from lib.music.extraction import YTDLSource
 from lib.spotify.track import Track
-from lib.utils import format_time, shortened, truncate
 from lib.utils import dominant_color
+from lib.utils import format_time, shortened, truncate
 
 
 class Song:
     """
     Class to represent a song
-
-    Attributes
-    ----------
-    source: YTDLSource
-        The source of the song
-    requester: Member
-        The member who requested the song
-    title: str
-        The title of the song
-    uploader: str
-        The uploader of the song
-    url: str
-        The url of the song
-    duration: int
-        The duration of the song in seconds
     """
 
-    source: YTDLSource
-    requester: Member
-
-    title: str
-    uploader: str
-    url: str
-    duration: int
-
-    def __init__(self, source: Union[YTDLSource, Track], requester: Member = None) -> None:
+    def __init__(self, source: YTDLSource | Track, requester: Member = None) -> None:
         if isinstance(source, Track):
             if not requester:
                 raise ValueError("Requester must be provided when creating a Song from a Track")
@@ -49,29 +26,46 @@ class Song:
         self._requester = requester or source.requester
 
     @property
-    def source(self) -> Union[YTDLSource, Track]:
+    def source(self) -> YTDLSource | Track:
+        """
+        It is recommended to use the properties of this class instead of this property
+        :return: The source of the song.
+        """
         return self._source
 
     @property
     def requester(self) -> Member:
+        """
+        :return: The member who requested the song.
+        """
         return self._requester
 
     @property
     def title(self) -> str:
+        """
+        :return: The title of the song.
+        """
         return self.source.title
 
     @property
-    def uploader(self) -> str:
-        if isinstance(self.source, YTDLSource):
-            return self.source.uploader
-        return self.source.artists[0].name
+    def artist(self) -> str:
+        """
+        :return: The artist of the song.
+        """
+        return self.source.artist
 
     @property
     def url(self) -> str:
+        """
+        :return: The url of the song.
+        """
         return self.source.url
 
     @property
     def duration(self) -> int:
+        """
+        :return: The duration of the song in seconds.
+        """
         return self.source.duration
 
     async def get_embed(

@@ -35,6 +35,13 @@ class Track:
         return self._artists
 
     @property
+    def artist(self) -> PartialArtist:
+        """
+        :return: The artist of the track. This is the first artist in the list of artists.
+        """
+        return self._artists[0]
+
+    @property
     def duration(self) -> int:
         """
         :return: The duration of the track in seconds.

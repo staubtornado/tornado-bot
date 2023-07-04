@@ -172,10 +172,11 @@ class Music(Cog):
             self._audio_player[ctx.guild.id] = audio_player
 
         # Join a voice channel if not already in one
+        if not ctx.author.voice:
+            await ctx.respond(f"{emoji_cross} You are **not connected to a voice channel**.")
+            return
+
         if not audio_player.voice:
-            if not ctx.author.voice:
-                await ctx.respond("❌ You are **not connected to a voice channel**.")
-                return
             await self.join(ctx)
 
         emoji_playlist: Emoji = await ctx.bot.database.get_emoji("playlist")
@@ -320,7 +321,7 @@ class Music(Cog):
             f"**Duration:** `{format_time(duration)}`\n"
             "\n"
             "**Currently Playing:**\n"
-            f"`{audio_player.current.source.title}` by `{audio_player.current.uploader}`\n"
+            f"`{audio_player.current.title}` by `{audio_player.current.artist}`\n"
             "\n"
             "**Requesters:**\n"
         )
@@ -364,9 +365,9 @@ class Music(Cog):
         embed.description += "\n**Queue:**\n"
 
         for i, song in enumerate(audio_player[start:end], start=start + 1):
-            url = urlparse(song.source.url)  # used to shorten the url in some cases
+            url = urlparse(song.url)  # used to shorten the url in some cases
             emoji: Emoji = requesters[song.requester.mention]
-            embed.description += f"`{i}.` {emoji} [{song.source.title}]({url.scheme}://{url.netloc}{url.path})\n"
+            embed.description += f"`{i}.` {emoji} [{song.title}]({url.scheme}://{url.netloc}{url.path})\n"
 
         embed.set_footer(text=f"Page {page}/{pages}")
         await ctx.respond(embed=embed)
