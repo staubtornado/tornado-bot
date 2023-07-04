@@ -33,8 +33,6 @@ class Leveling(Cog):
             return
 
         stats: LevelingStats = await self.bot.database.get_leveling_stats(message.author.id, message.guild.id)
-        if not stats:
-            stats = LevelingStats(message.guild.id, message.author.id, 0, 0)
         xp, level = xp_to_level(stats.experience)
 
         try:
@@ -123,9 +121,6 @@ class Leveling(Cog):
 
         user = user or ctx.author
         stats: LevelingStats = await self.bot.database.get_leveling_stats(user.id, ctx.guild.id)
-        if not stats:
-            await ctx.respond("❌ **No stats** found for this user.")
-            return
 
         # Calculate the rank of the user in the guild.
         # Get the leaderboard for the guild

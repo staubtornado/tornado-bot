@@ -104,7 +104,7 @@ class Database:  # aiosqlite3
                 (limit + offset,)) as cursor:
             return [LevelingStats(*data) for data in await cursor.fetchall()]
 
-    async def get_leveling_stats(self, user_id: int, guild_id: int) -> LevelingStats | None:
+    async def get_leveling_stats(self, user_id: int, guild_id: int) -> LevelingStats:
         """
         Gets a user's leveling stats.
         :param user_id: The user ID to get the stats for.
@@ -117,6 +117,7 @@ class Database:  # aiosqlite3
                 (user_id, guild_id)) as cursor:
             if data := await cursor.fetchone():
                 return LevelingStats(*data)
+            return LevelingStats(guild_id, user_id, 0, 0)
 
     async def set_leveling_stats(self, stats: LevelingStats) -> None:
         """
