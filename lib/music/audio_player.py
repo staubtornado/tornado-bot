@@ -16,11 +16,6 @@ from lib.spotify.track import Track
 class AudioPlayer:
     ctx: CustomApplicationContext
 
-    active: bool
-    current: Song | None
-    loop: AudioPlayerLoopMode
-    voice: VoiceClient | None
-
     _queue: SongQueue[Song]
     _messages: list[Message | InteractionMessage | None]
     _history: list[Song]

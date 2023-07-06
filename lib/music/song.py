@@ -33,6 +33,16 @@ class Song:
         """
         return self._source
 
+    @source.setter
+    def source(self, source: YTDLSource | Track) -> None:
+        """
+        Can be used to change the source of the song.
+
+        :param source: The new source of the song.
+        :return: None
+        """
+        self._source = source
+
     @property
     def requester(self) -> Member:
         """

@@ -68,7 +68,7 @@ class Music(Cog):
                 required=False
             ) = None
     ) -> None:
-        """Joins a voice channel"""
+        """Joins a voice channel."""
 
         if not self._audio_player.get(ctx.guild.id):
             self._audio_player[ctx.guild.id] = AudioPlayer(ctx)
@@ -77,7 +77,10 @@ class Music(Cog):
             await destination.connect()
             await ctx.respond(f"👋 **Hello**! **Joined** {destination.mention}.")
             return
-        await ctx.respond("❌ You are **not connected to a voice channel**.")
+
+        # Get the cross-emoji
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+        await ctx.respond(f"{emoji_cross} You are **not connected to a voice channel**.")
 
     @slash_command()
     async def leave(self, ctx: CustomApplicationContext) -> None:
@@ -85,7 +88,8 @@ class Music(Cog):
 
         # If the bot is not connected to a voice channel
         if not ctx.guild.voice_client:
-            await ctx.respond("❌ I am **not connected to a voice channel**.")
+            emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+            await ctx.respond(f"{emoji_cross} I am **not connected to a voice channel**.")
             return
 
         # Check if the user is a DJ
@@ -112,7 +116,7 @@ class Music(Cog):
             ctx: CustomApplicationContext,
             search: Option(
                 str,
-                "The song to play. This can be a search query or a to a playlist.",
+                "The song to play. This can be a search query or a link to a playlist.",
                 required=True,
                 autocomplete=complete
             )):
@@ -183,7 +187,7 @@ class Music(Cog):
         if isinstance(result, Artist):
             result = result.top_tracks
 
-        # Check if the result is iterable
+        # Check if the result is iterable, if not, it is a single song
         try:
             iter(result)
         except TypeError:
@@ -199,29 +203,35 @@ class Music(Cog):
     async def pause(self, ctx: CustomApplicationContext) -> None:
         """Pauses the currently playing song."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+
         if not audio_player:
-            await ctx.respond("❌ **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
             return
 
         if audio_player.voice.is_paused():
-            await ctx.respond("❌ **Already paused**.")
+            await ctx.respond(f"{emoji_cross} **Already paused**.")
             return
         audio_player.voice.pause()
-        await ctx.respond("⏸️ **Paused**.")
+        emoji_pause: Emoji = await ctx.bot.database.get_emoji("pause")
+        await ctx.respond(f"{emoji_pause} **Paused**.")
 
     @slash_command()
     async def resume(self, ctx: CustomApplicationContext) -> None:
         """Resumes the currently paused song."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+
         if not audio_player:
-            await ctx.respond("❌ **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
             return
 
-        if not audio_player.voice.is_playing():
-            await ctx.respond("❌ **Already playing**.")
+        if not audio_player.voice.is_paused():
+            await ctx.respond(f"{emoji_cross} **Already playing**.")
             return
         audio_player.voice.resume()
-        await ctx.respond("▶️ **Resumed**.")
+        emoji_play: Emoji = await ctx.bot.database.get_emoji("play")
+        await ctx.respond(f"{emoji_play} **Resumed**.")
 
     @slash_command()
     async def skip(
@@ -236,24 +246,28 @@ class Music(Cog):
     ) -> None:
         """Skips current song, requires 33% approval. The requester can always skip."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
-        if not audio_player:
-            await ctx.respond("❌ **Not currently playing** anything.")
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+
+        if not audio_player or not audio_player.current:
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
             return
+
+        emoji_skip: Emoji = await ctx.bot.database.get_emoji("skip")
 
         # Check if the user is the requester
         if ctx.author.id == audio_player.current.requester.id:
             audio_player.skip()
-            await ctx.respond("⏭️ **Skipped**.")
+            await ctx.respond(f"{emoji_skip} **Skipped**.")
             return
 
         # Check if the user is a DJ and force skip
         is_dj: bool = ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]
         if force == "True":
             if not is_dj:
-                await ctx.respond("❌ You are **not a DJ**.")
+                await ctx.respond(f"{emoji_cross} You are **not a DJ**.")
                 return
             audio_player.skip()
-            await ctx.respond("⏭️ **Force skipped**.")
+            await ctx.respond(f"{emoji_skip} **Force skipped**.")
             return
 
         # Add a vote and check if the song should be skipped
@@ -273,7 +287,8 @@ class Music(Cog):
         is_dj: bool = ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]
         if is_dj:
             audio_player.stop()
-            await ctx.respond("⏹️ **Stopped**.")
+            emoji_stop: Emoji = await ctx.bot.database.get_emoji("stop")
+            await ctx.respond(f"{emoji_stop} **Stopped**.")
             return
 
         # Add a vote and check if the player should be stopped
@@ -297,17 +312,18 @@ class Music(Cog):
         """Displays the current queue."""
 
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
         if not audio_player:
-            await ctx.respond("❌ **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
             return
 
         if not len(audio_player):
-            await ctx.respond("❌ **The queue is empty**.")
+            await ctx.respond(f"{emoji_cross} **The queue is empty**.")
             return
 
         pages: int = ceil(len(audio_player) / 9)
         if not 1 <= page <= pages:
-            await ctx.respond(f"❌ **Page** `{page}` **does not exist**. The queue has **{pages}** pages.")
+            await ctx.respond(f"{emoji_cross} **Page** `{page}` **does not exist**. The queue has **{pages}** pages.")
             return
 
         start: int = (page - 1) * 9
@@ -375,7 +391,8 @@ class Music(Cog):
         """Displays the currently playing song."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
         if not audio_player or not audio_player.current:
-            await ctx.respond("❌ **Not currently playing** anything.")
+            emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
             return
 
         song: Song = audio_player.current
@@ -389,7 +406,8 @@ class Music(Cog):
         """Shuffles the queue, requires 33% approval. DJs can always shuffle."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
         if not audio_player or not len(audio_player):
-            await ctx.respond("❌ **Not currently playing** anything.")
+            emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
             return
 
         # Check if the user is a DJ
@@ -413,12 +431,13 @@ class Music(Cog):
         """Displays the last 5 songs played."""
 
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
         if audio_player is None:
-            await ctx.respond("❌ **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
             return
 
         if not audio_player.history:
-            await ctx.respond("❌ **No history**.")
+            await ctx.respond(f"{emoji_cross} **No history**.")
             return
 
         embed: Embed = Embed(
@@ -439,7 +458,8 @@ class Music(Cog):
         """Clears the queue. Requires 45% approval. DJs can clear without approval."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
         if not audio_player or not len(audio_player):
-            await ctx.respond("❌ **Not currently playing** anything.")
+            emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
             return
 
         if ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]:
@@ -463,17 +483,19 @@ class Music(Cog):
     ) -> None:
         """Removes a song from the queue."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
         if not audio_player or not len(audio_player):
-            await ctx.respond("❌ **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
             return
 
         if index > len(audio_player):
-            await ctx.respond("❌ **Invalid index**.")
+            await ctx.respond(f"{emoji_cross} **Invalid index**.")
             return
 
         song: Song = audio_player[index - 1]
         audio_player.remove(index - 1)
-        await ctx.respond(f"✅ **Removed** `{song.source.title}` from the queue.")
+        emoji_checkmark: Emoji = await ctx.bot.database.get_emoji("checkmark")
+        await ctx.respond(f"{emoji_checkmark} **Removed** `{song.source.title}` from the queue.")
 
 
 def setup(bot: TornadoBot) -> None:
