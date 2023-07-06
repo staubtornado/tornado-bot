@@ -149,12 +149,11 @@ class Song:
 
         _queue: list[str] = []
         for i, song in enumerate(queue[:5], start=1):
+            # Remove query params, embeds are limited in length
             _url = urlparse(song.url)
             url: str = f"{_url.scheme}://{_url.netloc}{_url.path}"
-            try:
-                _queue.append(f"{i}. [{truncate(f'{song.title} by {song.uploader}', 55)}]({url})")
-            except Exception as e:
-                pass
+
+            _queue.append(f"`{i}`. [{truncate(f'{song.title} by {song.artist}', 55)}]({url})")
 
         if len(queue) > 5:
             _queue.append(f"Execute **/**queue to **see {len(queue) - 5} more**.")

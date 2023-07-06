@@ -192,7 +192,12 @@ class AudioPlayer:
             self._timestamp = int(self.voice.timestamp / 1000 * 0.02)
 
             # Send the message
-            self._messages.append(await self.send(embed=await song.get_embed(self.loop, list(self._queue), 2, 0)))
+            self._messages.append(await self.send(embed=await song.get_embed(
+                loop=self.loop,
+                queue=list(self._queue),
+                size=self.embed_size,
+                progress=0
+            )))
 
             # Process the next song in the queue to minimize the delay
             await self._process_next()
