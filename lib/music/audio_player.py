@@ -193,7 +193,10 @@ class AudioPlayer:
 
             # Send the message
             self._messages.append(await self.send(embed=await song.get_embed(self.loop, list(self._queue), 2, 0)))
-            await self._event.wait()
+
+            # Process the next song in the queue to minimize the delay
+            await self._process_next()
+            await self._event.wait()  # Wait for the song to end
 
     def add_message(self, message: Message | InteractionMessage | None) -> None:
         """
@@ -347,3 +350,17 @@ class AudioPlayer:
         if self.skip in self._votes:
             self._votes[self.skip].clear()
         self._event.set()
+
+    async def _process_next(self) -> None:
+        if len(self._queue) and self.loop != AudioPlayerLoopMode.SONG:
+            next_song = self._queue[0]
+            if isinstance(next_song.source, Track):
+                try:
+                    source = await YTDLSource.from_track(next_song.requester, next_song.source, loop=self.ctx.bot.loop)
+                except ValueError:
+                    del self._queue[0]
+                except Exception as e:
+                    await save_traceback(e)
+                    del self._queue[0]
+                else:
+                    next_song.source = source
