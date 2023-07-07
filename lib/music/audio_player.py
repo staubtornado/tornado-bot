@@ -47,7 +47,7 @@ class AudioPlayer:
     def __len__(self) -> int:
         return len(self._queue)
 
-    def __iter__(self) -> Iterator[Any]:
+    def __iter__(self) -> Iterator[Song]:
         return iter(self._queue)
 
     def __getitem__(self, item: int | slice) -> SongQueue[Song] | Song:
