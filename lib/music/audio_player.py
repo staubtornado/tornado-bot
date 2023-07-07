@@ -192,7 +192,7 @@ class AudioPlayer:
             self._timestamp = int(self.voice.timestamp / 1000 * 0.02)
 
             # Send the message
-            self._messages.append(await self.send(embed=await song.get_embed(
+            self._messages.append(await self.send(embed=song.get_embed(
                 loop=self.loop,
                 queue=list(self._queue),
                 size=self.embed_size,
