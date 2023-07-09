@@ -1,3 +1,4 @@
+from asyncio import QueueFull
 from math import floor, ceil
 from random import shuffle
 from re import match
@@ -140,10 +141,10 @@ class Music(Cog):
                     raise SpotifyNotFound
                 result = await functions[m.group(3)](search)
             except (KeyError, SpotifyNotFound):
-                await ctx.respond(f"{emoji_cross} Invalid Spotify URL.")
+                await ctx.respond(f"{emoji_cross} **Invalid** Spotify **URL**.")
                 return
             except SpotifyException as e:
-                await ctx.respond(f"{emoji_cross} **Spotify** API error.")
+                await ctx.respond(f"{emoji_cross} **Spotify** API **error**.")
                 if isinstance(e, SpotifyRateLimit):
                     return
                 return await save_traceback(e)
@@ -279,6 +280,28 @@ class Music(Cog):
         await ctx.respond(f"🗳️ **Vote to skip** the song. {vote[0]}/{vote[1]} (**{percent}%**)")
 
     @slash_command()
+    async def previous(self, ctx: CustomApplicationContext) -> None:
+        """Plays the previous song."""
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+
+        if not audio_player:
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
+            return
+
+        try:
+            audio_player.back()
+        except QueueFull:
+            await ctx.respond(f"{emoji_cross} **Queue is full.**")
+            return
+        except ValueError:
+            await ctx.respond(f"{emoji_cross} **No previous song.**")
+            return
+
+        emoji_back: Emoji = await ctx.bot.database.get_emoji("back")
+        await ctx.respond(f"{emoji_back} **Playing previous** song.")
+
+    @slash_command()
     async def stop(self, ctx: CustomApplicationContext) -> None:
         """Stops the current song and clears the queue. Requires 45% approval. DJs can always stop."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
@@ -397,7 +420,7 @@ class Music(Cog):
 
         song: Song = audio_player.current
         message = await ctx.respond(
-            embed=song.get_embed(audio_player.loop, list(audio_player[:5]), progress=audio_player.progress)
+            embed=song.get_embed(audio_player.loop, list(audio_player), progress=audio_player.progress)
         )
         audio_player.add_message(await message.original_response())
 

@@ -1,11 +1,11 @@
 from asyncio import wait_for, TimeoutError, Event, QueueFull, sleep
 from math import floor
-from typing import Any, Iterator, Callable
+from typing import Iterator, Callable
 
 from discord import VoiceClient, HTTPException, Forbidden, Message, FFmpegPCMAudio, InteractionMessage
 
 from lib.contexts import CustomApplicationContext
-from lib.enums import AudioPlayerLoopMode
+from lib.enums import AudioPlayerLoopMode, SongEmbedSize
 from lib.logging import log, save_traceback
 from lib.music.extraction import YTDLSource
 from lib.music.queue import SongQueue
@@ -23,7 +23,7 @@ class AudioPlayer:
 
     def __init__(self, ctx: CustomApplicationContext) -> None:
         self.ctx = ctx
-        self._queue = SongQueue()
+        self._queue = SongQueue(maxsize=200)
 
         self._voice = None
         self._votes = {}
@@ -142,9 +142,7 @@ class AudioPlayer:
 
             #  Add the previous song to queue if loop is enabled
             if self.loop and self.current:
-                self.current.source.original = FFmpegPCMAudio(
-                    self.current.source.stream_url, **YTDLSource.FFMPEG_OPTIONS
-                )
+                self.reset(self.current)  # Reset the current song, so it can be played again
 
                 try:
                     if self._loop == AudioPlayerLoopMode.QUEUE:
@@ -153,6 +151,11 @@ class AudioPlayer:
                         self._queue.insert(0, self.current)
                 except QueueFull:
                     await self.send("⚠️ **Queue is full**, ignoring loop.")
+
+            # Add the song to the history
+            if self.current and self.current not in self._history:
+                self._history.append(self.current)
+                self._history = self._history[-5:]
 
             #  Waiting for the next song, leaving if there is no song in 3 minutes
             self._current = None
@@ -181,11 +184,6 @@ class AudioPlayer:
                     continue
                 song = Song(source)
 
-            # Add the song to the history
-            if song not in self._history:
-                self._history.append(song)
-            self._history = self._history[-5:]
-
             # Play the song
             self._voice.play(song.source, after=self._prepare_next)
             self._current = song
@@ -205,7 +203,7 @@ class AudioPlayer:
 
     def add_message(self, message: Message | InteractionMessage | None) -> None:
         """
-        Add a message to the player
+        Add a message to the player.
         :param message: The message to add
 
         :return: None
@@ -214,7 +212,7 @@ class AudioPlayer:
 
     def put(self, song: Song) -> None:
         """
-        Put a song in the queue
+        Put a song in the queue.
         :param song: The song to put in the queue
 
         :return: None
@@ -225,7 +223,7 @@ class AudioPlayer:
 
     def clear(self) -> None:
         """
-        Clear the queue
+        Clear the queue.
         :return: None
         """
         self._queue.clear()
@@ -241,6 +239,40 @@ class AudioPlayer:
 
         if self.voice:
             self.voice.stop()
+
+    def back(self) -> None:
+        """
+        Go back to the previous song.
+        :return: None
+
+        :raises asyncio.QueueFull: If the queue is full
+        :raises ValueError: If there is no previous song in history
+        """
+        if not len(self.history):
+            raise ValueError("No previous song in history")
+
+        if not len(self._queue) + 2 < self._queue.maxsize:
+            if self._queue.maxsize != 0:
+                raise QueueFull("Queue is full")
+
+        previous: Song = self._history.pop()
+        self.reset(previous)  # Reset the current song, so it can be played again
+
+        self.voice.source = previous.source  # Replace the current song with the previous one
+        self._timestamp = int(self.voice.timestamp / 1000 * 0.02)  # Update the timestamp
+
+        current: Song = self.current
+        self._current = previous
+
+        self.reset(current)
+        self._queue.insert(0, current)  # Add the current song to the queue
+        self.ctx.bot.loop.create_task(self._delete_previous_messages())
+        self.ctx.bot.loop.create_task(self.send(embed=previous.get_embed(
+            loop=self.loop,
+            queue=list(self._queue),
+            size=SongEmbedSize(self.embed_size),
+            progress=0
+        )))  # Send the message
 
     def pause(self) -> None:
         """
@@ -328,6 +360,18 @@ class AudioPlayer:
             return await self.ctx.send(*args, **kwargs)
         except (Forbidden, HTTPException):
             pass
+
+    @staticmethod
+    def reset(song: Song) -> None:
+        """
+        Reset a song to its original streaming state.
+
+        :param song: The song to reset
+        :return: None
+        """
+        song.source.original = FFmpegPCMAudio(
+            song.source.stream_url, **YTDLSource.FFMPEG_OPTIONS
+        )
 
     def _cleanup(self) -> None:
         self._queue.clear()
