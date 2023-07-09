@@ -76,7 +76,8 @@ class Music(Cog):
 
         if destination := destination or ctx.author.voice.channel:
             await destination.connect()
-            await ctx.respond(f"👋 **Hello**! **Joined** {destination.mention}.")
+            emoji_checkmark2: Emoji = await self.bot.database.get_emoji("checkmark2")
+            await ctx.respond(f"{emoji_checkmark2} **Hello**! **Joined** {destination.mention}.")
             return
 
         # Get the cross-emoji
@@ -93,11 +94,13 @@ class Music(Cog):
             await ctx.respond(f"{emoji_cross} I am **not connected to a voice channel**.")
             return
 
+        emoji_checkmark2: Emoji = await self.bot.database.get_emoji("checkmark2")
+
         # Check if the user is a DJ
         is_dj: bool = ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]
         if is_dj:
             await ctx.guild.voice_client.disconnect(force=False)
-            await ctx.respond("👋 **Goodbye**!")
+            await ctx.respond(f"{emoji_checkmark2} **Goodbye**!")
             return
 
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
@@ -106,7 +109,7 @@ class Music(Cog):
         vote: tuple[int, int, bool] = audio_player.vote(audio_player.leave, ctx.author.id, 0.5)
         if vote[2]:
             await ctx.guild.voice_client.disconnect(force=False)
-            await ctx.respond("👋 **Goodbye**!")
+            await ctx.respond(f"{emoji_checkmark2} **Goodbye**!")
             return
         percent: int = floor((vote[0] / vote[1]) * 100)
         await ctx.respond(f"🗳️ **Vote to stop** the player. {vote[0]}/{vote[1]} (**{percent}%**)")
@@ -427,23 +430,29 @@ class Music(Cog):
     @slash_command()
     async def shuffle(self, ctx: CustomApplicationContext) -> None:
         """Shuffles the queue, requires 33% approval. DJs can always shuffle."""
+
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
-        if not audio_player or not len(audio_player):
-            emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+        if not audio_player:
             await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
             return
+        if not len(audio_player):
+            await ctx.respond(f"{emoji_cross} **The queue is empty**.")
+            return
+
+        emoji_shuffle: Emoji = await self.bot.database.get_emoji("shuffle")
 
         # Check if the user is a DJ
         is_dj: bool = ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]
         if is_dj:
             audio_player.shuffle()
-            await ctx.respond("🔀 **Shuffled**.")
+            await ctx.respond(f"{emoji_shuffle} **Shuffled**.")
             return
 
         # Add a vote and check if the queue should be shuffled
         vote: tuple[int, int, bool] = audio_player.vote(audio_player.shuffle, ctx.author.id, 0.33)
         if vote[2]:
-            await ctx.respond("🗳️ **Voted to shuffle** the queue.")
+            await ctx.respond(f"{emoji_shuffle} **Voted to shuffle** the queue.")
             return
 
         percent: int = round(vote[0] / vote[1] * 100)
