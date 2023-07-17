@@ -2,9 +2,9 @@ from enum import IntEnum
 
 
 class SongEmbedSize(IntEnum):
-    SMALL = 1
-    NO_QUEUE = 2
-    DEFAULT = 3
+    DEFAULT = 0
+    NO_QUEUE = 1
+    SMALL = 2
 
 
 class AudioPlayerLoopMode(IntEnum):

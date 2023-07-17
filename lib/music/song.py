@@ -128,7 +128,10 @@ class Song:
 
         embed.add_field(
             name="Loop",
-            value={0: "Disabled", 1: "Queue", 2: "Song"}[loop.value]
+            value={
+                AudioPlayerLoopMode.NONE: "Disabled",
+                AudioPlayerLoopMode.QUEUE: "Queue",
+                AudioPlayerLoopMode.SONG: "Song"}[loop]
         )
         embed.add_field(
             name="Uploaded",
