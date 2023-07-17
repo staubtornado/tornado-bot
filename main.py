@@ -10,12 +10,22 @@ def main() -> None:
     """Main entry point of the program."""
 
     # Load environment variables from .env file
-    with open("./config/.env", "r") as file:
-        for line in file.readlines():
-            key, value = line.strip().split("=", 1)
-            if key not in environ:
-                environ[key] = value
+    try:
+        with open("./config/.env", "r") as file:
+            for line in file.readlines():
+                key, value = line.strip().split("=", 1)
+                key, value = key.strip(), value.strip()
 
+                if key not in environ:
+                    environ[key] = value
+    except FileNotFoundError:
+        log("No .env file found. Create on in the config folder.", error=True)
+        return
+
+    # Check if all environment variables are present
+    if not all(key in environ for key in ["DISCORD_TOKEN", "SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET"]):
+        log("Not all environment variables found. Check your .env file.", error=True)
+        return
     bot: TornadoBot = TornadoBot()
 
     # Load cogs
