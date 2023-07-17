@@ -4,6 +4,7 @@ from pathlib import Path
 from aiosqlite import connect
 
 from lib.db.db_classes import Emoji, LevelingStats, GuildSettings
+from lib.enums import SongEmbedSize
 
 
 def _open_file() -> bytes:
@@ -109,7 +110,7 @@ class Database:  # aiosqlite3
         Gets a user's leveling stats.
         :param user_id: The user ID to get the stats for.
         :param guild_id: The guild ID to get the stats for.
-        :return: LevelingStats or None if not found.
+        :return: LevelingStats
         """
 
         async with self._db.execute(
@@ -150,7 +151,17 @@ class Database:  # aiosqlite3
         async with self._db.execute("SELECT * FROM GuildSettings WHERE guildId = ?;", (guild_id,)) as cursor:
             if data := await cursor.fetchone():
                 return GuildSettings(*data)
-            return GuildSettings(guild_id, False, False, True, 1, 0, None, False, "Welcome {user} to {guild}!")
+            return GuildSettings(
+                guild_id,  # guildId
+                False,  # beta
+                False,  # premium
+                True,  # leveling
+                1,  # levelingMultiplier
+                SongEmbedSize.DEFAULT,  # songEmbedSize
+                None,  # logChannelId
+                False,  # welcome
+                "Welcome {user} to {guild}!"  # welcomeMessage
+            )
 
     async def set_guild_settings(self, settings: GuildSettings) -> None:
         """

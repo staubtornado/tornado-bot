@@ -7,7 +7,7 @@ from pyrate_limiter import Limiter, RequestRate, Duration, BucketFullException
 
 from bot import TornadoBot
 from lib.contexts import CustomApplicationContext
-from lib.db.db_classes import LevelingStats
+from lib.db.db_classes import LevelingStats, Emoji
 from lib.leveling.calculation import xp_to_level
 from lib.leveling.leaderboard import gen_leaderboard
 from lib.leveling.level_up import generate_level_up_card
@@ -15,12 +15,14 @@ from lib.leveling.rank_card import generate_rank_card
 
 
 class Leveling(Cog):
+    _global_leaderboard: tuple[list[LevelingStats] | None, float]
+
     def __init__(self, bot: TornadoBot) -> None:
         self.bot = bot
         self._limiter = Limiter(
             RequestRate(1, Duration.MINUTE)
         )
-        self._global_leaderboard = None
+        self._global_leaderboard = (None, 0.0)
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
@@ -80,7 +82,8 @@ class Leveling(Cog):
             offset=offset
         )
         if not _leaderboard:
-            await ctx.respond("❌ **No leaderboard** found for this guild.")
+            emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+            await ctx.respond(f"{emoji_cross} **No leaderboard** found for this guild.")
             return
 
         # Get the avatars of the users
@@ -126,14 +129,21 @@ class Leveling(Cog):
         # Get the leaderboard for the guild
         leaderboard: list[LevelingStats] = await self.bot.database.get_guild_leaderboard(ctx.guild.id)
         # Get the index of the user in the leaderboard
-        rank: int = leaderboard.index(stats) + 1
+
+        try:
+            rank: int = leaderboard.index(stats) + 1
+        except ValueError:
+            emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+            await ctx.respond(f"{emoji_cross} **{user.name}** is **not ranked** in this guild.")
+            return
 
         # Calculate the rank of the user globally.
         # Get the global leaderboard
-        leaderboard_global: list[LevelingStats] = (await self.bot.database.get_global_leaderboard(-1))
+        leaderboard_global: list[LevelingStats] | None = self._global_leaderboard[0]
 
-        # Cache the global leaderboard for 60 minutes
-        if not self._global_leaderboard or time() - self._global_leaderboard[1] > 3600:
+        # Check if the global leaderboard is not cached or if it is older than 60 minutes
+        if not leaderboard_global or time() - self._global_leaderboard[1] > 30:
+            leaderboard_global: list[LevelingStats] = await self.bot.database.get_global_leaderboard(-1)
             self._global_leaderboard = (leaderboard_global, time())
         leaderboard_global = leaderboard_global[rank:]
 

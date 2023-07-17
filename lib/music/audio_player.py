@@ -210,15 +210,19 @@ class AudioPlayer:
         """
         self._messages.append(message)
 
-    def put(self, song: Song) -> None:
+    def put(self, song: Song, index: int = None) -> None:
         """
         Put a song in the queue.
         :param song: The song to put in the queue
+        :param index: The index to put the song at
 
         :return: None
 
         :raises asyncio.QueueFull: If the queue is full
         """
+
+        if index is not None:
+            return self._queue.insert(index, song)
         self._queue.put_nowait(song)
 
     def clear(self) -> None:
@@ -381,6 +385,7 @@ class AudioPlayer:
         if self._voice:
             self._voice.stop()
             self.ctx.bot.loop.create_task(self._voice.disconnect())
+            self.ctx.bot.loop.create_task(self.send("Left voice channel"))
 
     async def _delete_previous_messages(self) -> None:
         for message in self._messages:
