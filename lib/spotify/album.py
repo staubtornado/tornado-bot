@@ -1,11 +1,12 @@
-from lib.spotify.track import Track
+from lib.spotify.data import SpotifyData
 from lib.spotify.track_collection import TrackCollection
 
 
-class Album(TrackCollection):
+class Album(SpotifyData, TrackCollection):
     """
     A Spotify album.
     """
+
     def __init__(self, data: dict) -> None:
         super().__init__(data)
-        self._tracks = [Track(track) for track in data["tracks"]["items"]]
+        TrackCollection.__init__(self, data)

@@ -5,7 +5,8 @@ from re import match
 from typing import Optional, Callable
 from urllib.parse import urlparse, ParseResultBytes
 
-from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel, Embed, Color
+from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel, Embed, Color, \
+    InteractionResponded
 from discord.ext.commands import Cog
 from yt_dlp import DownloadError
 
@@ -19,7 +20,7 @@ from lib.music.auto_complete import complete
 from lib.music.embeds import YOUTUBE_NOT_ENABLED
 from lib.music.extraction import YTDLSource
 from lib.music.song import Song
-from lib.spotify.artist import Artist
+from lib.spotify.data import SpotifyData
 from lib.spotify.exceptions import SpotifyNotFound, SpotifyRateLimit, SpotifyException
 from lib.utils import format_time
 
@@ -33,6 +34,23 @@ class Music(Cog):
 
     def __getitem__(self, item: int) -> AudioPlayer:
         return self._audio_player[item]
+
+    async def _check_for_valid_player(self, ctx: CustomApplicationContext) -> bool:
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        if not audio_player:
+            audio_player = AudioPlayer(ctx)
+            self._audio_player[ctx.guild.id] = audio_player
+
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+
+        # Join a voice channel if not already in one
+        if not ctx.author.voice:
+            await ctx.respond(f"{emoji_cross} You are **not connected to a voice channel**.")
+            return False
+
+        if not audio_player.voice:
+            await self.join(ctx)
+        return True
 
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
@@ -125,7 +143,10 @@ class Music(Cog):
                 autocomplete=complete
             )):
         """Plays a song or playlist."""
-        await ctx.defer()
+        try:
+            await ctx.defer()
+        except InteractionResponded:
+            pass
 
         emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
 
@@ -161,6 +182,12 @@ class Music(Cog):
                 await ctx.respond(f"{emoji_cross} **Download error**. Try a different source.")
                 return
         else:  # If the search query is a search query
+            if match(r"Playlist: .+", search):
+                playlist_suggestions: list[SpotifyData] = await ctx.bot.spotify.get_trending_playlists()
+
+                for playlist in playlist_suggestions:
+                    if search[10:] == playlist.name:
+                        return await self.play(ctx, playlist.url)
             try:
                 result = await YTDLSource.from_search(
                     ctx.author,
@@ -172,36 +199,100 @@ class Music(Cog):
                 return
 
         # Check for valid existing player
-        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
-        if not audio_player:
-            audio_player = AudioPlayer(ctx)
-            self._audio_player[ctx.guild.id] = audio_player
-
-        # Join a voice channel if not already in one
-        if not ctx.author.voice:
-            await ctx.respond(f"{emoji_cross} You are **not connected to a voice channel**.")
+        if not await self._check_for_valid_player(ctx):
             return
-
-        if not audio_player.voice:
-            await self.join(ctx)
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
 
         emoji_playlist: Emoji = await ctx.bot.database.get_emoji("playlist")
         emoji_checkmark: Emoji = await ctx.bot.database.get_emoji("checkmark")
-
-        if isinstance(result, Artist):
-            result = result.top_tracks
 
         # Check if the result is iterable, if not, it is a single song
         try:
             iter(result)
         except TypeError:
             audio_player.put(Song(result, ctx.author))
-            await ctx.respond(f"{emoji_checkmark} **Added** `{result.title}` **to the queue**.")
+            await ctx.respond(f"{emoji_checkmark} **Added** `{result.name}` **to the queue**.")
             return
+
+        # If the result is a playlist, add all songs to the queue
+        # Check if the playlist is too long for the queue
+        if len(result) > 200:
+            # TODO: Add a way to play a playlist without adding all songs to the queue
+            pass
+
         for track in result:
             audio_player.put(Song(track, ctx.author))
         await ctx.respond(f"{emoji_playlist} **Added** `{len(result)}` **tracks to the queue**.")
         return
+
+    @slash_command()
+    async def playnext(
+            self,
+            ctx: CustomApplicationContext,
+            search: Option(
+                str,
+                "The song to play. This can be a search query or a link.",
+                required=True,
+                autocomplete=complete
+            )):
+        """Plays a song next."""
+
+        try:
+            await ctx.defer()
+        except InteractionResponded:
+            pass
+
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+
+        #  Analyze the search query
+        parse_result: ParseResultBytes = urlparse(search)
+        if parse_result.netloc == "open.spotify.com":  # If the search query is not a Spotify URL
+            m = match(r"(https://)?open.spotify\.com/(intl-\w+/)?track/(\w+)", search)
+
+            if not m:
+                await ctx.respond(
+                    f"{emoji_cross} **Invalid** Spotify **URL**. **Only tracks** are supported **in this command**."
+                )
+                return
+            try:
+                result = await ctx.bot.spotify.get_track(search)
+            except SpotifyNotFound:
+                await ctx.respond(f"{emoji_cross} **Invalid** Spotify **URL**.")
+                return
+            except SpotifyException as e:
+                await ctx.respond(f"{emoji_cross} **Spotify** API **error**.")
+                if isinstance(e, SpotifyRateLimit):
+                    return
+                return await save_traceback(e)
+
+        elif parse_result.scheme in ("http", "https"):  # If the search query is another URL
+            try:
+                result = await YTDLSource.from_url(ctx, search, loop=self.bot.loop)
+            except YouTubeNotEnabled:
+                await ctx.respond(embed=YOUTUBE_NOT_ENABLED)
+                return
+            except DownloadError:
+                await ctx.respond(f"{emoji_cross} **Download error**. Try a different source.")
+                return
+        else:  # If the search query is a search query
+            try:
+                result = await YTDLSource.from_search(
+                    ctx.author,
+                    search,
+                    loop=self.bot.loop
+                )
+            except ValueError:
+                await ctx.respond(f"{emoji_cross} **No results**.")
+                return
+
+        # Check for valid existing player
+        if not await self._check_for_valid_player(ctx):
+            return
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+
+        emoji_checkmark: Emoji = await ctx.bot.database.get_emoji("checkmark")
+        audio_player.put(Song(result, ctx.author), index=0)
+        await ctx.respond(f"{emoji_checkmark} **Added** `{result.name}` **to the queue**.")
 
     @slash_command()
     async def pause(self, ctx: CustomApplicationContext) -> None:
@@ -478,7 +569,7 @@ class Music(Cog):
         )
         for i, song in enumerate(audio_player.history, start=1):
             embed.add_field(
-                name=f"{i}. {song.source.title}",
+                name=f"{i}. {song.source.name}",
                 value=f"**Duration:** `{format_time(song.duration)}`\n"
                       f"**Requester:** {song.requester.mention}",
                 inline=False
@@ -495,8 +586,9 @@ class Music(Cog):
             return
 
         if ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]:
+            emoji_clear: Emoji = await self.bot.database.get_emoji("playlist_clear")
             audio_player.clear()
-            await ctx.respond("📂 **Cleared** the queue.")
+            await ctx.respond(f"{emoji_clear} **Cleared** the queue.")
             return
 
         vote: tuple[int, int, bool] = audio_player.vote(audio_player.clear, ctx.author.id, 0.45)
@@ -527,7 +619,7 @@ class Music(Cog):
         song: Song = audio_player[index - 1]
         audio_player.remove(index - 1)
         emoji_checkmark: Emoji = await ctx.bot.database.get_emoji("checkmark")
-        await ctx.respond(f"{emoji_checkmark} **Removed** `{song.source.title}` from the queue.")
+        await ctx.respond(f"{emoji_checkmark} **Removed** `{song.source.name}` from the queue.")
 
 
 def setup(bot: TornadoBot) -> None:

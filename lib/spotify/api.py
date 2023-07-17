@@ -1,12 +1,14 @@
 from datetime import datetime, timedelta
 from re import match
-from typing import AsyncGenerator
+from time import time
+from typing import AsyncGenerator, Any
 from urllib.parse import quote
 
 from aiohttp import ClientSession, ClientResponse
 
 from lib.spotify.album import Album
 from lib.spotify.artist import Artist
+from lib.spotify.data import SpotifyData
 from lib.spotify.exceptions import SpotifyRateLimit, SpotifyNotFound, SpotifyNotAvailable
 from lib.spotify.playlist import Playlist
 from lib.spotify.track import Track
@@ -17,12 +19,16 @@ class SpotifyAPI:
     A Spotify API client. Lightweight wrapper around the Spotify Web API.
     """
 
+    _trending_playlists: tuple[dict[str, Any] | None, float]
+
     def __init__(self, client_id: str, client_secret: str) -> None:
         self._client_id = client_id
         self._client_secret = client_secret
         self._token = None
 
         self._retry_after = None
+
+        self._trending_playlists = (None, 0.0)
 
     async def _get_token(self) -> None:
         async with ClientSession() as session:
@@ -128,10 +134,35 @@ class SpotifyAPI:
         response: dict = await self._get(f"https://api.spotify.com/v1/artists/{artist_id}/top-tracks?market=DE")
         return Artist(response)
 
-    async def get_playlist(self, playlist_id: str, limit: int = 400) -> Playlist:
+    async def get_playlist_tracks(self, playlist: Playlist | str, limit: int = 200, offset: int = 200) -> Playlist:
+        """
+        :param playlist: The Spotify ID of the playlist or the playlist object.
+        :param limit: The maximum number of tracks to fetch.
+        :param offset: The offset to start fetching tracks from.
+        :return: The playlist with the tracks.
+
+        :raises SpotifyRateLimit: If the rate limit is exceeded.
+        :raises SpotifyNotFound: If the playlist could not be found.
+        :raises SpotifyNotAvailable: If the Spotify API is not available.
+
+        Note: All raised exceptions are subclasses of :class:`SpotifyException`.
+        """
+
+        if isinstance(playlist, str):
+            playlist = await self.get_playlist(playlist)
+
+        for i in range(0, limit, 50):
+            response: dict = await self._get(
+                f"https://api.spotify.com/v1/playlists/{playlist.id}/tracks?limit=50&offset={offset + i}"
+            )
+            playlist.tracks.extend([Track(track) for track in response["items"]])
+            if len(response["items"]) < 50:
+                break
+        return playlist
+
+    async def get_playlist(self, playlist_id: str) -> Playlist:
         """
         :param playlist_id: The Spotify ID of the playlist.
-        :param limit: The maximum number of tracks to fetch.
         :return: The playlist.
 
         :raises SpotifyRateLimit: If the rate limit is exceeded.
@@ -145,17 +176,7 @@ class SpotifyAPI:
             playlist_id = self._strip_url(playlist_id)
 
         response: dict = await self._get(f"https://api.spotify.com/v1/playlists/{playlist_id}")
-        playlist = Playlist(response)
-
-        for i in range(100, limit, 50):
-            _response: dict = await self._get(
-                f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?offset={i}&limit=50"
-            )
-            response['tracks']["items"] = _response["items"]
-            playlist += Playlist(response)
-            if i + 50 >= _response["total"]:
-                break
-        return playlist
+        return Playlist(response)
 
     async def search(self, query: str, limit: int = 10) -> AsyncGenerator[Track, None]:
         """
@@ -173,3 +194,26 @@ class SpotifyAPI:
         response: dict = await self._get(f"https://api.spotify.com/v1/search?q={query}&type=track&limit={limit}")
         for track in response["tracks"]["items"]:
             yield Track(track)
+
+    async def get_trending_playlists(self, use_cache: bool = True) -> list[SpotifyData]:
+        """
+        :return: The trending playlists.
+
+        :param use_cache: Whether to use the cached response.
+
+        :raises SpotifyRateLimit: If the rate limit is exceeded.
+        :raises SpotifyNotFound: If the trending playlists could not be found.
+        :raises SpotifyNotAvailable: If the Spotify API is not available.
+
+        Note: All raised exceptions are subclasses of :class:`SpotifyException`.
+        """
+
+        if use_cache:
+            # Check if there are already trending playlists cached and if they are older than 24 hours
+            if not self._trending_playlists[0] or time() - self._trending_playlists[1] > 86400:
+                use_cache = False
+
+        if not use_cache:
+            response: dict = await self._get("https://api.spotify.com/v1/browse/featured-playlists")
+            self._trending_playlists = (response["playlists"]["items"], time())
+        return [SpotifyData(playlist) for playlist in self._trending_playlists[0]]

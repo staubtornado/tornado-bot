@@ -1,45 +1,16 @@
-from lib.spotify.partial_artist import PartialArtist
+from lib.spotify.data import SpotifyData
 
 
-class Track:
+class Track(SpotifyData):
     """
     A Spotify track.
     """
 
     def __init__(self, data: dict) -> None:
-        self._id = data["id"]
-        self._title = data["name"]
-        self._artists = [PartialArtist(artist) for artist in data["artists"]]
+        super().__init__(data)
+
+        self._artists = [SpotifyData(artist) for artist in data["artists"]]
         self._duration = data["duration_ms"] // 1000
-        self._url = data["external_urls"]["spotify"]
-
-    @property
-    def id(self) -> str:
-        """
-        :return: The Spotify ID of the track.
-        """
-        return self.id
-
-    @property
-    def title(self) -> str:
-        """
-        :return: The name of the track.
-        """
-        return self._title
-
-    @property
-    def artists(self) -> list[PartialArtist]:
-        """
-        :return: The artists of the track.
-        """
-        return self._artists
-
-    @property
-    def artist(self) -> PartialArtist:
-        """
-        :return: The artist of the track. This is the first artist in the list of artists.
-        """
-        return self._artists[0]
 
     @property
     def duration(self) -> int:
@@ -49,8 +20,8 @@ class Track:
         return self._duration
 
     @property
-    def url(self) -> str:
+    def artists(self) -> list[SpotifyData]:
         """
-        :return: The URL of the track.
+        :return: The artists of the track.
         """
-        return self._url
+        return self._artists

@@ -52,14 +52,16 @@ class Song:
         """
         :return: The title of the song.
         """
-        return self.source.title
+        return self.source.name
 
     @property
     def artist(self) -> str:
         """
         :return: The artist of the song.
         """
-        return self.source.artist
+        if isinstance(self.source, YTDLSource):
+            return self.source.artist
+        return self.source.artists[0].name
 
     @property
     def url(self) -> str:

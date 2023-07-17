@@ -37,8 +37,8 @@ class YTDLSource(PCMVolumeTransformer):
 
         self._requester = requester
 
-        self._title = data.get('title')
-        self._uploader = data.get('uploader')
+        self._name = data.get('title')
+        self._artist = data.get('uploader')
         self._uploader_url = data.get('channel_url')
         self._upload_date = datetime.strptime(data.get('upload_date'), '%Y%m%d')
         self._url = data.get('webpage_url')
@@ -58,12 +58,12 @@ class YTDLSource(PCMVolumeTransformer):
         return self._requester  # type: ignore
 
     @property
-    def title(self) -> str:
-        return self._title
+    def name(self) -> str:
+        return self._name
 
     @property
     def artist(self) -> str:
-        return self._uploader
+        return self._artist
 
     @property
     def uploader_url(self) -> str:
@@ -98,10 +98,10 @@ class YTDLSource(PCMVolumeTransformer):
         return self._duration
 
     def __str__(self) -> str:
-        return f"{self.title} by {self.artist}"
+        return f"{self.name} by {self.artist}"
 
     def __repr__(self) -> str:
-        return f"<YTDLSource title='{self.title}' uploader='{self.artist}'>"
+        return f"<YTDLSource title='{self.name}' uploader='{self.artist}'>"
 
     @classmethod
     async def from_url(cls, ctx: CustomApplicationContext, url: str, loop: AbstractEventLoop) -> Self:
@@ -171,7 +171,7 @@ class YTDLSource(PCMVolumeTransformer):
         :return: The created YTDLSource.
         """
 
-        search: str = f"{track.title} {' '.join(str(artist) for artist in track.artists)}"
+        search: str = f"{track.name} {' '.join(str(artist) for artist in track.artists)}"
         return await cls.from_search(requester, search, loop=loop)
 
     @classmethod
