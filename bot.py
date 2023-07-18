@@ -6,6 +6,7 @@ from discord import Bot, Interaction, ApplicationContext, ApplicationCommandInvo
 
 from config.settings import SETTINGS
 from lib.db.database import Database
+from lib.db.db_classes import Emoji
 from lib.emoji_loader import load_emojis
 from lib.logging import log, save_traceback
 from lib.spotify.api import SpotifyAPI
@@ -68,5 +69,8 @@ class TornadoBot(Bot):
             exception: ApplicationCommandInvokeError
     ) -> None:
         log(f"Error while processing interaction {ctx.interaction.id}: {exception.original}", error=True)
-        await ctx.respond(f"❌ **Error** while **processing command**: `{exception.original.__class__.__name__}`")
+        emoji_cross: Emoji = await self.database.get_emoji("cross")
+        await ctx.respond(
+            f"{emoji_cross} **Error** while **processing command**: `{exception.original.__class__.__name__}`"
+        )
         await save_traceback(exception)
