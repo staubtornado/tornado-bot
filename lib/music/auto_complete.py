@@ -1,3 +1,4 @@
+from urllib.parse import urlparse
 from lib.contexts import CustomAutocompleteContext
 from lib.spotify.data import SpotifyData
 
@@ -22,4 +23,8 @@ async def complete(ctx: CustomAutocompleteContext) -> list[str]:
         for playlist in playlists:
             results.append(f"Playlist: {playlist.name}")
         return results
+    
+    # Check if value is any url
+    if urlparse(value).scheme in ["http", "https"]:
+        return []
     return [f"{track.name} {track.artists[0]}"[:100] async for track in ctx.bot.spotify.search(value, limit=10)]

@@ -8,12 +8,15 @@ from lib.spotify.track import Track
 class TrackCollection:
     """
     :ivar tracks: The tracks in the collection.
+    :ivar total: The total number of tracks in the collection. This may be greater than the number of tracks in the collection.
     """
 
     tracks: list[Track]
+    total: int
 
     def __init__(self, data: dict) -> None:
         self.tracks = [Track(track['track']) for track in data["tracks"]["items"]]
+        self.total = data["tracks"]["total"]
 
     def __len__(self) -> int:
         return len(self.tracks)

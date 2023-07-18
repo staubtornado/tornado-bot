@@ -19,6 +19,12 @@ class Database:  # aiosqlite3
         loop.create_task(self._connect(path))
 
     async def _connect(self, path: Path | str) -> None:
+        # Check if database exists
+        if isinstance(path, str):
+            path = Path(path)
+
+        if not path.exists():
+            path.touch()
         self._db = await connect(path)
 
         #  Execute build.sql to create tables

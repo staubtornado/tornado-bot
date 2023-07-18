@@ -20,6 +20,7 @@ from lib.music.auto_complete import complete
 from lib.music.embeds import YOUTUBE_NOT_ENABLED
 from lib.music.extraction import YTDLSource
 from lib.music.song import Song
+from lib.music.views import QueueFill
 from lib.spotify.data import SpotifyData
 from lib.spotify.exceptions import SpotifyNotFound, SpotifyRateLimit, SpotifyException
 from lib.utils import format_time
@@ -216,9 +217,24 @@ class Music(Cog):
 
         # If the result is a playlist, add all songs to the queue
         # Check if the playlist is too long for the queue
-        if len(result) > 200:
-            # TODO: Add a way to play a playlist without adding all songs to the queue
-            pass
+        if len(result) > 200 - len(audio_player) or result.total > 200 - len(audio_player):
+            view: QueueFill = QueueFill(ctx, result, audio_player)
+
+            emoji_attention: Emoji = await ctx.bot.database.get_emoji("attention")
+            await ctx.respond(
+                f"{emoji_attention} Playlist **too long** for the queue. **Select** the songs you want to **add**.",
+                view=view
+            )
+            await view.wait()
+
+            if not view.value:
+                return
+            
+            start, stop = view.value.split(" - ")
+            start, stop = int(start), int(stop)
+
+            #  TODO: Continue implementing this
+            return
 
         for track in result:
             audio_player.put(Song(track, ctx.author))
