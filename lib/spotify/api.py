@@ -134,12 +134,12 @@ class SpotifyAPI:
         response: dict = await self._get(f"https://api.spotify.com/v1/artists/{artist_id}/top-tracks?market=DE")
         return Artist(response)
 
-    async def get_playlist_tracks(self, playlist: Playlist | str, limit: int = 200, offset: int = 200) -> Playlist:
+    async def get_playlist_tracks(self, playlist_id: str, start: int, end: int) -> list[Track]:
         """
-        :param playlist: The Spotify ID of the playlist or the playlist object.
-        :param limit: The maximum number of tracks to fetch.
-        :param offset: The offset to start fetching tracks from.
-        :return: The playlist with the tracks.
+        :param playlist_id: The Spotify ID of the playlist.
+        :param start: The start index of the tracks to retrieve.
+        :param end: The end index of the tracks to retrieve.
+        :return: A list of tracks in the specified range.
 
         :raises SpotifyRateLimit: If the rate limit is exceeded.
         :raises SpotifyNotFound: If the playlist could not be found.
@@ -148,17 +148,18 @@ class SpotifyAPI:
         Note: All raised exceptions are subclasses of :class:`SpotifyException`.
         """
 
-        if isinstance(playlist, str):
-            playlist = await self.get_playlist(playlist)
+        if "https://open.spotify.com/" in playlist_id:
+            playlist_id = self._strip_url(playlist_id)
 
-        for i in range(0, limit, 50):
-            response: dict = await self._get(
-                f"https://api.spotify.com/v1/playlists/{playlist.id}/tracks?limit=50&offset={offset + i}"
-            )
-            playlist.tracks.extend([Track(track) for track in response["items"]])
-            if len(response["items"]) < 50:
-                break
-        return playlist
+        tracks: list[Track] = []
+        while start < end:
+            limit = min(end - start, 50)
+            response = await self._get(
+                f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?offset={start}&limit={limit}")
+            tracks.extend([Track(item["track"]) for item in response["items"]])
+            start += limit
+
+        return tracks
 
     async def get_playlist(self, playlist_id: str) -> Playlist:
         """

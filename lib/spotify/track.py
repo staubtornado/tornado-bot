@@ -7,8 +7,10 @@ class Track(SpotifyData):
     """
 
     def __init__(self, data: dict) -> None:
-        super().__init__(data)
+        if isinstance(data.get("track"), dict):
+            data = data["track"]
 
+        super().__init__(data)
         self._artists = [SpotifyData(artist) for artist in data["artists"]]
         self._duration = data["duration_ms"] // 1000
 
