@@ -6,7 +6,7 @@ from typing import Optional, Callable
 from urllib.parse import urlparse, ParseResultBytes
 
 from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel, Embed, Color, \
-    InteractionResponded
+    InteractionResponded, ClientException
 from discord.ext.commands import Cog
 from yt_dlp import DownloadError
 
@@ -92,15 +92,18 @@ class Music(Cog):
 
         if not self._audio_player.get(ctx.guild.id):
             self._audio_player[ctx.guild.id] = AudioPlayer(ctx)
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")  # Get the cross-emoji
 
         if destination := destination or ctx.author.voice.channel:
-            await destination.connect()
+            try:
+                await destination.connect()
+            except ClientException:
+                await ctx.respond(f"{emoji_cross} I am **already connected to a voice channel**.")
+                return
+
             emoji_checkmark2: Emoji = await self.bot.database.get_emoji("checkmark2")
             await ctx.respond(f"{emoji_checkmark2} **Hello**! **Joined** {destination.mention}.")
             return
-
-        # Get the cross-emoji
-        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
         await ctx.respond(f"{emoji_cross} You are **not connected to a voice channel**.")
 
     @slash_command()
