@@ -1,6 +1,7 @@
 from discord import Interaction, ButtonStyle
 from discord.ui import View, Button
 from lib.contexts import CustomApplicationContext
+from lib.db.db_classes import Emoji
 from lib.music.audio_player import AudioPlayer
 
 from lib.spotify.track_collection import TrackCollection
@@ -16,13 +17,12 @@ class QueueFill(View):
         self.tracks = tracks
         self.audio_player = audio_player
 
-
         free: int = 200 - len(audio_player)
 
         if free < 1:
             raise ValueError('Queue is full')
-        
-        parts: int = tracks.total // free
+
+        parts: int = min(tracks.total // free, 22)
         remainder: int = tracks.total % free
 
         for i in range(0, parts):
@@ -49,10 +49,24 @@ class QueueFill(View):
         )
 
     async def interaction_check(self, interaction: Interaction) -> bool:
-        return interaction.user.id == self.ctx.author.id
+        if interaction.user.id == self.ctx.author.id:
+            self.disable_all_items()
 
-    async def on_timeout(self) -> None:
-        await self.ctx.response.edit_message(
-            content='You took too long to respond.',
-            view=None
+            for button in self.children:
+                if isinstance(button, Button) and button.custom_id == interaction.custom_id:
+                    self.value: str = button.label
+            emoji_checkmark: Emoji = await self.ctx.bot.database.get_emoji("checkmark")
+            await interaction.response.edit_message(
+                content=f"{emoji_checkmark} **You choose**: `{self.value}`",
+                view=None
+            )
+            self.stop()
+            return True
+        return False
+
+    async def on_check_failure(self, interaction: Interaction) -> None:
+        emoji_cross: Emoji = await self.ctx.bot.database.get_emoji("cross")
+        await interaction.response.send_message(
+            f'{emoji_cross} Only the command author can use this.',
+            ephemeral=True
         )

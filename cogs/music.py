@@ -217,24 +217,31 @@ class Music(Cog):
 
         # If the result is a playlist, add all songs to the queue
         # Check if the playlist is too long for the queue
-        if len(result) > 200 - len(audio_player) or result.total > 200 - len(audio_player):
+
+        if max(len(result), result.total) > 100 - len(audio_player):
             view: QueueFill = QueueFill(ctx, result, audio_player)
 
             emoji_attention: Emoji = await ctx.bot.database.get_emoji("attention")
-            await ctx.respond(
+            response = await ctx.respond(
                 f"{emoji_attention} Playlist **too long** for the queue. **Select** the songs you want to **add**.",
                 view=view
             )
             await view.wait()
 
             if not view.value:
+                emoji_cross: Emoji = await ctx.bot.database.get_emoji("cross")
+                await response.edit(
+                    content=f'{emoji_cross} You **took too long** to respond.',
+                    view=None
+                )
                 return
-            
-            start, stop = view.value.split(" - ")
-            start, stop = int(start), int(stop)
 
-            #  TODO: Continue implementing this
-            return
+            start, stop = view.value.split(" - ")
+            start, stop = int(start) - 1, int(stop)
+
+            result.tracks = result[start:stop]
+            tracks = await ctx.bot.spotify.get_playlist_tracks(result.id, start + len(result), stop)
+            result.tracks.extend(tracks)
 
         for track in result:
             audio_player.put(Song(track, ctx.author))
@@ -263,9 +270,7 @@ class Music(Cog):
         #  Analyze the search query
         parse_result: ParseResultBytes = urlparse(search)
         if parse_result.netloc == "open.spotify.com":  # If the search query is not a Spotify URL
-            m = match(r"(https://)?open.spotify\.com/(intl-\w+/)?track/(\w+)", search)
-
-            if not m:
+            if not match(r"(https://)?open.spotify\.com/(intl-\w+/)?track/(\w+)", search):
                 await ctx.respond(
                     f"{emoji_cross} **Invalid** Spotify **URL**. **Only tracks** are supported **in this command**."
                 )
