@@ -122,6 +122,7 @@ class Music(Cog):
         is_dj: bool = ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]
         if is_dj:
             await ctx.guild.voice_client.disconnect(force=False)
+            del self._audio_player[ctx.guild.id]
             await ctx.respond(f"{emoji_checkmark2} **Goodbye**!")
             return
 
@@ -131,6 +132,7 @@ class Music(Cog):
         vote: tuple[int, int, bool] = audio_player.vote(audio_player.leave, ctx.author.id, 0.5)
         if vote[2]:
             await ctx.guild.voice_client.disconnect(force=False)
+            del self._audio_player[ctx.guild.id]
             await ctx.respond(f"{emoji_checkmark2} **Goodbye**!")
             return
         percent: int = floor((vote[0] / vote[1]) * 100)
