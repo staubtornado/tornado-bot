@@ -5,6 +5,14 @@ from lib.enums import SongEmbedSize
 
 @dataclass
 class Emoji:
+    """
+    Represents a custom emoji.
+
+    :ivar emoji_id: The ID of the emoji.
+    :ivar name: The name of the emoji.
+    :ivar is_animated: Whether the emoji is animated.
+    :ivar guild_id: The ID of the guild the emoji is from.
+    """
     emoji_id: int
     name: str
     is_animated: bool
@@ -22,6 +30,14 @@ class Emoji:
 
 @dataclass(slots=True)
 class LevelingStats:
+    """
+    Represents the leveling stats of a user.
+
+    :ivar guild_id: The ID of the guild the user is in.
+    :ivar user_id: The ID of the user.
+    :ivar experience: The experience of the user.
+    :ivar message_count: The message count of the user.
+    """
     guild_id: int
     user_id: int
     experience: int
@@ -39,6 +55,21 @@ class LevelingStats:
 
 @dataclass
 class GuildSettings:
+    """
+    Represents the settings of a guild.
+
+    :ivar guild_id: The ID of the guild.
+    :ivar has_beta: Whether the guild has beta.
+    :ivar has_premium: Whether the guild has premium.
+    :ivar xp_active: Whether the leveling system is active.
+    :ivar xp_multiplier: The multiplier of the leveling system.
+    :ivar song_embed_size: The size of the song embed.
+    :ivar log_channel_id: The ID of the log channel.
+    :ivar send_welcome_message: Whether the welcome message should be sent.
+    :ivar welcome_message: The welcome message.
+
+    """
+
     guild_id: int
     has_beta: bool
     has_premium: bool
