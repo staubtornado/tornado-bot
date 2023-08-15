@@ -3,6 +3,7 @@ from os import environ, listdir
 from discord import LoginFailure
 
 from bot import TornadoBot
+from config.settings import SETTINGS
 from lib.logging import log
 
 
@@ -26,7 +27,11 @@ def main() -> None:
     if not all(key in environ for key in ["DISCORD_TOKEN", "SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET"]):
         log("Not all environment variables found. Check your .env file.", error=True)
         return
-    bot: TornadoBot = TornadoBot()
+    bot: TornadoBot = TornadoBot(
+        owner_ids=SETTINGS["OwnerIDs"],
+        description=SETTINGS["Description"],
+        intents=SETTINGS["Intents"],
+    )
 
     # Load cogs
     for cog in listdir('./cogs'):
