@@ -5,6 +5,7 @@ from typing import Iterator, Callable
 from discord import VoiceClient, HTTPException, Forbidden, Message, FFmpegPCMAudio, InteractionMessage
 
 from lib.contexts import CustomApplicationContext
+from lib.db.db_classes import Emoji, UserStats
 from lib.enums import AudioPlayerLoopMode, SongEmbedSize
 from lib.logging import log, save_traceback
 from lib.music.extraction import YTDLSource
@@ -199,6 +200,15 @@ class AudioPlayer:
                 size=self.embed_size,
                 progress=0
             )))
+
+            for member in self.voice.channel.members:
+                if member.bot:
+                    continue
+
+                user_stats: UserStats = await self.ctx.bot.database.get_user_stats(member.id)
+                user_stats.songs_played += 1
+                user_stats.songs_minutes += song.duration
+                await self.ctx.bot.database.set_user_stats(user_stats)
 
             # Process the next song in the queue to minimize the delay
             await self._process_next()

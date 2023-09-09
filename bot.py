@@ -63,6 +63,11 @@ class TornadoBot(Bot):
         log(f"Received interaction {interaction.id} from {interaction.user.name} ({interaction.user.id})")
         await self.process_application_commands(interaction, auto_sync=None)
 
+        if interaction.is_command():
+            user_stats = await self.database.get_user_stats(interaction.user.id)
+            user_stats.commands_used += 1
+            await self.database.set_user_stats(user_stats)
+
     async def on_application_command_error(
             self,
             ctx: ApplicationContext,
