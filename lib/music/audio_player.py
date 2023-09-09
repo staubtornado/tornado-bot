@@ -126,12 +126,14 @@ class AudioPlayer:
         :return: None
         """
 
-        await sleep(60)
-        while self.active:
+        while True:
+            await sleep(60)
+            if not self.active:
+                break
+
             member_amount = len([member for member in self.voice.channel.members if not member.bot])
             if not member_amount:
                 self._cleanup()
-            await sleep(60)
 
     async def _player(self) -> None:
         self.embed_size = (await self.ctx.bot.database.get_guild_settings(self.ctx.guild.id)).song_embed_size
@@ -150,7 +152,8 @@ class AudioPlayer:
                     else:
                         self._queue.insert(0, self.current)
                 except QueueFull:
-                    await self.send("⚠️ **Queue is full**, ignoring loop.")
+                    emoji_attention: Emoji = await self.ctx.bot.database.get_emoji("attention")
+                    await self.send(f"{emoji_attention} **Queue is full**, ignoring loop.")
 
             # Add the song to the history
             if self.current and self.current not in self._history:
@@ -235,7 +238,7 @@ class AudioPlayer:
     def skip(self) -> None:
         """
         Skip the current song.
-        Disable loop of song if it is enabled.
+        This disables the loop if it is enabled.
         :return: None
         """
         if self._loop == AudioPlayerLoopMode.SONG:
@@ -385,7 +388,6 @@ class AudioPlayer:
         if self._voice:
             self._voice.stop()
             self.ctx.bot.loop.create_task(self._voice.disconnect())
-            self.ctx.bot.loop.create_task(self.send("Left voice channel"))
 
     async def _delete_previous_messages(self) -> None:
         for message in self._messages:

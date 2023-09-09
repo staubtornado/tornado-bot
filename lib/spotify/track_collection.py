@@ -9,7 +9,7 @@ class TrackCollection:
     """
     :ivar tracks: The tracks in the collection.
     :ivar total: The total number of tracks in the collection.
-    This may be greater than the number of tracks in the collection.
+    This may be greater than the number of tracks processed in the collection.
     """
 
     tracks: list[Track]
@@ -22,7 +22,7 @@ class TrackCollection:
     def __len__(self) -> int:
         return len(self.tracks)
 
-    def __getitem__(self, index: int) -> Track | list[Track]:
+    def __getitem__(self, index: int | slice) -> Track | list[Track]:
         return self.tracks[index]
 
     def __iter__(self) -> Iterator[Track]:

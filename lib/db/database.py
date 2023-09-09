@@ -136,13 +136,18 @@ class Database:  # aiosqlite3
         async with self._db.execute("REPLACE INTO Leveling VALUES (?, ?, ?, ?);", (*stats,)):
             await self._db.commit()
 
-    async def remove_leveling_stats(self, user_id: int, guild_id: int) -> None:
+    async def remove_leveling_stats(self, user_id: int | None, guild_id: int) -> None:
         """
         Removes a user's LevelingStats stats.
         :param user_id: The user ID to remove the stats for.
         :param guild_id: The guild ID to remove the stats for.
         :return: None
         """
+
+        if not user_id:
+            async with self._db.execute("DELETE FROM Leveling WHERE guildId = ?;", (guild_id,)):
+                await self._db.commit()
+            return
 
         async with self._db.execute("DELETE FROM Leveling WHERE userId = ? AND guildId = ?;", (user_id, guild_id)):
             await self._db.commit()

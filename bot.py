@@ -1,6 +1,6 @@
 from datetime import datetime
 from os import environ
-from typing import Optional, Any
+from typing import Any
 
 from discord import Bot, Interaction, ApplicationContext, ApplicationCommandInvokeError, Forbidden, HTTPException
 
@@ -23,7 +23,7 @@ class TornadoBot(Bot):
         self._database = Database("./data/database.sqlite", self.loop)
 
     @property
-    def uptime(self) -> Optional[datetime]:
+    def uptime(self) -> datetime | None:
         """Returns the time the bot was started. Might be None if the bot has not yet logged in."""
         return self._uptime
 

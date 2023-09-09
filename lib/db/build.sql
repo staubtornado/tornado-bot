@@ -32,6 +32,6 @@ CREATE TABLE IF NOT EXISTS GuildSettings (
 
     logChannel INTEGER DEFAULT 0,
     sendWelcomeMessage INTEGER NOT NULL DEFAULT 0,
-    welcomeMessage TEXT NOT NULL DEFAULT "Welcome {user} to {guild}!",
+    welcomeMessage TEXT NOT NULL DEFAULT '**Hello** {user}! **Welcome** to **{guild}**!',
     PRIMARY KEY (guildId)
 );
