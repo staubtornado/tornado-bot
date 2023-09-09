@@ -89,3 +89,25 @@ class GuildSettings:
     def __iter__(self):
         yield from asdict(self).values()
 
+
+@dataclass
+class UserStats:
+    """
+    Represents the usage stats of a user.
+
+    :ivar user_id: The ID of the user.
+    :ivar commands_used: The number of commands used by the user.
+    :ivar songs_played: The number of songs played by the user.
+    :ivar songs_minutes: The number of minutes the user has listened to songs.
+    """
+
+    user_id: int
+    commands_used: int
+    songs_played: int
+    songs_minutes: int
+
+    def __bool__(self):
+        return True
+
+    def __iter__(self):
+        yield from asdict(self).values()

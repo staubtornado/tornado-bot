@@ -35,3 +35,12 @@ CREATE TABLE IF NOT EXISTS GuildSettings (
     welcomeMessage TEXT NOT NULL DEFAULT '**Hello** {user}! **Welcome** to **{guild}**!',
     PRIMARY KEY (guildId)
 );
+
+
+CREATE TABLE IF NOT EXISTS UserStats (
+    userId INTEGER NOT NULL,
+    commandsUsed INTEGER NOT NULL DEFAULT 0,
+    musicPlayed INTEGER NOT NULL DEFAULT 0,
+    songsPlayed INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (userId)
+);

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from aiosqlite import connect
 
-from lib.db.db_classes import Emoji, LevelingStats, GuildSettings
+from lib.db.db_classes import Emoji, LevelingStats, GuildSettings, UserStats
 from lib.enums import SongEmbedSize
 
 
@@ -192,4 +192,32 @@ class Database:  # aiosqlite3
         """
 
         async with self._db.execute("DELETE FROM GuildSettings WHERE guildId = ?;", (guild_id,)):
+            await self._db.commit()
+
+    async def get_user_stats(self, user_id: int) -> UserStats:
+        """
+        Gets a user's leveling stats.
+        :param user_id: The user ID to get the stats for.
+        :return: UserStats
+        """
+
+        async with self._db.execute(
+                "SELECT * FROM UserStats WHERE userId = ?;", (user_id,)) as cursor:
+            if data := await cursor.fetchone():
+                return UserStats(*data)
+            return UserStats(user_id, 0, 0, 0)
+
+    async def set_user_stats(self, stats: UserStats | None) -> None:
+        """
+        Sets a user's UserStats stats.
+        :param stats: The stats to set.
+        :return: None
+        """
+
+        if not stats:
+            async with self._db.execute("DELETE FROM UserStats WHERE userId = ?;", (stats.user_id,)):
+                await self._db.commit()
+            return
+
+        async with self._db.execute("REPLACE INTO UserStats VALUES (?, ?, ?, ?);", (*stats,)):
             await self._db.commit()
