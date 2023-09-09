@@ -241,12 +241,19 @@ class Music(Cog):
                 )
                 return
 
-            start, stop = view.value.split(" - ")
-            start, stop = int(start) - 1, int(stop)
+            try:
+                start, stop = view.value.split(" - ")
+            except ValueError:
+                tracks = await ctx.bot.spotify.get_playlist_tracks(result.id, len(result), result.total)
+                result.tracks.extend(tracks)
+                shuffle(result.tracks)
+                result.tracks = result.tracks[:200 - len(audio_player)]
+            else:
+                start, stop = int(start) - 1, int(stop)
 
-            result.tracks = result[start:stop]
-            tracks = await ctx.bot.spotify.get_playlist_tracks(result.id, start + len(result), stop)
-            result.tracks.extend(tracks)
+                result.tracks = result[start:stop]
+                tracks = await ctx.bot.spotify.get_playlist_tracks(result.id, start + len(result), stop)
+                result.tracks.extend(tracks)
 
         for track in result:
             audio_player.put(Song(track, ctx.author))
