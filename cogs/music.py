@@ -7,6 +7,7 @@ from urllib.parse import urlparse, ParseResultBytes
 
 from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel, Embed, Color, \
     InteractionResponded, ClientException
+from discord.abc import GuildChannel
 from discord.ext.commands import Cog
 from yt_dlp import DownloadError
 
@@ -90,15 +91,25 @@ class Music(Cog):
     ) -> None:
         """Joins a voice channel."""
 
+        try:
+            await ctx.defer()
+        except InteractionResponded:
+            pass
+
         if not self._audio_player.get(ctx.guild.id):
             self._audio_player[ctx.guild.id] = AudioPlayer(ctx)
         emoji_cross: Emoji = await self.bot.database.get_emoji("cross")  # Get the cross-emoji
 
         if destination := destination or ctx.author.voice.channel:
             try:
-                await destination.connect()
+                await destination.connect(timeout=5)
             except ClientException:
                 await ctx.respond(f"{emoji_cross} I am **already connected to a voice channel**.")
+                return
+            except TimeoutError:
+                await ctx.respond(
+                    f"{emoji_cross} **Could not join.** Please check permissions for {destination.mention}."
+                )
                 return
 
             emoji_checkmark2: Emoji = await self.bot.database.get_emoji("checkmark2")
@@ -208,6 +219,9 @@ class Music(Cog):
         if not await self._check_for_valid_player(ctx):
             return
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+
+        if audio_player.voice is None:
+            return
 
         emoji_playlist: Emoji = await ctx.bot.database.get_emoji("playlist")
         emoji_checkmark: Emoji = await ctx.bot.database.get_emoji("checkmark")

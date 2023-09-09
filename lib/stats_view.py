@@ -1,4 +1,3 @@
-import time
 from asyncio import AbstractEventLoop, get_event_loop
 from io import BytesIO
 
