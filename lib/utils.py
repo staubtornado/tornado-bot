@@ -1,9 +1,6 @@
-from io import BytesIO
 from random import randrange
 from time import strftime, gmtime
 
-from easy_pil import Editor
-from fast_colorthief import get_dominant_color
 from millify import millify
 
 
@@ -34,17 +31,3 @@ def truncate(s: str, limit: int, ending: str = "...") -> str:
 def random_hex(length: int) -> str:
     """Generates a random hex string."""
     return f'{randrange(16**length):x}'.zfill(length)
-
-
-def dominant_color(image: bytes) -> tuple[int, int, int]:
-    """
-    Gets the average color of an image.
-
-    :param image: The image to get the average color of.
-
-    :return: The average color of the image.
-    """
-
-    editor: Editor = Editor(BytesIO(image))
-    editor.blur(amount=5)
-    return get_dominant_color(editor.image_bytes, 1)
