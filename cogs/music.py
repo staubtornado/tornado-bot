@@ -7,7 +7,6 @@ from urllib.parse import urlparse, ParseResultBytes
 
 from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel, Embed, Color, \
     InteractionResponded, ClientException
-from discord.abc import GuildChannel
 from discord.ext.commands import Cog
 from yt_dlp import DownloadError
 
@@ -221,6 +220,11 @@ class Music(Cog):
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
 
         if audio_player.voice is None:
+            return
+
+        if audio_player.voice.channel.permissions_for(ctx.guild.me).speak is False:
+            await ctx.respond(f"{emoji_cross} I **cannot speak** in {audio_player.voice.channel.mention}.")
+            await audio_player.voice.disconnect(force=False)
             return
 
         emoji_playlist: Emoji = await ctx.bot.database.get_emoji("playlist")
