@@ -2,7 +2,9 @@ from datetime import datetime
 from os import environ
 from typing import Any
 
-from discord import Bot, Interaction, ApplicationContext, ApplicationCommandInvokeError, Forbidden, HTTPException
+from discord import Bot, Interaction, ApplicationContext, ApplicationCommandInvokeError, Forbidden, HTTPException, \
+    Activity, ActivityType
+from discord.ext.tasks import loop
 
 from config.settings import SETTINGS
 from lib.db.database import Database
@@ -21,6 +23,7 @@ class TornadoBot(Bot):
         self._settings = SETTINGS
         self._spotify = SpotifyAPI(environ["SPOTIFY_CLIENT_ID"], environ["SPOTIFY_CLIENT_SECRET"])
         self._database = Database("./data/database.sqlite", self.loop)
+        self.presence_loop.start()
 
     @property
     def uptime(self) -> datetime | None:
@@ -41,6 +44,16 @@ class TornadoBot(Bot):
     def database(self) -> Database:
         """Returns the database instance."""
         return self._database
+
+    @loop(minutes=5)
+    async def presence_loop(self) -> None:
+        """Updates the bot presence every 5 minutes."""
+        stats: str = f"{len(self.guilds)} servers | {len(self.users)} users"
+
+        await self.wait_until_ready()
+        await self.change_presence(
+            activity=Activity(type=ActivityType.playing, name=SETTINGS['Version'] + f" | {stats}")
+        )
 
     async def on_ready(self) -> None:
         self._uptime = datetime.utcnow()
