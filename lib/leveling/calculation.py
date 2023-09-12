@@ -1,3 +1,4 @@
+from functools import cache
 from math import e
 
 
@@ -8,6 +9,7 @@ def level_size(level: int) -> int:
     return round(10000 / (1 + 39 * e ** (-0.15 * level))) + 5 * level
 
 
+@cache
 def xp_to_level(xp: int) -> tuple[int, int]:
     """
     Returns the level and the experience of the given experience.

@@ -1,4 +1,3 @@
-from time import time
 from random import randint
 
 from discord import Message, slash_command, Option, Member, Forbidden, HTTPException, File, MessageType, NotFound
@@ -15,14 +14,11 @@ from lib.leveling.rank_card import generate_rank_card
 
 
 class Leveling(Cog):
-    _global_leaderboard: tuple[list[LevelingStats] | None, float]
-
     def __init__(self, bot: TornadoBot) -> None:
         self.bot = bot
         self._limiter = Limiter(
             RequestRate(1, Duration.MINUTE)
         )
-        self._global_leaderboard = (None, 0.0)
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
@@ -128,8 +124,8 @@ class Leveling(Cog):
         # Calculate the rank of the user in the guild.
         # Get the leaderboard for the guild
         leaderboard: list[LevelingStats] = await self.bot.database.get_guild_leaderboard(ctx.guild.id)
-        # Get the index of the user in the leaderboard
 
+        # Get the index of the user in the leaderboard
         try:
             rank: int = leaderboard.index(stats) + 1
         except ValueError:
@@ -139,30 +135,16 @@ class Leveling(Cog):
 
         # Calculate the rank of the user globally.
         # Get the global leaderboard
-        leaderboard_global: list[LevelingStats] | None = self._global_leaderboard[0]
-
-        # Check if the global leaderboard is not cached or if it is older than 60 minutes
-        if not leaderboard_global or time() - self._global_leaderboard[1] > 30:
-            leaderboard_global: list[LevelingStats] = await self.bot.database.get_global_leaderboard(-1)
-            self._global_leaderboard = (leaderboard_global, time())
-        leaderboard_global = leaderboard_global[rank:]
-
-        # Get the index of the user in the global leaderboard, binary search
-        rank_global: int = 0
-        start: int = 0
-        end: int = len(leaderboard_global) - 1
-        while start <= end:
-            mid: int = (start + end) // 2
-            if leaderboard_global[mid] == stats:
-                rank_global = mid + 1
+        leaderboard_global: list[LevelingStats] = await self.bot.database.get_global_leaderboard(-1)
+        for i, stats_global in enumerate(leaderboard_global):
+            if stats_global.user_id == user.id:
+                rank_global: int = i + 1
                 break
-            elif leaderboard_global[mid] > stats:
-                end = mid - 1
-            else:
-                start = mid + 1
+        else:  # no break
+            rank_global: int = -1
 
         # Generate the rank card and send it
-        card: File = await generate_rank_card(stats, user, rank, rank_global + rank)
+        card: File = await generate_rank_card(stats, user, rank, rank_global)
         await ctx.respond(file=card)
 
 

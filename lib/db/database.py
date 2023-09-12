@@ -96,7 +96,7 @@ class Database:  # aiosqlite3
         async with self._db.execute(
                 "SELECT * FROM Leveling WHERE guildId = ? ORDER BY xp DESC LIMIT ?;",
                 (guild_id, limit + offset)) as cursor:
-            return [LevelingStats(*data) for data in await cursor.fetchall()]
+            return [LevelingStats(*data) for data in await cursor.fetchall()][offset:]
 
     async def get_global_leaderboard(self, limit: int = 19, offset: int = 0) -> list[LevelingStats]:
         """
