@@ -24,11 +24,18 @@ class SpotifyAPI:
     def __init__(self, client_id: str, client_secret: str) -> None:
         self._client_id = client_id
         self._client_secret = client_secret
-        self._token = None
+        self.__token = None
+        self._token_expiry = None
 
         self._retry_after = None
 
         self._trending_playlists = (None, 0.0)
+
+    @property
+    def _token(self) -> str | None:
+        if self._token_expiry and datetime.now() > self._token_expiry:
+            self.__token = None
+        return self.__token
 
     async def _get_token(self) -> None:
         async with ClientSession() as session:
@@ -41,7 +48,8 @@ class SpotifyAPI:
                 }
             ) as response:
                 data = await response.json()
-                self._token = data["access_token"]
+                self.__token = data["access_token"]
+                self._token_expiry = datetime.now() + timedelta(seconds=data["expires_in"])
 
     @staticmethod
     def _strip_url(url: str) -> str:
