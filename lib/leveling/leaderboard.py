@@ -81,7 +81,7 @@ def _gen_leaderboard(
         align="right"
     )
 
-    for i, info in enumerate(zip(stats[:8], avatars[:8], user_names[:8]), start=1):
+    for i, info in enumerate(zip(stats[:8], avatars[:8], user_names[:8]), start=1 + (page - 1) * 8):
         stat, avatar, username = info
 
         editor.paste(
@@ -111,7 +111,7 @@ def _gen_leaderboard(
 
     editor: Editor = Editor("./assets/leaderboard2.png")
 
-    for i, info in enumerate(zip(stats[8:], avatars[8:], user_names[8:]), start=1):
+    for i, info in enumerate(zip(stats[8:], avatars[8:], user_names[8:]), start=1 + (page - 1) * 8):
         stat, avatar, username = info
 
         editor.paste(
