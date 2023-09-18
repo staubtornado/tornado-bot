@@ -118,6 +118,5 @@ ffmpeg.exe
 data/db/database.db
 *.db
 .idea/
-chromedriver.exe
-/data/tracebacks/*.txt
-/data/cache/*
+/logs/*
+*.sqlite
