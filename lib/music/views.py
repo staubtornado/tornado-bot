@@ -34,13 +34,15 @@ class QueueFill(View):
                     custom_id=random_hex(8),
                 )
             )
-        self.add_item(
-            Button(
-                style=ButtonStyle.green,
-                label=f'{parts * free + 1} - {parts * free + remainder}',
-                custom_id=random_hex(8),
+
+        if remainder > 0:
+            self.add_item(
+                Button(
+                    style=ButtonStyle.green,
+                    label=f'{parts * free + 1} - {parts * free + remainder}',
+                    custom_id=random_hex(8),
+                )
             )
-        )
         self.add_item(
             Button(
                 style=ButtonStyle.blurple,
