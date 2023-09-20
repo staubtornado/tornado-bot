@@ -2,7 +2,6 @@ from asyncio import AbstractEventLoop, get_event_loop
 from datetime import datetime
 from sys import stdout, stderr
 from traceback import format_exception
-from typing import Union
 
 from discord import ApplicationCommandInvokeError
 
@@ -23,7 +22,7 @@ def _write_file(path: str, content: str) -> None:
         file.write(content)
 
 
-async def save_traceback(_exception:  Union[ApplicationCommandInvokeError, Exception]) -> None:
+async def save_traceback(_exception:  ApplicationCommandInvokeError | Exception) -> None:
     """
     Saves a traceback to a file without blocking the event loop.
     :param _exception: The exception to save the traceback of.
