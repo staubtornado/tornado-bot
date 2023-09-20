@@ -20,7 +20,7 @@ from lib.music.auto_complete import complete
 from lib.music.embeds import YOUTUBE_NOT_ENABLED
 from lib.music.extraction import YTDLSource
 from lib.music.song import Song
-from lib.music.views import QueueFill
+from lib.music.views import QueueFill, LoopView
 from lib.spotify.data import SpotifyData
 from lib.spotify.exceptions import SpotifyNotFound, SpotifyRateLimit, SpotifyException
 from lib.utils import format_time
@@ -626,6 +626,31 @@ class Music(Cog):
                 inline=False
             )
         await ctx.respond(embed=embed)
+
+    @slash_command()
+    async def loop(self, ctx: CustomApplicationContext) -> None:
+        """Loops the current song."""
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+
+        if not audio_player:
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
+            return
+
+        view = LoopView(ctx, audio_player)
+        response = await ctx.respond(
+            "Select a loop mode.",
+            view=view
+        )
+        await view.wait()
+
+        if not view.value:
+            emoji_cross: Emoji = await ctx.bot.database.get_emoji("cross")
+            await response.response.edit(
+                content=f'{emoji_cross} You **took too long** to respond.',
+                view=None
+            )
+            return
 
     @slash_command()
     async def clear(self, ctx: CustomApplicationContext) -> None:
