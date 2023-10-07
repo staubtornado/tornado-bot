@@ -152,7 +152,7 @@ class Song:
             _queue.append(f"`{i}`. [{truncate(f'{song.title} by {song.artist}', 55)}]({url})")
 
         if len(queue) > 5:
-            _queue.append(f"Execute **/**queue to **see {len(queue) - 5} more**.")
+            _queue.append(f"Execute **/**`queue` to **see {len(queue) - 5} more**.")
 
         embed.add_field(
             name="Queue",

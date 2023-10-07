@@ -1,5 +1,6 @@
 from asyncio import AbstractEventLoop
 from datetime import datetime
+from re import sub
 from typing import Self, Any, AsyncGenerator
 from urllib.parse import quote
 
@@ -19,7 +20,7 @@ class YTDLSource(PCMVolumeTransformer):
         'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
         'restrictfilenames': True,
         'noplaylist': True,
-        # 'quiet': True,
+        'quiet': True,
         'source_address': '0.0.0.0',
         'default_search': 'auto',
         'playlist_items': '1,2,3,4,5'
@@ -38,7 +39,7 @@ class YTDLSource(PCMVolumeTransformer):
         self._requester = requester
 
         self._name = data.get('title')
-        self._artist = data.get('uploader')
+        self._artist = sub(r" - Topic", "", data.get('uploader'))
         self._uploader_url = data.get('channel_url')
         self._upload_date = datetime.strptime(data.get('upload_date'), '%Y%m%d')
         self._url = data.get('webpage_url')
