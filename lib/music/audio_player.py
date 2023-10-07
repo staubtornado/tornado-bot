@@ -2,7 +2,7 @@ from asyncio import wait_for, TimeoutError, Event, QueueFull, sleep
 from math import floor
 from typing import Iterator, Callable
 
-from discord import VoiceClient, HTTPException, Forbidden, Message, FFmpegPCMAudio, InteractionMessage
+from discord import VoiceClient, HTTPException, Forbidden, Message, FFmpegPCMAudio, InteractionMessage, NotFound
 
 from lib.contexts import CustomApplicationContext
 from lib.db.db_classes import Emoji, UserStats
@@ -18,7 +18,7 @@ class AudioPlayer:
     ctx: CustomApplicationContext
 
     _queue: SongQueue[Song]
-    _messages: list[Message | InteractionMessage | None]
+    _message: Message | InteractionMessage | None
     _history: list[Song]
     _votes: dict[Callable[[], None], set[int]]
 
@@ -30,7 +30,7 @@ class AudioPlayer:
         self._votes = {}
         self._loop = AudioPlayerLoopMode.NONE
         self._timestamp = 0
-        self._messages = []
+        self._message = None
         self._current = None
         self._event = Event()
         self._history = []
@@ -119,6 +119,28 @@ class AudioPlayer:
         """
         return self._history
 
+    @property
+    def message(self) -> Message | None:
+        """
+        :return: The last message associated with the newest song embed.
+        """
+        return self._message
+
+    @message.setter
+    def message(self, value: Message | None) -> None:
+        """
+        Overwriting using this getter will delete the deprecated song embed.
+        :param value: The new message.
+        :return: None
+        """
+
+        if self.message:
+            try:
+                self.ctx.bot.loop.create_task(self.message.delete())
+            except (Forbidden, HTTPException, NotFound):
+                pass
+        self._message = value
+
     async def _inactivity_check(self) -> None:
         """
         Checks if the bot is alone in the voice channel.
@@ -141,7 +163,6 @@ class AudioPlayer:
 
         while True:
             self._event.clear()
-            await self._delete_previous_messages()
 
             #  Add the previous song to queue if loop is enabled
             if self.loop and self.current:
@@ -194,12 +215,12 @@ class AudioPlayer:
             self._timestamp = int(self.voice.timestamp / 1000 * 0.02)
 
             # Send the message
-            self._messages.append(await self.send(embed=song.get_embed(
+            self.message = await self.send(embed=song.get_embed(
                 loop=self.loop,
                 queue=list(self._queue),
                 size=self.embed_size,
                 progress=0
-            )))
+            ))
 
             for member in self.voice.channel.members:
                 if member.bot:
@@ -213,15 +234,6 @@ class AudioPlayer:
             # Process the next song in the queue to minimize the delay
             await self._process_next()
             await self._event.wait()  # Wait for the song to end
-
-    def add_message(self, message: Message | InteractionMessage | None) -> None:
-        """
-        Add a message to the player.
-        :param message: The message to add
-
-        :return: None
-        """
-        self._messages.append(message)
 
     def put(self, song: Song, index: int = None) -> None:
         """
@@ -283,13 +295,16 @@ class AudioPlayer:
 
         self.reset(current)
         self._queue.insert(0, current)  # Add the current song to the queue
-        self.ctx.bot.loop.create_task(self._delete_previous_messages())
-        self.ctx.bot.loop.create_task(self.send(embed=previous.get_embed(
-            loop=self.loop,
-            queue=list(self._queue),
-            size=SongEmbedSize(self.embed_size),
-            progress=0
-        )))  # Send the message
+
+        async def _send() -> None:
+            message: Message = await self.send(embed=previous.get_embed(
+                loop=self.loop,
+                queue=list(self._queue),
+                size=SongEmbedSize(self.embed_size),
+                progress=0
+            ))
+            self.message = message
+        self.ctx.bot.loop.create_task(_send())  # Send the message
 
     def pause(self) -> None:
         """
@@ -393,21 +408,11 @@ class AudioPlayer:
     def _cleanup(self) -> None:
         self._queue.clear()
         self._player_task.cancel()
-        self.ctx.bot.loop.create_task(self._delete_previous_messages())
+        self.message = None
 
         if self._voice:
             self._voice.stop()
             self.ctx.bot.loop.create_task(self._voice.disconnect())
-
-    async def _delete_previous_messages(self) -> None:
-        for message in self._messages:
-            try:
-                await message.delete()
-            except (Forbidden, HTTPException):
-                break
-            except AttributeError:
-                pass
-        self._messages.clear()
 
     def _prepare_next(self, error=None) -> None:
         if error:

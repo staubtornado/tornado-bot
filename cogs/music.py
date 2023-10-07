@@ -567,7 +567,7 @@ class Music(Cog):
         message = await ctx.respond(
             embed=song.get_embed(audio_player.loop, list(audio_player), progress=audio_player.progress)
         )
-        audio_player.add_message(await message.original_response())
+        audio_player.message = await message.original_response()
 
     @slash_command()
     async def shuffle(self, ctx: CustomApplicationContext) -> None:
