@@ -101,7 +101,7 @@ class AudioPlayer:
         """
         The progress of the current song.
         :returns: The percentage of the current song that has been played.
-        Between 0 and 1
+        Between zero and one
         """
         return ((self.voice.timestamp / 1000 * 0.02) - self._timestamp) / self.current.duration
 
@@ -115,7 +115,7 @@ class AudioPlayer:
     @property
     def history(self) -> list[Song]:
         """
-        :returns: The last 5 songs played.
+        :returns: The last five songs played.
         """
         return self._history
 

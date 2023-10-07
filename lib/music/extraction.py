@@ -47,7 +47,7 @@ class YTDLSource(PCMVolumeTransformer):
         try:
             self._thumbnail_url = data.get('thumbnails')[5].get('url')
         except (IndexError, TypeError):
-            self._thumbnail_url = data.get('thumbnail')
+            self._thumbnail_url = data.get('thumbnail')  # Let yt-dl decide
 
         self._views = data.get('view_count')
         self._likes = data.get('like_count')
