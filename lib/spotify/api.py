@@ -223,6 +223,8 @@ class SpotifyAPI:
                 use_cache = False
 
         if not use_cache:
-            response: dict = await self._get("https://api.spotify.com/v1/browse/featured-playlists")
+            response: dict = await self._get(
+                "https://api.spotify.com/v1/browse/featured-playlists?locale=en_US&country=US"
+            )
             self._trending_playlists = (response["playlists"]["items"], time())
         return [SpotifyData(playlist) for playlist in self._trending_playlists[0]]
