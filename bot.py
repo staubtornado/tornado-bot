@@ -12,7 +12,7 @@ from lib.db.db_classes import Emoji
 from lib.emoji_loader import load_emojis
 from lib.logging import log, save_traceback
 from lib.spotify.api import SpotifyAPI
-from lib.utils import random_hex
+from lib.utils import random_hex, shortened
 
 
 class TornadoBot(Bot):
@@ -48,11 +48,12 @@ class TornadoBot(Bot):
     @loop(minutes=5)
     async def presence_loop(self) -> None:
         """Updates the bot presence every 5 minutes."""
-        stats: str = f"{len(self.guilds)} servers | {len(self.users)} users"
-
         await self.wait_until_ready()
+
+        guilds, members = len(self.guilds), len(list(self.get_all_members()))
+        message: str = f"{shortened(guilds)} servers | {shortened(members)} users"
         await self.change_presence(
-            activity=Activity(type=ActivityType.playing, name=SETTINGS['Version'] + f" | {stats}")
+            activity=Activity(type=ActivityType.playing, name=SETTINGS['Version'] + f" | {message}")
         )
 
     async def on_ready(self) -> None:
