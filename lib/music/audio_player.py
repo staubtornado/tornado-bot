@@ -1,4 +1,5 @@
 from asyncio import wait_for, TimeoutError, Event, QueueFull, sleep
+from collections import deque
 from math import floor
 from typing import Iterator, Callable
 
@@ -19,7 +20,6 @@ class AudioPlayer:
 
     _queue: SongQueue[Song]
     _message: Message | InteractionMessage | None
-    _history: list[Song]
     _votes: dict[Callable[[], None], set[int]]
 
     def __init__(self, ctx: CustomApplicationContext) -> None:
@@ -33,7 +33,7 @@ class AudioPlayer:
         self._message = None
         self._current = None
         self._event = Event()
-        self._history = []
+        self._history = deque(maxlen=5)
         self._player_task = self.ctx.bot.loop.create_task(self._player())
         self.embed_size = 2
 
@@ -113,7 +113,7 @@ class AudioPlayer:
         return self._queue.duration
 
     @property
-    def history(self) -> list[Song]:
+    def history(self) -> deque[Song]:
         """
         :returns: The last five songs played.
         """
@@ -178,9 +178,8 @@ class AudioPlayer:
                     await self.send(f"{emoji_attention} **Queue is full**, ignoring loop.")
 
             # Add the song to the history
-            if self.current and self.current not in self._history:
-                self._history.append(self.current)
-                self._history = self._history[-5:]
+            if self.current and self.current not in self.history:
+                self.history.append(self.current)
 
             #  Waiting for the next song, leaving if there is no song in 3 minutes
             self._current = None
@@ -280,21 +279,18 @@ class AudioPlayer:
         if not len(self.history):
             raise ValueError("No previous song in history")
 
-        if not len(self._queue) + 2 < self._queue.maxsize:
-            if self._queue.maxsize != 0:
-                raise QueueFull("Queue is full")
+        if self._queue.full():
+            raise QueueFull("Queue is full.")
 
-        previous: Song = self._history.pop()
-        self.reset(previous)  # Reset the current song, so it can be played again
-
+        previous: Song = self.history.pop()
+        self.reset(previous)  # Reset the stream so the source can be played again
         self.voice.source = previous.source  # Replace the current song with the previous one
+
+        self.reset(self.current)
+        self._queue.insert(0, self.current)
+
         self._timestamp = int(self.voice.timestamp / 1000 * 0.02)  # Update the timestamp
-
-        current: Song = self.current
         self._current = previous
-
-        self.reset(current)
-        self._queue.insert(0, current)  # Add the current song to the queue
 
         async def _send() -> None:
             message: Message = await self.send(embed=previous.get_embed(
