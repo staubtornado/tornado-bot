@@ -35,7 +35,7 @@ class AudioPlayer:
         self._event = Event()
         self._history = deque(maxlen=5)
         self._player_task = self.ctx.bot.loop.create_task(self._player())
-        self.embed_size = 2
+        self.embed_size = SongEmbedSize.DEFAULT
 
         self.ctx.bot.loop.create_task(self._inactivity_check())
 
