@@ -238,45 +238,46 @@ class Music(Cog):
             await ctx.respond(f"{emoji_checkmark} **Added** `{result.name}` **to the queue**.")
             return
 
-        # If the result is a playlist, add all songs to the queue
-        # Check if the playlist is too long for the queue
+        # From now on, the variable result has to be a playlist / album as it is iterable
+        if not len(result):
+            await ctx.respond(f"{emoji_cross} What you have send **seems to be empty**.")
+            return
 
-        if max(len(result), result.total) > 100 - len(audio_player):
-            view: QueueFill = QueueFill(ctx, result, audio_player)
+        view: QueueFill = QueueFill(ctx, result, audio_player)
 
-            emoji_attention: Emoji = await ctx.bot.database.get_emoji("attention")
-            response = await ctx.respond(
-                f"{emoji_attention} Playlist **too long** for the queue. **Select** the songs you want to **add**.",
-                view=view
+        emoji_attention: Emoji = await ctx.bot.database.get_emoji("attention")
+        response = await ctx.respond(f"{emoji_attention} **What** do you want **to add?**", view=view)
+        await view.wait()
+
+        if not view.value:
+            emoji_cross: Emoji = await ctx.bot.database.get_emoji("cross")
+            await response.edit(
+                content=f'{emoji_cross} You **took too long** to respond.',
+                view=None
             )
-            await view.wait()
+            return
 
-            if not view.value:
-                emoji_cross: Emoji = await ctx.bot.database.get_emoji("cross")
-                await response.edit(
-                    content=f'{emoji_cross} You **took too long** to respond.',
-                    view=None
-                )
-                return
+        try:
+            start, stop = view.value.split(" - ")
+        except ValueError:
+            tracks = await ctx.bot.spotify.get_playlist_tracks(result.id, len(result), result.total)
+            result.tracks.extend(tracks)
+            shuffle(result.tracks)
+            result.tracks = result.tracks[:200 - len(audio_player)]
+        else:
+            start, stop = int(start) - 1, int(stop)
 
-            try:
-                start, stop = view.value.split(" - ")
-            except ValueError:
-                tracks = await ctx.bot.spotify.get_playlist_tracks(result.id, len(result), result.total)
-                result.tracks.extend(tracks)
-                shuffle(result.tracks)
-                result.tracks = result.tracks[:200 - len(audio_player)]
-            else:
-                start, stop = int(start) - 1, int(stop)
-
-                result.tracks = result[start:stop]
-                tracks = await ctx.bot.spotify.get_playlist_tracks(result.id, start + len(result), stop)
-                result.tracks.extend(tracks)
+            result.tracks = result[start:stop]
+            tracks = await ctx.bot.spotify.get_playlist_tracks(result.id, start + len(result), stop)
+            result.tracks.extend(tracks)
 
         for track in result:
             audio_player.put(Song(track, ctx.author))
-        await ctx.respond(f"{emoji_playlist} **Added** `{len(result)}` **tracks to the queue**.")
-        return
+
+        if len(result) > 1:
+            await ctx.respond(f"{emoji_playlist} **Added** `{len(result)}` **tracks to the queue**.")
+            return
+        await ctx.respond(f"{emoji_checkmark} **Added** `{result[0].name}` **to the queue**.")
 
     @slash_command()
     async def playnext(
@@ -602,7 +603,7 @@ class Music(Cog):
 
     @slash_command()
     async def history(self, ctx: CustomApplicationContext) -> None:
-        """Displays the last 5 songs played."""
+        """Displays the last five songs played."""
 
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
         emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
@@ -629,7 +630,7 @@ class Music(Cog):
 
     @slash_command()
     async def loop(self, ctx: CustomApplicationContext) -> None:
-        """Loops the current song."""
+        """Loops the current song or queue."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
         emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
 
