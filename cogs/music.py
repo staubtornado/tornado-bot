@@ -110,6 +110,7 @@ class Music(Cog):
                     f"{emoji_cross} **Could not join.** Please check permissions for {destination.mention}."
                 )
                 return
+            await ctx.guild.change_voice_state(channel=destination, self_deaf=True)
 
             emoji_checkmark2: Emoji = await self.bot.database.get_emoji("checkmark2")
             await ctx.respond(f"{emoji_checkmark2} **Hello**! **Joined** {destination.mention}.")
