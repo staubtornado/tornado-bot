@@ -1,26 +1,26 @@
 from asyncio import QueueFull
-from math import floor, ceil
+from math import ceil
 from random import shuffle
 from re import match
 from typing import Optional, Callable
 from urllib.parse import urlparse, ParseResultBytes
 
 from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel, Embed, Color, \
-    InteractionResponded, ClientException
+    InteractionResponded, ClientException, Interaction, WebhookMessage
 from discord.ext.commands import Cog
 from yt_dlp import DownloadError
 
 from bot import TornadoBot
 from lib.contexts import CustomApplicationContext
 from lib.db.db_classes import Emoji
-from lib.exceptions import YouTubeNotEnabled
+from lib.exceptions import YouTubeNotEnabled, NotEnoughVotes
 from lib.logging import save_traceback
 from lib.music.audio_player import AudioPlayer
 from lib.music.auto_complete import complete
 from lib.music.embeds import YOUTUBE_NOT_ENABLED
 from lib.music.extraction import YTDLSource
 from lib.music.song import Song
-from lib.music.views import QueueFill, LoopView
+from lib.music.views import QueueFill, LoopView, SearchOptions
 from lib.spotify.data import SpotifyData
 from lib.spotify.exceptions import SpotifyNotFound, SpotifyRateLimit, SpotifyException
 from lib.utils import format_time
@@ -145,16 +145,18 @@ class Music(Cog):
             return
 
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
-
-        # Add a vote to leave and check if the vote was successful
-        vote: tuple[int, int, bool] = audio_player.vote(audio_player.leave, ctx.author.id, 0.5)
-        if vote[2]:
-            await ctx.guild.voice_client.disconnect(force=False)
-            del self._audio_player[ctx.guild.id]
-            await ctx.respond(f"{emoji_checkmark2} **Goodbye**!")
+        if not audio_player:
+            if audio_player is not None:
+                del self._audio_player[ctx.guild.id]
             return
-        percent: int = floor((vote[0] / vote[1]) * 100)
-        await ctx.respond(f"🗳️ **Vote to stop** the player. {vote[0]}/{vote[1]} (**{percent}%**)")
+
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+        try:
+            audio_player.vote(audio_player.leave, ctx.author.id, 0.5)
+        except NotEnoughVotes as e:
+            await ctx.respond(f"{emoji_cross} {e}")
+            return
+        await ctx.respond(f"{emoji_checkmark2} **Goodbye**!")
 
     @slash_command()
     async def play(
@@ -422,23 +424,20 @@ class Music(Cog):
             await ctx.respond(f"{emoji_skip} **Skipped**.")
             return
 
-        # Check if the user is a DJ and force skip
-        is_dj: bool = ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]
         if force == "True":
-            if not is_dj:
-                await ctx.respond(f"{emoji_cross} You are **not a DJ**.")
+            if self.member_is_dj(ctx.author):
+                audio_player.skip()
+                await ctx.respond(f"{emoji_skip} **Force skipped**.")
                 return
-            audio_player.skip()
-            await ctx.respond(f"{emoji_skip} **Force skipped**.")
+            await ctx.respond(f"{emoji_cross} You are **not a DJ**.", ephemeral=True)
             return
 
-        # Add a vote and check if the song should be skipped
-        vote: tuple[int, int, bool] = audio_player.vote(audio_player.skip, ctx.author.id, 0.33)
-        if vote[2]:
-            await ctx.respond("🗳️ **Voted to skip** the song.")
+        try:
+            audio_player.vote(audio_player.skip, ctx.author.id, 0.33)
+        except NotEnoughVotes as e:
+            await ctx.respond(f"{emoji_cross} {e}")
             return
-        percent: int = round(vote[0] / vote[1] * 100)
-        await ctx.respond(f"🗳️ **Vote to skip** the song. {vote[0]}/{vote[1]} (**{percent}%**)")
+        await ctx.respond(f"{emoji_skip} **Skipped**.")
 
     @slash_command()
     async def previous(self, ctx: CustomApplicationContext) -> None:
@@ -464,22 +463,29 @@ class Music(Cog):
 
     @slash_command()
     async def stop(self, ctx: CustomApplicationContext) -> None:
-        """Stops the current song and clears the queue. Requires 45% approval. DJs can always stop."""
+        """Stops the current song and clears the queue. Requires 50% approval. DJs can always stop."""
+
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        emoji_cross: Emoji = await ctx.bot.database.get_emoji("cross")
+
+        if not audio_player:
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
+            return
+
+        emoji_stop: Emoji = await ctx.bot.database.get_emoji("stop")
 
         if self.member_is_dj(ctx.author):
             audio_player.stop()
-            emoji_stop: Emoji = await ctx.bot.database.get_emoji("stop")
             await ctx.respond(f"{emoji_stop} **Stopped**.")
             return
 
-        # Add a vote and check if the player should be stopped
-        vote: tuple[int, int, bool] = audio_player.vote(audio_player.stop, ctx.author.id, 0.45)
-        if vote[2]:
-            await ctx.respond("🗳️ **Voted to stop** the player.")
+        try:
+            audio_player.vote(audio_player.stop, ctx.author.id, 0.5)
+        except NotEnoughVotes as e:
+            await ctx.respond(f"{emoji_cross} {e}")
             return
-        percent: int = round(vote[0] / vote[1] * 100)
-        await ctx.respond(f"🗳️ **Vote to stop** the player. {vote[0]}/{vote[1]} (**{percent}%**)")
+
+        await ctx.respond(f"{emoji_stop} **Stopped**.")
 
     @slash_command()
     async def queue(
@@ -505,7 +511,10 @@ class Music(Cog):
 
         pages: int = ceil(len(audio_player) / 9)
         if not 1 <= page <= pages:
-            await ctx.respond(f"{emoji_cross} **Page** `{page}` **does not exist**. The queue has **{pages}** pages.")
+            await ctx.respond(
+                content=f"{emoji_cross} **Page** `{page}` **does not exist**. The queue has **{pages}** pages.",
+                ephemeral=True
+            )
             return
 
         start: int = (page - 1) * 9
@@ -603,14 +612,35 @@ class Music(Cog):
             await ctx.respond(f"{emoji_shuffle} **Shuffled**.")
             return
 
-        # Add a vote and check if the queue should be shuffled
-        vote: tuple[int, int, bool] = audio_player.vote(audio_player.shuffle, ctx.author.id, 0.33)
-        if vote[2]:
-            await ctx.respond(f"{emoji_shuffle} **Voted to shuffle** the queue.")
+        try:
+            audio_player.vote(audio_player.shuffle, ctx.author.id, 0.33)
+        except NotEnoughVotes as e:
+            await ctx.respond(f"{emoji_cross} {e}")
             return
 
-        percent: int = round(vote[0] / vote[1] * 100)
-        await ctx.respond(f"🗳️ **Vote to shuffle** the queue. {vote[0]}/{vote[1]} (**{percent}%**)")
+    @slash_command()
+    async def reverse(self, ctx: CustomApplicationContext) -> None:
+        """Reverses the queue, requires 33% approval. DJs can always reverse."""
+
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild_id)
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+        if audio_player is None or not len(audio_player):
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
+            return
+
+        if self.member_is_dj(ctx.author):
+            reversed(audio_player)
+            await ctx.respond("Reversed the queue.")
+            return
+
+        try:
+            audio_player.vote(audio_player.reverse, ctx.author.id, 0.33)
+        except NotEnoughVotes as e:
+            await ctx.respond(f"{emoji_cross} {e}")
+            return
+
+        reversed(audio_player)
+        await ctx.respond("Reversed the queue.")
 
     @slash_command()
     async def history(self, ctx: CustomApplicationContext) -> None:
@@ -645,8 +675,8 @@ class Music(Cog):
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
         emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
 
-        if not audio_player:
-            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
+        if not audio_player or not audio_player.current:
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
             return
 
         view = LoopView(ctx, audio_player)
@@ -667,25 +697,27 @@ class Music(Cog):
     @slash_command()
     async def clear(self, ctx: CustomApplicationContext) -> None:
         """Clears the queue. Requires 45% approval. DJs can clear without approval."""
+
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+
         if not audio_player or not len(audio_player):
-            emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
-            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
             return
 
-        if ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]:
-            emoji_clear: Emoji = await self.bot.database.get_emoji("playlist_clear")
+        emoji_clear: Emoji = await self.bot.database.get_emoji("playlist_clear")
+
+        if self.member_is_dj(ctx.author):
             audio_player.clear()
-            await ctx.respond(f"{emoji_clear} **Cleared** the queue.")
+            await ctx.respond(f"{emoji_clear} **Cleared** the **queue**.")
             return
 
-        vote: tuple[int, int, bool] = audio_player.vote(audio_player.clear, ctx.author.id, 0.45)
-
-        if vote[2]:
-            await ctx.respond("🗳️ **Voted to clear** the queue.")
+        try:
+            audio_player.vote(audio_player.clear, ctx.author.id, 0.45)
+        except NotEnoughVotes as e:
+            await ctx.respond(f"{emoji_cross} {e}")
             return
-        percent: int = round(vote[0] / vote[1] * 100)
-        await ctx.respond(f"🗳️ **Vote to clear** the queue. {vote[0]}/{vote[1]} (**{percent}%**)")
+        await ctx.respond(f"{emoji_clear} **Cleared** the **queue**.")
 
     @slash_command()
     async def remove(
@@ -697,17 +729,18 @@ class Music(Cog):
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
         emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
         if not audio_player or not len(audio_player):
-            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
             return
 
-        if index > len(audio_player):
+        try:
+            song: Song = audio_player[index - 1]
+            audio_player.remove(index - 1)
+        except IndexError:
             await ctx.respond(f"{emoji_cross} **Invalid index**.")
             return
 
-        song: Song = audio_player[index - 1]
-        audio_player.remove(index - 1)
-        emoji_checkmark: Emoji = await ctx.bot.database.get_emoji("checkmark")
-        await ctx.respond(f"{emoji_checkmark} **Removed** `{song.source.name}` from the queue.")
+        emoji_checkmark2: Emoji = await self.bot.database.get_emoji("checkmark2")
+        await ctx.respond(f"{emoji_checkmark2} **Removed** `{song.source.name}` from the queue.")
 
 
 def setup(bot: TornadoBot) -> None:

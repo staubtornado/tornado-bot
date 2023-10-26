@@ -1,13 +1,13 @@
 from asyncio import wait_for, TimeoutError, Event, QueueFull, sleep
 from collections import deque
-from math import floor
 from typing import Iterator, Callable
 
-from discord import VoiceClient, HTTPException, Forbidden, Message, FFmpegPCMAudio, InteractionMessage, NotFound
+from discord import VoiceClient, HTTPException, Forbidden, Message, FFmpegPCMAudio, InteractionMessage, NotFound, Member
 
 from lib.contexts import CustomApplicationContext
 from lib.db.db_classes import Emoji, UserStats
 from lib.enums import AudioPlayerLoopMode, SongEmbedSize
+from lib.exceptions import NotEnoughVotes
 from lib.logging import log, save_traceback
 from lib.music.extraction import YTDLSource
 from lib.music.queue import SongQueue
@@ -379,34 +379,41 @@ class AudioPlayer:
     def leave(self) -> None:
         self._cleanup()
 
-    def vote(self, func: Callable[[], None], member_id: int, percentage: float = 0.45) -> tuple[int, int, bool]:
+    def vote(self, func: Callable[[], None], member: Member | int, percentage: float) -> None:
         """
-        Request a vote to execute a function.
-        Executes the function if the vote is successful.
+        Vote for a function to execute.
 
-        Example: Clear the queue if 50% of the members vote for it: player.vote(player.clear, ctx.author.id, 0.5)
+        :param func: The function to vote for.
+        :param member: The member who voted. This can be the member id as well.
+        :param percentage: The percentage of members needed to execute the function.
 
-        :param func: The function to execute, it should not take any positional arguments
+        :return: None
 
-        :param member_id: The member who requested the vote.
-        :param percentage: The percentage of members required executing the function
-
-        :returns: A tuple containing the number of votes, required votes, and if the vote was successful
+        :raises ValueError: If the percentage is not between 0 and 1 or member id is invalid.
+        :raises NotEnoughVotes: If there are not enough votes to execute the function.
         """
 
-        if func not in self._votes:
-            self._votes[func] = set()
-        self._votes[func].add(member_id)
+        if not 0 < percentage <= 1:
+            raise ValueError("Percentage must be between 0 and 1")
 
-        votes: int = len(self._votes[func])
-        total_members: int = len([member.id for member in self.voice.channel.members if not member.bot])
-        required: int = floor(total_members * percentage)
+        if isinstance(member, int):
+            member = self.ctx.guild.get_member(member)
+            if not member:
+                raise ValueError("Invalid member id")
 
-        if votes >= required:
-            self._votes[func].clear()
+        try:
+            self._votes[func].add(member.id)
+        except KeyError:
+            self._votes[func] = {member.id}
+
+        members: int = len([member for member in self.voice.channel.members if not member.bot])
+        if round(len(self._votes[func]) / members, 2) >= percentage:
             func()
-            return votes, required, True
-        return votes, required, False
+            self._votes[func].clear()
+            return
+        raise NotEnoughVotes(
+            f"**Not enough votes** to execute `{func.__name__}`: {len(self._votes[func])}/{members} **(<{percentage})**"
+        )
 
     async def send(self, *args, **kwargs) -> Message | None:
         """
