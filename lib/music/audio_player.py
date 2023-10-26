@@ -56,6 +56,9 @@ class AudioPlayer:
             return self._queue[item.start:item.stop:item.step]
         return self._queue[item]
 
+    def __reversed__(self) -> reversed:
+        return reversed(self._queue)
+
     @property
     def active(self) -> bool:
         """
@@ -140,6 +143,26 @@ class AudioPlayer:
             except (Forbidden, HTTPException, NotFound):
                 pass
         self._message = value
+
+    @property
+    def full(self) -> bool:
+        """
+        Returns True if the queue is full.
+
+        :return: The boolean, true or false.
+        """
+        return self._queue.full()
+
+    @property
+    def live(self) -> bool:
+        """
+        If the player plays live audio or not.
+
+        :return: True if live audio is played, otherwise False.
+        """
+        if self.current:
+            return self.current.duration > 0
+        return False
 
     async def _inactivity_check(self) -> None:
         """
@@ -341,8 +364,17 @@ class AudioPlayer:
         :param index: The index of the song to remove
 
         :return: None
+
+        :raises IndexError: If the index is out of range
         """
         del self._queue[index]
+
+    def reverse(self) -> None:
+        """
+        Reverse the queue
+        :return: None
+        """
+        reversed(self._queue)
 
     def leave(self) -> None:
         self._cleanup()
