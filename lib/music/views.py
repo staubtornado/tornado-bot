@@ -1,3 +1,5 @@
+from asyncio import QueueFull
+
 from discord import Interaction, ButtonStyle
 from discord.ui import View, Button
 from lib.contexts import CustomApplicationContext
@@ -18,10 +20,9 @@ class QueueFill(View):
         self.tracks = tracks
         self.audio_player = audio_player
 
+        if audio_player.full:
+            raise QueueFull('Queue is full')
         free: int = 200 - len(audio_player)
-
-        if free < 1:
-            raise ValueError('Queue is full')
 
         parts: int = min(tracks.total // free, 22)
         remainder: int = tracks.total % free

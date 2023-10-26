@@ -222,6 +222,10 @@ class Music(Cog):
         if audio_player.voice is None:
             return
 
+        if audio_player.full:
+            await ctx.respond(f"{emoji_cross} The **queue is full**.", ephemeral=True)
+            return
+
         if audio_player.voice.channel.permissions_for(ctx.guild.me).speak is False:
             await ctx.respond(
                 content=f"{emoji_cross} I **cannot speak** in {audio_player.voice.channel.mention}.",
