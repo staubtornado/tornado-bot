@@ -364,6 +364,47 @@ class Music(Cog):
         await ctx.respond(f"{emoji_checkmark} **Added** `{result.name}` **to the queue**.")
 
     @slash_command()
+    async def search(
+            self,
+            ctx: CustomApplicationContext,
+            search: Option(
+                str,
+                "The search query. This cannot be a link.",
+                required=True,
+                autocomplete=complete
+            )) -> None:
+        """Searches for a song. Gives out five results."""
+        await ctx.defer()
+
+        embed: Embed = Embed(
+            title="Search",
+            color=Color.blurple()
+        )
+
+        results: list[YTDLSource] = []
+        _results = YTDLSource.search(ctx.author, search, loop=self.bot.loop)
+        while len(results) < 3:
+            results.append(await _results.__anext__())
+
+        value: str = "**Choose a song** by clicking on the buttons below.\n\n"
+        for i, result in enumerate(results, start=1):
+            value += f"`{i}`. `{result.name}` **by** `{result.artist}`\n"
+        embed.description = value
+
+        view: SearchOptions = SearchOptions(ctx, len(results))
+        response: Interaction | WebhookMessage = await ctx.respond(embed=embed, view=view)
+        await view.wait()
+
+        if not view.index:
+            await response.edit(
+                content=f"{await self.bot.database.get_emoji('cross')} You **took too long** to respond.",
+                view=None,
+                embed=None
+            )
+            return
+        await self.play(ctx, results[view.index - 1].url)
+
+    @slash_command()
     async def pause(self, ctx: CustomApplicationContext) -> None:
         """Pauses the currently playing song."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
