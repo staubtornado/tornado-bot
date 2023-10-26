@@ -37,22 +37,28 @@ class YTDLSource(PCMVolumeTransformer):
         super().__init__(source, volume)
 
         self._requester = requester
-
         self._name = data.get('title')
-        self._artist = sub(r" - Topic", "", data.get('uploader'))
         self._uploader_url = data.get('channel_url')
-        self._upload_date = datetime.strptime(data.get('upload_date'), '%Y%m%d')
         self._url = data.get('webpage_url')
         self._stream_url = data.get('url')
+        self._views = data.get('view_count')
+        self._likes = data.get('like_count')
+        self._duration = data.get('duration')
+
+        try:
+            self._artist = sub(r" - Topic", "", data.get('uploader'))
+        except TypeError:
+            self._artist = "Unknown Artist"
+
+        try:
+            self._upload_date = datetime.strptime(data.get('upload_date'), '%Y%m%d')
+        except (ValueError, TypeError):
+            self._upload_date = datetime.utcnow()
 
         try:
             self._thumbnail_url = data.get('thumbnails')[5].get('url')
         except (IndexError, TypeError):
             self._thumbnail_url = data.get('thumbnail')  # Let yt-dl decide
-
-        self._views = data.get('view_count')
-        self._likes = data.get('like_count')
-        self._duration = data.get('duration')
 
     @property
     def requester(self) -> Member:
@@ -67,7 +73,7 @@ class YTDLSource(PCMVolumeTransformer):
         return self._artist
 
     @property
-    def uploader_url(self) -> str:
+    def uploader_url(self) -> str | None:
         return self._uploader_url
 
     @property
@@ -87,15 +93,15 @@ class YTDLSource(PCMVolumeTransformer):
         return self._thumbnail_url
 
     @property
-    def views(self) -> int:
+    def views(self) -> int | None:
         return self._views
 
     @property
-    def likes(self) -> int:
+    def likes(self) -> int | None:
         return self._likes
 
     @property
-    def duration(self) -> int:
+    def duration(self) -> int | None:
         return self._duration
 
     def __str__(self) -> str:
