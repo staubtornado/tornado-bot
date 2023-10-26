@@ -103,7 +103,7 @@ class Music(Cog):
             try:
                 await destination.connect(timeout=5)
             except ClientException:
-                await ctx.respond(f"{emoji_cross} I am **already connected to a voice channel**.")
+                await ctx.respond(f"{emoji_cross} I am **already connected to a voice channel**.", ephemeral=True)
                 return
             except TimeoutError:
                 await ctx.respond(
@@ -114,7 +114,7 @@ class Music(Cog):
             emoji_checkmark2: Emoji = await self.bot.database.get_emoji("checkmark2")
             await ctx.respond(f"{emoji_checkmark2} **Hello**! **Joined** {destination.mention}.")
             return
-        await ctx.respond(f"{emoji_cross} You are **not connected to a voice channel**.")
+        await ctx.respond(f"{emoji_cross} You are **not connected to a voice channel**.", ephemeral=True)
 
     @slash_command()
     async def leave(self, ctx: CustomApplicationContext) -> None:
@@ -123,7 +123,7 @@ class Music(Cog):
         # If the bot is not connected to a voice channel
         if not ctx.guild.voice_client:
             emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
-            await ctx.respond(f"{emoji_cross} I am **not connected to a voice channel**.")
+            await ctx.respond(f"{emoji_cross} I am **not connected to a voice channel**.", ephemeral=True)
             return
 
         emoji_checkmark2: Emoji = await self.bot.database.get_emoji("checkmark2")
@@ -211,7 +211,7 @@ class Music(Cog):
                     loop=self.bot.loop
                 )
             except ValueError:
-                await ctx.respond(f"{emoji_cross} **No results**.")
+                await ctx.respond(f"{emoji_cross} **No results**.", ephemeral=True)
                 return
 
         # Check for valid existing player
@@ -223,7 +223,10 @@ class Music(Cog):
             return
 
         if audio_player.voice.channel.permissions_for(ctx.guild.me).speak is False:
-            await ctx.respond(f"{emoji_cross} I **cannot speak** in {audio_player.voice.channel.mention}.")
+            await ctx.respond(
+                content=f"{emoji_cross} I **cannot speak** in {audio_player.voice.channel.mention}.",
+                ephemeral=True
+            )
             await audio_player.voice.disconnect(force=False)
             return
 
@@ -240,7 +243,7 @@ class Music(Cog):
 
         # From now on, the variable result has to be a playlist / album as it is iterable
         if not len(result):
-            await ctx.respond(f"{emoji_cross} What you have send **seems to be empty**.")
+            await ctx.respond(f"{emoji_cross} What you have send **seems to be empty**.", ephemeral=True)
             return
 
         view: QueueFill = QueueFill(ctx, result, audio_player)
@@ -353,11 +356,11 @@ class Music(Cog):
         emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
 
         if not audio_player:
-            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
             return
 
         if audio_player.voice.is_paused():
-            await ctx.respond(f"{emoji_cross} **Already paused**.")
+            await ctx.respond(f"{emoji_cross} **Already paused**.", ephemeral=True)
             return
         audio_player.voice.pause()
         emoji_pause: Emoji = await ctx.bot.database.get_emoji("pause")
@@ -370,11 +373,11 @@ class Music(Cog):
         emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
 
         if not audio_player:
-            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
             return
 
         if not audio_player.voice.is_paused():
-            await ctx.respond(f"{emoji_cross} **Already playing**.")
+            await ctx.respond(f"{emoji_cross} **Already playing**.", ephemeral=True)
             return
         audio_player.voice.resume()
         emoji_play: Emoji = await ctx.bot.database.get_emoji("play")
@@ -396,7 +399,7 @@ class Music(Cog):
         emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
 
         if not audio_player or not audio_player.current:
-            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
             return
 
         emoji_skip: Emoji = await ctx.bot.database.get_emoji("skip")
@@ -432,16 +435,16 @@ class Music(Cog):
         emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
 
         if not audio_player:
-            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
             return
 
         try:
             audio_player.back()
         except QueueFull:
-            await ctx.respond(f"{emoji_cross} **Queue is full.**")
+            await ctx.respond(f"{emoji_cross} **Queue is full.**", ephemeral=True)
             return
         except ValueError:
-            await ctx.respond(f"{emoji_cross} **No previous song.**")
+            await ctx.respond(f"{emoji_cross} **No previous song.**", ephemeral=True)
             return
 
         emoji_back: Emoji = await ctx.bot.database.get_emoji("back")
@@ -483,11 +486,11 @@ class Music(Cog):
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
         emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
         if not audio_player:
-            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
             return
 
         if not len(audio_player):
-            await ctx.respond(f"{emoji_cross} **The queue is empty**.")
+            await ctx.respond(f"{emoji_cross} **The queue is empty**.", ephemeral=True)
             return
 
         pages: int = ceil(len(audio_player) / 9)
@@ -561,7 +564,7 @@ class Music(Cog):
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
         if not audio_player or not audio_player.current:
             emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
-            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
             return
 
         song: Song = audio_player.current
@@ -577,10 +580,10 @@ class Music(Cog):
         emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
         if not audio_player:
-            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
             return
         if not len(audio_player):
-            await ctx.respond(f"{emoji_cross} **The queue is empty**.")
+            await ctx.respond(f"{emoji_cross} **The queue is empty**.", ephemeral=True)
             return
 
         emoji_shuffle: Emoji = await self.bot.database.get_emoji("shuffle")
@@ -608,11 +611,11 @@ class Music(Cog):
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
         emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
         if audio_player is None:
-            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.")
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
             return
 
         if not audio_player.history:
-            await ctx.respond(f"{emoji_cross} **No history**.")
+            await ctx.respond(f"{emoji_cross} **No history**.", ephemeral=True)
             return
 
         embed: Embed = Embed(
