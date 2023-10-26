@@ -53,6 +53,16 @@ class Music(Cog):
             await self.join(ctx)
         return True
 
+    @staticmethod
+    def member_is_dj(member: Member) -> bool:
+        """
+        Whether the member is a DJ or has the manage_guild permission.
+
+        :param member: The member to check.
+        :return: Whether the member is a DJ or has the manage_guild permission.
+        """
+        return member.guild_permissions.manage_guild or "DJ" in [role.name for role in member.roles]
+
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
         if member.id != self.bot.user.id:
@@ -129,10 +139,7 @@ class Music(Cog):
 
         emoji_checkmark2: Emoji = await self.bot.database.get_emoji("checkmark2")
 
-        # Check if the user is a DJ
-        is_dj: bool = ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]
-        if is_dj:
-            await ctx.guild.voice_client.disconnect(force=False)
+        if self.member_is_dj(ctx.author):
             del self._audio_player[ctx.guild.id]
             await ctx.respond(f"{emoji_checkmark2} **Goodbye**!")
             return
@@ -460,9 +467,7 @@ class Music(Cog):
         """Stops the current song and clears the queue. Requires 45% approval. DJs can always stop."""
         audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
 
-        # Check if the user is a DJ
-        is_dj: bool = ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]
-        if is_dj:
+        if self.member_is_dj(ctx.author):
             audio_player.stop()
             emoji_stop: Emoji = await ctx.bot.database.get_emoji("stop")
             await ctx.respond(f"{emoji_stop} **Stopped**.")
@@ -593,9 +598,7 @@ class Music(Cog):
 
         emoji_shuffle: Emoji = await self.bot.database.get_emoji("shuffle")
 
-        # Check if the user is a DJ
-        is_dj: bool = ctx.author.guild_permissions.manage_guild or "DJ" in [role.name for role in ctx.author.roles]
-        if is_dj:
+        if self.member_is_dj(ctx.author):
             audio_player.shuffle()
             await ctx.respond(f"{emoji_shuffle} **Shuffled**.")
             return
