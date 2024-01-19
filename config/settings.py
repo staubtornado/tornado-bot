@@ -16,6 +16,6 @@ SETTINGS: dict[str, Any] = {
     ],
     'Description': '',
     'Intents': intents,
-    "Version": "0.5.1b",
+    "Version": "0.5.2b",
 }
 
