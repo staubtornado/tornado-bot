@@ -6,7 +6,7 @@ from typing import Optional, Callable
 from urllib.parse import urlparse, ParseResultBytes
 
 from discord import Member, VoiceState, VoiceClient, slash_command, Option, VoiceChannel, Embed, Color, \
-    InteractionResponded, ClientException, Interaction, WebhookMessage
+    InteractionResponded, ClientException
 from discord.ext.commands import Cog
 from yt_dlp import DownloadError
 
@@ -20,7 +20,7 @@ from lib.music.auto_complete import complete
 from lib.music.embeds import YOUTUBE_NOT_ENABLED
 from lib.music.extraction import YTDLSource
 from lib.music.song import Song
-from lib.music.views import QueueFill, LoopView, SearchOptions
+from lib.music.views import QueueFill, LoopView
 from lib.spotify.data import SpotifyData
 from lib.spotify.exceptions import SpotifyNotFound, SpotifyRateLimit, SpotifyException
 from lib.utils import format_time
@@ -62,8 +62,8 @@ class Music(Cog):
         :return: Whether the member is a DJ or has the manage_guild permission.
         """
         return member.guild_permissions.manage_guild or "DJ" in [role.name for role in member.roles]
-    
-    
+
+
 
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
@@ -364,47 +364,6 @@ class Music(Cog):
         emoji_checkmark: Emoji = await ctx.bot.database.get_emoji("checkmark")
         audio_player.put(Song(result, ctx.author), index=0)
         await ctx.respond(f"{emoji_checkmark} **Added** `{result.name}` **to the queue**.")
-
-    @slash_command()
-    async def search(
-            self,
-            ctx: CustomApplicationContext,
-            search: Option(
-                str,
-                "The search query. This cannot be a link.",
-                required=True,
-                autocomplete=complete
-            )) -> None:
-        """Searches for a song. Gives out five results."""
-        await ctx.defer()
-
-        embed: Embed = Embed(
-            title="Search",
-            color=Color.blurple()
-        )
-
-        results: list[YTDLSource] = []
-        _results = YTDLSource.search(ctx.author, search, loop=self.bot.loop)
-        while len(results) < 3:
-            results.append(await _results.__anext__())
-
-        value: str = "**Choose a song** by clicking on the buttons below.\n\n"
-        for i, result in enumerate(results, start=1):
-            value += f"`{i}`. `{result.name}` **by** `{result.artist}`\n"
-        embed.description = value
-
-        view: SearchOptions = SearchOptions(ctx, len(results))
-        response: Interaction | WebhookMessage = await ctx.respond(embed=embed, view=view)
-        await view.wait()
-
-        if not view.index:
-            await response.edit(
-                content=f"{await self.bot.database.get_emoji('cross')} You **took too long** to respond.",
-                view=None,
-                embed=None
-            )
-            return
-        await self.play(ctx, results[view.index - 1].url)
 
     @slash_command()
     async def pause(self, ctx: CustomApplicationContext) -> None:

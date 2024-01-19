@@ -1,7 +1,7 @@
 from asyncio import AbstractEventLoop
 from datetime import datetime
 from re import sub
-from typing import Self, Any, AsyncGenerator
+from typing import Self
 from urllib.parse import quote
 
 from discord import PCMVolumeTransformer, FFmpegPCMAudio, Member
@@ -180,29 +180,3 @@ class YTDLSource(PCMVolumeTransformer):
 
         search: str = f"{track.name} {' '.join(str(artist) for artist in track.artists)}"
         return await cls.from_search(requester, search, loop=loop)
-
-    @classmethod
-    async def search(
-            cls,
-            requester: Member,
-            search: str,
-            loop: AbstractEventLoop
-    ) -> AsyncGenerator[Self, Any]:
-        """
-        Searches YouTube for a query and yields the results.
-
-        :param requester: The member who requested the search.
-        :param search: The query to search for.
-        :param loop: The event loop to run the search in.
-        :return: The results of the search.
-        """
-
-        search = quote(search)
-        data = await loop.run_in_executor(None, lambda: cls.ytdl.extract_info(
-            f"https://music.youtube.com/search?q={search}#songs",
-            download=False,
-            process=True
-        ))
-
-        for entry in data['entries']:
-            yield cls(requester, FFmpegPCMAudio(entry['url'], **cls.FFMPEG_OPTIONS), data=entry)

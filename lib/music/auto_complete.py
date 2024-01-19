@@ -15,7 +15,7 @@ async def complete(ctx: CustomAutocompleteContext) -> list[str]:
     value = ctx.value
 
     if not len(value) > 3:
-        if ctx.command.name in ("playnext", "search"):
+        if ctx.command.name == "playnext":
             return []
 
         for playlist in await ctx.bot.spotify.get_trending_playlists():
