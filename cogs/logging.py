@@ -5,7 +5,7 @@ from discord.ext.commands import Cog
 
 from bot import TornadoBot
 from lib.contexts import CustomApplicationContext
-from lib.db.db_classes import GuildSettings, Emoji
+from lib.db.db_classes import GuildSettings, Emoji, UserStats
 from lib.logging import log
 from lib.stats_view import generate_stats_card
 from lib.welcome_message import generate_welcome_message_card
@@ -65,7 +65,7 @@ class Logging(Cog):
         embed: Embed = Embed(
             description=f"{emoji_checkmark} {member.mention} **joined** the **server**.",
             timestamp=member.joined_at,
-            color=0xCDEAC0
+            color=0x58F39B
         )
         embed.set_author(name=member.name, icon_url=member.avatar.url)
         await self._final_log_channel_logic(embed, guild_settings)
@@ -80,7 +80,7 @@ class Logging(Cog):
         embed: Embed = Embed(
             description=f"{emoji_cross} {member.mention} **left** the **server**.",
             timestamp=datetime.utcnow(),
-            color=0xFF928B
+            color=0xF35858
         )
         embed.set_author(name=member.name, icon_url=member.avatar.url)
         await self._final_log_channel_logic(embed, await self.bot.database.get_guild_settings(member.guild.id))
@@ -106,11 +106,11 @@ class Logging(Cog):
         if before.channel is None:
             emoji_skip: Emoji = await self.bot.database.get_emoji("skip")
             embed.description = f"{emoji_skip} {member.mention} **joined** {after.channel.mention}."
-            embed.colour = 0xCDEAC0
+            embed.colour = 0x62F358
         elif after.channel is None:
             emoji_back: Emoji = await self.bot.database.get_emoji("back")
             embed.description = f"{emoji_back} {member.mention} **left** {before.channel.mention}."
-            embed.colour = 0xC5C3EE
+            embed.colour = 0xF35886
         else:
             emoji_shuffle: Emoji = await self.bot.database.get_emoji("shuffle")
             embed.description = (
@@ -133,7 +133,7 @@ class Logging(Cog):
         await ctx.defer()
 
         target: Member = user or ctx.author
-        stats = await self.bot.database.get_user_stats(target.id)
+        stats: UserStats = await self.bot.database.get_user_stats(target.id)
         await ctx.respond(
             file=await generate_stats_card(target, stats, self.bot.loop),
         )
