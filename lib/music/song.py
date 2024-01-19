@@ -120,13 +120,17 @@ class Song:
             return embed
         embed.set_thumbnail(url=self.source.thumbnail_url)
 
-        try:
-            embed.add_field(
-                name="Views / Likes",
-                value=f"{shortened(self.source.views)} **/** {shortened(self.source.likes)}"
-            )
-        except TypeError:
-            pass
+        name: str = ""
+        value: str = ""
+        if self.source.views is not None:
+            name += "Views"
+            value += f"{shortened(self.source.views)}"
+        if self.source.likes is not None:
+            name += " / Likes"
+            value += f" **/** {shortened(self.source.likes)}"
+
+        if name and value:
+            embed.add_field(name=name, value=value)
 
         embed.add_field(
             name="Loop",
@@ -156,7 +160,8 @@ class Song:
 
         embed.add_field(
             name="Queue",
-            value="\n".join(_queue)
+            value="\n".join(_queue),
+            inline=False
         )
         return embed
 
