@@ -1,3 +1,4 @@
+from asyncio import QueueFull
 from datetime import datetime
 from os import environ
 from typing import Any
@@ -87,8 +88,13 @@ class TornadoBot(Bot):
             ctx: ApplicationContext,
             exception: ApplicationCommandInvokeError
     ) -> None:
-        log(f"Error while processing interaction {ctx.interaction.id}: {exception.original}", error=True)
+
         emoji_cross: Emoji = await self.database.get_emoji("cross")
+        if isinstance(exception.original, QueueFull):
+            await ctx.respond(f"{emoji_cross} **Queue is full.**")
+            return
+
+        log(f"Error while processing interaction {ctx.interaction.id}: {exception.original}", error=True)
         await ctx.respond(
             f"{emoji_cross} **Error** while **processing command**: `{exception.original.__class__.__name__}`"
         )
