@@ -62,6 +62,8 @@ class Music(Cog):
         :return: Whether the member is a DJ or has the manage_guild permission.
         """
         return member.guild_permissions.manage_guild or "DJ" in [role.name for role in member.roles]
+    
+    
 
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:

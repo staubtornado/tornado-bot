@@ -34,10 +34,10 @@ class AudioPlayer:
         self._current = None
         self._event = Event()
         self._history = deque(maxlen=5)
-        self._player_task = self.ctx.bot.loop.create_task(self._player())
-        self.embed_size = SongEmbedSize.DEFAULT
+        self._embed_size = None
 
-        self.ctx.bot.loop.create_task(self._inactivity_check())
+        self._player_task = ctx.bot.loop.create_task(self._player())
+        self._inactivity_check_task = ctx.bot.loop.create_task(self._inactivity_check())
 
     def __del__(self) -> None:
         self._cleanup()
@@ -163,6 +163,25 @@ class AudioPlayer:
         if self.current:
             return self.current.duration > 0
         return False
+    
+    @property
+    def embed_size(self) -> SongEmbedSize:
+        """
+        The size of the song embed.
+
+        :return: The size of the song embed.
+        """
+        return self._embed_size or SongEmbedSize.DEFAULT
+    
+    @embed_size.setter
+    def embed_size(self, value: SongEmbedSize) -> None:
+        """
+        Set the size of the song embed.
+
+        :param value: The size of the song embed.
+        :return: None
+        """
+        self._embed_size = value
 
     async def _inactivity_check(self) -> None:
         """
@@ -175,21 +194,24 @@ class AudioPlayer:
         while True:
             await sleep(60)
             if not self.active:
-                break
-
-            member_amount = len([member for member in self.voice.channel.members if not member.bot])
-            if not member_amount:
-                self._cleanup()
+                return self._cleanup()
+            
+            try:
+                member_amount = len([member for member in self.voice.channel.members if not member.bot])
+                if not member_amount:
+                    raise AttributeError
+            except AttributeError:
+                return self._cleanup()
 
     async def _player(self) -> None:
-        self.embed_size = (await self.ctx.bot.database.get_guild_settings(self.ctx.guild.id)).song_embed_size
+        self._embed_size = (await self.ctx.bot.database.get_guild_settings(self.ctx.guild.id)).song_embed_size
 
         while True:
             self._event.clear()
 
             #  Add the previous song to queue if loop is enabled
             if self.loop and self.current:
-                self.reset(self.current)  # Reset the current song, so it can be played again
+                self.resetFFmpeg(self.current)  # Reset the current song, so it can be played again
 
                 try:
                     if self._loop == AudioPlayerLoopMode.QUEUE:
@@ -306,10 +328,10 @@ class AudioPlayer:
             raise QueueFull("Queue is full.")
 
         previous: Song = self.history.pop()
-        self.reset(previous)  # Reset the stream so the source can be played again
+        self.resetFFmpeg(previous)  # Reset the stream so the source can be played again
         self.voice.source = previous.source  # Replace the current song with the previous one
 
-        self.reset(self.current)
+        self.resetFFmpeg(self.current)
         self._queue.insert(0, self.current)
 
         self._timestamp = int(self.voice.timestamp / 1000 * 0.02)  # Update the timestamp
@@ -429,7 +451,7 @@ class AudioPlayer:
             pass
 
     @staticmethod
-    def reset(song: Song) -> None:
+    def resetFFmpeg(song: Song) -> None:
         """
         Reset a song to its original streaming state.
 
@@ -443,6 +465,7 @@ class AudioPlayer:
     def _cleanup(self) -> None:
         self._queue.clear()
         self._player_task.cancel()
+        self._inactivity_check_task.cancel()
         self.message = None
 
         if self._voice:

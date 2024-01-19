@@ -38,7 +38,7 @@ class YTDLSource(PCMVolumeTransformer):
 
         self._requester = requester
         self._name = data.get('title')
-        self._uploader_url = data.get('channel_url')
+        self._uploader_url = data.get('channel_url') or data.get('uploader_url')
         self._url = data.get('webpage_url')
         self._stream_url = data.get('url')
         self._views = data.get('view_count')
