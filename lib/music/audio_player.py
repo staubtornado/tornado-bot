@@ -211,7 +211,7 @@ class AudioPlayer:
 
             #  Add the previous song to queue if loop is enabled
             if self.loop and self.current:
-                self.resetFFmpeg(self.current)  # Reset the current song, so it can be played again
+                self.reset_ffmpeg(self.current)  # Reset the current song, so it can be played again
 
                 try:
                     if self._loop == AudioPlayerLoopMode.QUEUE:
@@ -328,10 +328,10 @@ class AudioPlayer:
             raise QueueFull("Queue is full.")
 
         previous: Song = self.history.pop()
-        self.resetFFmpeg(previous)  # Reset the stream so the source can be played again
+        self.reset_ffmpeg(previous)  # Reset the stream so the source can be played again
         self.voice.source = previous.source  # Replace the current song with the previous one
 
-        self.resetFFmpeg(self.current)
+        self.reset_ffmpeg(self.current)
         self._queue.insert(0, self.current)
 
         self._timestamp = int(self.voice.timestamp / 1000 * 0.02)  # Update the timestamp
@@ -434,7 +434,8 @@ class AudioPlayer:
             self._votes[func].clear()
             return
         raise NotEnoughVotes(
-            f"**Not enough votes** to execute `{func.__name__}`: {len(self._votes[func])}/{members} **(<{percentage})**"
+            f"**Not enough votes** to execute `{func.__name__}`: "
+            f"{len(self._votes[func])}/{members} **(<{int(percentage * 100)}%)**"
         )
 
     async def send(self, *args, **kwargs) -> Message | None:
@@ -451,7 +452,7 @@ class AudioPlayer:
             pass
 
     @staticmethod
-    def resetFFmpeg(song: Song) -> None:
+    def reset_ffmpeg(song: Song) -> None:
         """
         Reset a song to its original streaming state.
 
