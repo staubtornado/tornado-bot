@@ -133,26 +133,44 @@ class Music(Cog):
     async def leave(self, ctx: CustomApplicationContext) -> None:
         """Leaves a voice channel, requires 50% approval. DJ permissions override this."""
 
-        # If the bot is not connected to a voice channel
-        if not ctx.guild.voice_client:
-            emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
-            await ctx.respond(f"{emoji_cross} I am **not connected to a voice channel**.", ephemeral=True)
+        emoji_checkmark2: Emoji = await self.bot.database.get_emoji("checkmark2")
+        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
+
+        if audio_player is None and ctx.guild.voice_client:
+            await ctx.guild.voice_client.disconnect(force=False)
+            await ctx.respond(f"{emoji_checkmark2} **Goodbye**!")
             return
 
-        emoji_checkmark2: Emoji = await self.bot.database.get_emoji("checkmark2")
+        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+        if audio_player is None:
+            await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
+            return
+
+        if not audio_player:
+            del self._audio_player[ctx.guild.id]
+            await ctx.guild.voice_client.disconnect(force=False)  # Ensure the bot leaves the voice channel
+            await ctx.respond(f"{emoji_checkmark2} **Reset** the player.")
+            return
 
         if self.member_is_dj(ctx.author):
             del self._audio_player[ctx.guild.id]
             await ctx.respond(f"{emoji_checkmark2} **Goodbye**!")
             return
 
-        audio_player: AudioPlayer = self._audio_player.get(ctx.guild.id)
-        if not audio_player:
-            if audio_player is not None:
-                del self._audio_player[ctx.guild.id]
+        if audio_player.current is None and not len(audio_player):
+            del self._audio_player[ctx.guild.id]
+            await ctx.respond(f"{emoji_checkmark2} **Goodbye**!")
             return
 
-        emoji_cross: Emoji = await self.bot.database.get_emoji("cross")
+        if audio_player.current:
+            author_has_all_entries: bool = all(
+                [entry.requester.id == ctx.author.id for entry in audio_player]
+            ) and audio_player.current.requester.id == ctx.author.id
+            if author_has_all_entries:
+                del self._audio_player[ctx.guild.id]
+                await ctx.respond(f"{emoji_checkmark2} **Goodbye**!")
+                return
+
         try:
             audio_player.vote(audio_player.leave, ctx.author.id, 0.5)
         except NotEnoughVotes as e:
