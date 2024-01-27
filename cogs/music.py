@@ -63,8 +63,6 @@ class Music(Cog):
         """
         return member.guild_permissions.manage_guild or "DJ" in [role.name for role in member.roles]
 
-
-
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
         if member.id != self.bot.user.id:
@@ -648,9 +646,10 @@ class Music(Cog):
             await ctx.respond(f"{emoji_cross} **Not currently playing** anything.", ephemeral=True)
             return
 
+        emoji_reverse: Emoji = await self.bot.database.get_emoji("reverse")
         if self.member_is_dj(ctx.author):
             reversed(audio_player)
-            await ctx.respond("Reversed the queue.")
+            await ctx.respond(f"{emoji_reverse} **Reversed the queue**.")
             return
 
         try:
@@ -660,7 +659,7 @@ class Music(Cog):
             return
 
         reversed(audio_player)
-        await ctx.respond("Reversed the queue.")
+        await ctx.respond(f"{emoji_reverse} **Reversed the queue**.")
 
     @slash_command()
     async def history(self, ctx: CustomApplicationContext) -> None:
