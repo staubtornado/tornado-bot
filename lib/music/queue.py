@@ -26,8 +26,8 @@ class SongQueue(Queue):
     def __len__(self) -> int:
         return len(self._queue)
 
-    def __reversed__(self):
-        return reversed(self._queue)
+    def __reversed__(self) -> None:
+        self._queue.reverse()
 
     def __setitem__(self, key, value) -> None:
         self._queue[key] = value
