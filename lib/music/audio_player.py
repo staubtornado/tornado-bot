@@ -56,8 +56,8 @@ class AudioPlayer:
             return self._queue[item.start:item.stop:item.step]
         return self._queue[item]
 
-    def __reversed__(self) -> reversed:
-        return reversed(self._queue)
+    def __reversed__(self) -> None:
+        reversed(self._queue)
 
     @property
     def active(self) -> bool:
