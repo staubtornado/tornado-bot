@@ -21,6 +21,7 @@ from lib.music.embeds import YOUTUBE_NOT_ENABLED
 from lib.music.extraction import YTDLSource
 from lib.music.song import Song
 from lib.music.views import QueueFill, LoopView
+from lib.spotify.artist import Artist
 from lib.spotify.data import SpotifyData
 from lib.spotify.exceptions import SpotifyNotFound, SpotifyRateLimit, SpotifyException
 from lib.utils import format_time
@@ -290,6 +291,12 @@ class Music(Cog):
                 content=f'{emoji_cross} You **took too long** to respond.',
                 view=None
             )
+            return
+
+        if isinstance(result, Artist):
+            for album in result.tracks:
+                audio_player.put(Song(album, ctx.author))
+            await ctx.respond(f"{emoji_playlist} **Added** `{len(result)}` **tracks to the queue**.")
             return
 
         try:

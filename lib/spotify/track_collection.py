@@ -16,8 +16,12 @@ class TrackCollection:
     total: int
 
     def __init__(self, data: dict) -> None:
-        self.tracks = [Track(track['track']) for track in data["tracks"]["items"]]
-        self.total = data["tracks"]["total"]
+        if isinstance(data.get("tracks"), dict):
+            self.tracks = [Track(track) for track in data["tracks"]["items"]]
+            self.total = data["tracks"]["total"]
+        else:
+            self.tracks = [Track(track) for track in data["tracks"]]
+            self.total = len(self.tracks)
 
     def __len__(self) -> int:
         return len(self.tracks)
