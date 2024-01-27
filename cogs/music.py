@@ -146,17 +146,19 @@ class Music(Cog):
             return
 
         if not audio_player:
+            audio_player.leave()
             del self._audio_player[ctx.guild.id]
-            await ctx.guild.voice_client.disconnect(force=False)  # Ensure the bot leaves the voice channel
             await ctx.respond(f"{emoji_checkmark2} **Reset** the player.")
             return
 
         if self.member_is_dj(ctx.author):
+            audio_player.leave()
             del self._audio_player[ctx.guild.id]
             await ctx.respond(f"{emoji_checkmark2} **Goodbye**!")
             return
 
         if audio_player.current is None and not len(audio_player):
+            audio_player.leave()
             del self._audio_player[ctx.guild.id]
             await ctx.respond(f"{emoji_checkmark2} **Goodbye**!")
             return
@@ -166,12 +168,14 @@ class Music(Cog):
                 [entry.requester.id == ctx.author.id for entry in audio_player]
             ) and audio_player.current.requester.id == ctx.author.id
             if author_has_all_entries:
+                audio_player.leave()
                 del self._audio_player[ctx.guild.id]
                 await ctx.respond(f"{emoji_checkmark2} **Goodbye**!")
                 return
 
         try:
             audio_player.vote(audio_player.leave, ctx.author.id, 0.5)
+            del self._audio_player[ctx.guild.id]
         except NotEnoughVotes as e:
             await ctx.respond(f"{emoji_cross} {e}")
             return
