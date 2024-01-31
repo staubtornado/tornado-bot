@@ -153,7 +153,7 @@ class Song:
             _url = urlparse(song.url)
             url: str = f"{_url.scheme}://{_url.netloc}{_url.path}"
 
-            _queue.append(f"`{i}`. [{truncate(f'{song.title} by {song.artist}', 55)}]({url})")
+            _queue.append(f"`{i}`. [{truncate(f'{song.title}', 55)}]({url})")
 
         if len(queue) > 5:
             _queue.append(f"Execute **/**`queue` to **see {len(queue) - 5} more**.")

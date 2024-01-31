@@ -609,7 +609,8 @@ class Music(Cog):
         for i, song in enumerate(audio_player[start:end], start=start + 1):
             url = urlparse(song.url)  # used to shorten the url in some cases
             emoji: Emoji = requesters[song.requester.mention]
-            embed.description += f"`{i}.` {emoji} [{song.title}]({url.scheme}://{url.netloc}{url.path})\n"
+            embed.description += (f"`{i}.` {emoji} [{song.title} by {song.artist}]"
+                                  f"({url.scheme}://{url.netloc}{url.path})\n")
 
         embed.set_footer(text=f"Page {page}/{pages}")
         await ctx.respond(embed=embed)
