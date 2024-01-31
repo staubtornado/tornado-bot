@@ -79,7 +79,7 @@ class QueueFill(View):
 
 class LoopView(View):
     def __init__(self, ctx: CustomApplicationContext, audio_player: AudioPlayer) -> None:
-        super().__init__(timeout=15)
+        super().__init__(timeout=20)
         self.ctx = ctx
         self.audio_player = audio_player
         self.value = None
