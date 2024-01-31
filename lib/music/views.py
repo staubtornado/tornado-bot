@@ -47,7 +47,7 @@ class QueueFill(View):
         self.add_item(
             Button(
                 style=ButtonStyle.blurple,
-                label='Help me decide.',
+                label='Select Random...',
                 custom_id=random_hex(8)
             )
         )
@@ -62,7 +62,8 @@ class QueueFill(View):
             emoji_checkmark: Emoji = await self.ctx.bot.database.get_emoji("checkmark")
             await interaction.response.edit_message(
                 content=f"{emoji_checkmark} **You choose**: `{self.value}`",
-                view=None
+                view=None,
+                embed=None
             )
             self.stop()
             return True

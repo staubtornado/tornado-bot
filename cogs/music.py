@@ -285,15 +285,23 @@ class Music(Cog):
 
         view: QueueFill = QueueFill(ctx, result, audio_player)
 
-        emoji_attention: Emoji = await ctx.bot.database.get_emoji("attention")
-        response = await ctx.respond(f"{emoji_attention} **What** do you want **to add?**", view=view)
+        embed: Embed = Embed(
+            title="Which part of the playlist do you want to add?",
+            description="Select the songs you want to add to the queue.",
+            color=Color.blurple()
+        )
+        response = await ctx.respond(
+            view=view,
+            embed=embed
+        )
         await view.wait()
 
         if not view.value:
             emoji_cross: Emoji = await ctx.bot.database.get_emoji("cross")
             await response.edit(
                 content=f'{emoji_cross} You **took too long** to respond.',
-                view=None
+                view=None,
+                embed=None
             )
             return
 
