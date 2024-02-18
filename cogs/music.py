@@ -558,12 +558,16 @@ class Music(Cog):
         end: int = start + 9
         duration: int = audio_player.duration
 
+        current_info: str = "Nothing is currently playing."
+        if audio_player.current:
+            current_info = f"`{audio_player.current.title}` by `{audio_player.current.artist}`"
+
         description: str = (
             f"**Size:** `{len(audio_player)}`\n"
             f"**Duration:** `{format_time(duration)}`\n"
             "\n"
             "**Currently Playing:**\n"
-            f"`{audio_player.current.title}` by `{audio_player.current.artist}`\n"
+            f"{current_info}\n"
             "\n"
             "**Requesters:**\n"
         )
