@@ -194,6 +194,7 @@ class AudioPlayer:
         while True:
             await sleep(60)
             if not self.active:
+                await self.send(f"**Left** {self.voice.channel.mention} **due to inactivity**.")
                 return self._cleanup()
             
             try:
@@ -201,6 +202,7 @@ class AudioPlayer:
                 if not member_amount:
                     raise AttributeError
             except AttributeError:
+                await self.send(f"**Left** {self.voice.channel.mention} **due to inactivity**.")
                 return self._cleanup()
 
     async def _player(self) -> None:
