@@ -1,9 +1,9 @@
-aiohttp==3.8.6
+aiohttp==3.9.5
 millify~=0.1.1
-aiosqlite~=0.19.0
-yt-dlp==2023.10.13
-Pillow==9.5.0
-py-cord~=2.4.1
+aiosqlite==0.20.0
+yt-dlp==2024.4.9
+Pillow==10.3.0
+py-cord==2.5.0
 PyNaCl==1.5.0
-numpy==1.26.1
-easy-pil~=0.3.0
+numpy==1.26.4
+easy-pil==0.3.3
