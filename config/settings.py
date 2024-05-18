@@ -9,7 +9,7 @@ intents.__setattr__("messages", True)
 
 SETTINGS: dict[str, Any] = {
     'Music': {
-        'YouTubeEnabled': False
+        'YouTubeEnabled': True
     },
     'OwnerIDs': [
         272446903940153345
