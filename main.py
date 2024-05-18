@@ -20,7 +20,7 @@ def main() -> None:
                 if key not in environ:
                     environ[key] = value
     except FileNotFoundError:
-        log("No .env file found. Create on in the config folder.", error=True)
+        log("No .env file found. Create one in the config folder.", error=True)
         return
 
     # Check if all environment variables are present
