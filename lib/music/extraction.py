@@ -10,6 +10,7 @@ from yt_dlp import YoutubeDL
 from lib.contexts import CustomApplicationContext
 from lib.exceptions import YouTubeNotEnabled
 from lib.spotify.track import Track
+from lib.utils import similarity
 
 
 class YTDLSource(PCMVolumeTransformer):
@@ -149,14 +150,21 @@ class YTDLSource(PCMVolumeTransformer):
             process=False
         ))
 
+        process_info: dict | list[dict] = []
         if 'entries' not in data:
             process_info = data
         else:
-            process_info = None
             for entry in data['entries']:  # entries is a generator, so we need to iterate through it
                 if entry:
-                    process_info = entry
+                    process_info.append(entry)
+
+                if len(process_info) == 3:
                     break
+
+            # sort the entries by similarity to the search term
+            # used to remove the likelihood of an extended mix or remix being selected when the original is searched
+            process_info.sort(key=lambda x: similarity(x['title'], search), reverse=True)
+            process_info = process_info[0]
 
         if not process_info:
             raise ValueError("No data to process")
