@@ -1,3 +1,4 @@
+from difflib import SequenceMatcher
 from random import randrange
 from time import strftime, gmtime
 
@@ -31,3 +32,8 @@ def truncate(s: str, limit: int, ending: str = "...") -> str:
 def random_hex(length: int) -> str:
     """Generates a random hex string."""
     return f'{randrange(16**length):x}'.zfill(length)
+
+
+def similarity(a: str, b: str) -> float:
+    """Calculates the similarity between two strings."""
+    return SequenceMatcher(None, a, b).ratio()
