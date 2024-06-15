@@ -230,6 +230,7 @@ class AudioPlayer:
 
             #  Waiting for the next song, leaving if there is no song in 3 minutes
             self._current = None
+            self.message = None
             try:
                 song: Song = await wait_for(self._queue.get(), timeout=180)
             except TimeoutError:
