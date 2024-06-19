@@ -1,5 +1,6 @@
 from asyncio import wait_for, TimeoutError, Event, QueueFull, sleep
 from collections import deque
+from math import floor
 from typing import Iterator, Callable
 
 from discord import VoiceClient, HTTPException, Forbidden, Message, FFmpegPCMAudio, InteractionMessage, NotFound, Member
@@ -431,14 +432,18 @@ class AudioPlayer:
         except KeyError:
             self._votes[func] = {member.id}
 
-        members: int = len([member for member in self.voice.channel.members if not member.bot])
-        if round(len(self._votes[func]) / members, 2) >= percentage:
+        total: int = len([member for member in self.voice.channel.members if not member.bot])
+        required: int = floor(total * percentage)
+        actual: int = len(self._votes[func])
+
+        if actual >= required:
             func()
             self._votes[func].clear()
             return
+
         raise NotEnoughVotes(
             f"**Not enough votes** to execute `{func.__name__}`: "
-            f"{len(self._votes[func])}/{members} **(<{int(percentage * 100)}%)**"
+            f"{actual}/{required} **({round(percentage * 100)}%)**"
         )
 
     async def send(self, *args, **kwargs) -> Message | None:
