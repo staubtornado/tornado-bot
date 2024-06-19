@@ -112,6 +112,22 @@ class YTDLSource(PCMVolumeTransformer):
         return f"<YTDLSource title='{self.name}' uploader='{self.artist}'>"
 
     @classmethod
+    async def process_result(cls, requester: Member, data: dict, loop: AbstractEventLoop) -> Self:
+        """
+        Processes a search result.
+
+        :param requester: The member who requested the source.
+        :param data: The data to process.
+        :param loop: The event loop to run the processing in.
+        :return: The processed data.
+        """
+        processed_data = await loop.run_in_executor(
+            None,
+            lambda: cls.ytdl.extract_info(data['url'], download=False)
+        )
+        return cls(requester, FFmpegPCMAudio(processed_data['url'], **cls.FFMPEG_OPTIONS), data=processed_data)
+
+    @classmethod
     async def from_url(cls, ctx: CustomApplicationContext, url: str, loop: AbstractEventLoop) -> Self:
         """
         Creates a YTDLSource from a URL.
@@ -133,19 +149,17 @@ class YTDLSource(PCMVolumeTransformer):
         return cls(ctx.author, FFmpegPCMAudio(data['url'], **cls.FFMPEG_OPTIONS), data=data)
 
     @classmethod
-    async def from_search(cls, requester: Member, search: str, loop: AbstractEventLoop) -> Self:
+    async def _get_top_results(cls, search: str, loop: AbstractEventLoop) -> dict | list[dict]:
         """
-        Creates a YTDLSource from a search.
+        Searches for a track on YouTube.
 
-        :param requester: The member who requested the source.
-        :param search: The search to create the source from.
-        :param loop: The event loop to run the YTDLSource creation in.
-        :return: The created YTDLSource.
+        :param search: The search to perform.
+        :param loop: The event loop to run the search in.
+        :return: The search results.
         """
 
-        search = quote(search)
         data = await loop.run_in_executor(None, lambda: cls.ytdl.extract_info(
-            f"https://music.youtube.com/search?q={search}#songs",
+            f"https://music.youtube.com/search?q={quote(search)}#songs",
             download=False,
             process=False
         ))
@@ -160,20 +174,60 @@ class YTDLSource(PCMVolumeTransformer):
 
                 if len(process_info) == 3:
                     break
+        return process_info
 
-            # sort the entries by similarity to the search term
-            # used to remove the likelihood of an extended mix or remix being selected when the original is searched
-            process_info.sort(key=lambda x: similarity(x['title'], search), reverse=True)
-            process_info = process_info[0]
+    @staticmethod
+    def _get_closest_match(results: list[dict], match: str) -> dict:
+        """
+        Gets the closest match from a list of results.
+
+        :param results: The results to search through.
+        :param match: The match to find.
+        :return: The closest match.
+        """
+        return max(results, key=lambda x: similarity(x['title'], match))
+
+    @classmethod
+    async def from_search(cls, requester: Member, search: str, loop: AbstractEventLoop) -> Self:
+        """
+        Creates a YTDLSource from a search.
+
+        :param requester: The member who requested the source.
+        :param search: The search to create the source from.
+        :param loop: The event loop to run the YTDLSource creation in.
+        :return: The created YTDLSource.
+        """
+
+        process_info = await cls._get_top_results(search, loop)
+
+        if isinstance(process_info, list):
+            process_info = cls._get_closest_match(process_info, search)
 
         if not process_info:
             raise ValueError("No data to process")
+        return await cls.process_result(requester, process_info, loop)
 
-        processed_data = await loop.run_in_executor(
-            None,
-            lambda: cls.ytdl.extract_info(process_info['url'], download=False)
-        )
-        return cls(requester, FFmpegPCMAudio(processed_data['url'], **cls.FFMPEG_OPTIONS), data=processed_data)
+    @classmethod
+    async def from_advanced_search(cls, requester: Member, name: str, artist: str, loop: AbstractEventLoop) -> Self:
+        """
+        Creates a YTDLSource from an advanced search.
+
+        :param requester: The member who requested the source.
+        :param name: The name of the track.
+        :param artist: The artist of the track.
+        :param loop: The event loop to run the YTDLSource creation in.
+        :return: The created YTDLSource.
+        """
+
+        search = f"{name} {artist}"
+        process_info = await cls._get_top_results(search, loop)
+
+        if isinstance(process_info, list):
+            process_info = cls._get_closest_match(process_info, name)
+
+        if not process_info:
+            raise ValueError("No data to process")
+        return await cls.process_result(requester, process_info, loop)
 
     @classmethod
     async def from_track(cls, requester: Member, track: Track, loop: AbstractEventLoop) -> Self:
@@ -186,5 +240,5 @@ class YTDLSource(PCMVolumeTransformer):
         :return: The created YTDLSource.
         """
 
-        search: str = f"{track.name} {' '.join(str(artist) for artist in track.artists)}"
-        return await cls.from_search(requester, search, loop=loop)
+        artists: str = ' '.join(str(artist) for artist in track.artists)
+        return await cls.from_advanced_search(requester, track.name, artists, loop)
