@@ -24,7 +24,9 @@ class YTDLSource(PCMVolumeTransformer):
         'quiet': True,
         'source_address': '0.0.0.0',
         'default_search': 'auto',
-        'playlist_items': '1,2,3,4,5'
+        'playlist_items': '1,2,3,4,5',
+        'username': 'oauth2',
+        'password': 'p'
     }
 
     FFMPEG_OPTIONS = {
