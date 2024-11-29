@@ -220,11 +220,10 @@ class SpotifyAPI:
         if use_cache:
             # Check if there are already trending playlists cached and if they are older than 24 hours
             if not self._trending_playlists[0] or time() - self._trending_playlists[1] > 86400:
-                use_cache = False
+                # use_cache = False TODO: This feature was removed by the spotify, there is currently no replacement
+                pass
 
         if not use_cache:
-            response: dict = await self._get(
-                "https://api.spotify.com/v1/browse/featured-playlists?locale=en_US&country=US"
-            )
+            response: dict = await self._get("https://api.spotify.com/v1/browse/featured-playlists")
             self._trending_playlists = (response["playlists"]["items"], time())
         return [SpotifyData(playlist) for playlist in self._trending_playlists[0]]
