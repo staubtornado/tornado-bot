@@ -25,6 +25,7 @@ class YTDLSource(PCMVolumeTransformer):
         'source_address': '0.0.0.0',
         'default_search': 'auto',
         'playlist_items': '1,2,3,4,5',
+        'cookiefile': 'cookies.txt',
 
     }
 
